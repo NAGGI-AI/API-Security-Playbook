@@ -1,0 +1,21 @@
+{
+  "id": "API9",
+  "name": "Improper Inventory Management",
+  "what_it_means": "Unknown, outdated, or shadow APIs remain exposed without ownership, controls, or monitoring.",
+  "animated_example": "Keys to old office doors still work because no one collected them.",
+  "quick_checks": [
+    "Central API catalog with owner, data class, version, environment",
+    "Versioning lifecycle with deprecation/sunset policies",
+    "Gateway logs/repo/runtime traffic reconciled regularly",
+    "Shadow/test endpoints blocked; old versions return 410"
+  ],
+  "how_to_test": [
+    "Scan for /v1/, /legacy/, /test/ routes",
+    "Compare runtime traffic with inventory; find unlisted APIs"
+  ],
+  "expected_outcomes": [
+    "Every endpoint mapped to an owner and lifecycle state",
+    "Deprecated versions blocked or 410 Gone"
+  ],
+  "minimal_example": "GET /v1/visitor on retired API → 410 Gone (or blocked)"
+}

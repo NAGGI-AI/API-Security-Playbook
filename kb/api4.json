@@ -1,0 +1,24 @@
+{
+  "id": "API4",
+  "name": "Unrestricted Resource Consumption",
+  "what_it_means": "The API lacks limits on requests, sizes, concurrency, or expensive operations, enabling denial of service or cost blowouts.",
+  "animated_example": "All-you-can-eat buffet with no serving spoons — one person can empty everything.",
+  "quick_checks": [
+    "Global/per-identity rate limits and quotas with burst control",
+    "Payload/body size and array length caps; file size/type limits",
+    "Pagination enforced; sensible max page size",
+    "Server timeouts, circuit breakers, and concurrency caps",
+    "Idempotency keys for retried operations; back-pressure at gateway",
+    "Resource-heavy endpoints require stronger auth and throttling"
+  ],
+  "how_to_test": [
+    "Oversized JSON bodies and deep arrays → expect 413",
+    "Rapid bursts/parallel calls → expect 429",
+    "Deep pagination and long-running queries under load"
+  ],
+  "expected_outcomes": [
+    "Graceful 413/429; no platform instability",
+    "Logs show throttling/quotas triggered with actor ID"
+  ],
+  "minimal_example": "POST 100MB body → 413 Payload Too Large; 1k req/min → 429 Too Many Requests"
+}

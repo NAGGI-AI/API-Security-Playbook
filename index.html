@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>API security playbook agent — Reader</title>
+<style>
+  :root { --bg:#0f172a; --panel:#111827; --soft:#1f2937; --accent:#10b981; --text:#e5e7eb; --muted:#9ca3af; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui, Segoe UI, Arial; }
+  .app { display:flex; height:100vh; }
+  .sidebar { width:320px; background:var(--panel); border-right:1px solid #222; padding:16px; overflow:auto; }
+  h1 { font-size:16px; margin:0 0 12px; }
+  .muted { color:var(--muted); }
+  .list { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .item { padding:10px 12px; border:1px solid #1f2937; border-radius:8px; cursor:pointer; }
+  .item.active { border-color:var(--accent); background:#0d1f1a; }
+  .main { flex:1; display:flex; flex-direction:column; }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 16px; border-bottom:1px solid #222; background:#0b1220; }
+  .sections { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { padding:6px 10px; border:1px solid #374151; border-radius:999px; cursor:pointer; color:#cbd5e1; }
+  .chip.active { background:var(--accent); border-color:var(--accent); color:#052e1a; font-weight:600; }
+  .content { padding:16px; overflow:auto; }
+  .card { background:#0d1b2a; border:1px solid #1f2937; border-radius:12px; padding:16px; max-width:1000px; }
+  .h { font-weight:700; margin:16px 0 8px; }
+  ul { margin:8px 0 8px 18px; }
+  .small { font-size:12px; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .copy { background:#122; border:1px solid #1f2937; color:#9bd; cursor:pointer; padding:6px 10px; border-radius:8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <h1>API security playbook agent</h1>
+    <div class="muted small">Choose a risk to view its Playbook sections. (Playbook)</div>
+    <div class="list" id="riskList"></div>
+  </aside>
+  <main class="main">
+    <div class="toolbar">
+      <div class="sections" id="sections">
+        <div class="chip active" data-section="all">All</div>
+        <div class="chip" data-section="what">What this risk means</div>
+        <div class="chip" data-section="animated_example">Animated example</div>
+        <div class="chip" data-section="quick_checks">Quick checks</div>
+        <div class="chip" data-section="how_to_test">How to test</div>
+        <div class="chip" data-section="expected_outcomes">Expected outcomes</div>
+        <div class="chip" data-section="minimal_example">Minimal example</div>
+      </div>
+      <div class="row">
+        <button class="copy" id="copyBtn">Copy</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="card" id="card">Select a risk on the left.</div>
+    </div>
+  </main>
+</div>
+
+<script>
+const risks = [
+  ["API1","Broken Object Level Authorization (BOLA)"],
+  ["API2","Broken Authentication"],
+  ["API3","Broken Object Property Level Authorization (BOPLA)"],
+  ["API4","Unrestricted Resource Consumption"],
+  ["API5","Broken Function Level Authorization (BFLA)"],
+  ["API6","Unrestricted Access to Sensitive Business Flows"],
+  ["API7","Server-Side Request Forgery (SSRF)"],
+  ["API8","Security Misconfiguration"],
+  ["API9","Improper Inventory Management"],
+  ["API10","Unsafe Consumption of APIs"]
+];
+
+const riskList = document.getElementById('riskList');
+const sectionsBar = document.getElementById('sections');
+const card = document.getElementById('card');
+let currentRisk = null;
+let currentSection = "all";
+const baseUrl = "http://localhost:8000";
+
+function makeRiskItem(id, name) {
+  const d = document.createElement('div');
+  d.className = 'item';
+  d.textContent = `${id} — ${name}`;
+  d.dataset.id = id;
+  d.onclick = ()=> {
+    riskList.querySelectorAll('.item').forEach(x=>x.classList.remove('active'));
+    d.classList.add('active');
+    currentRisk = id;
+    fetchAndRender();
+  };
+  return d;
+}
+
+risks.forEach(([id, name])=> riskList.appendChild(makeRiskItem(id, name)));
+
+sectionsBar.querySelectorAll('.chip').forEach(c=>{
+  c.onclick = ()=>{
+    sectionsBar.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    currentSection = c.dataset.section;
+    fetchAndRender();
+  };
+});
+
+async function fetchAndRender() {
+  if (!currentRisk) { card.textContent = 'Select a risk on the left.'; return; }
+  card.textContent = 'Loading…';
+  try {
+    let url = `${baseUrl}/risk?id=${encodeURIComponent(currentRisk)}`;
+    if (currentSection !== 'all') url += `&section=${encodeURIComponent(currentSection)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    card.innerHTML = render(data);
+  } catch (e) {
+    card.textContent = 'Error: ' + e.message;
+  }
+}
+
+function render(data) {
+  const r = data.risk || {};
+  if (currentSection !== 'all') {
+    const key = currentSection;
+    const value = r[key];
+    return sectionHtml(r.id, r.name, key, value);
+  }
+  // all sections
+  return `
+    <div class="small muted">Source: Playbook</div>
+    <div class="h">${r.id} — ${r.name}</div>
+    ${sectionHtml(r.id, r.name, 'what', r.what)}
+    ${sectionHtml(r.id, r.name, 'animated_example', r.animated_example)}
+    ${sectionListHtml('quick_checks', r.quick_checks)}
+    ${sectionListHtml('how_to_test', r.how_to_test)}
+    ${sectionListHtml('expected_outcomes', r.expected_outcomes)}
+    ${sectionHtml(r.id, r.name, 'minimal_example', r.minimal_example)}
+  `;
+}
+
+function sectionHtml(id, name, key, value) {
+  if (!value) return '';
+  const title = titleFor(key);
+
+  // ✅ Bullet sections (arrays) → real list
+  if (Array.isArray(value)) {
+    return `
+      <div class="h">${title}</div>
+      <ul>
+        ${value.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+      </ul>
+    `;
+  }
+
+  // ✅ Text sections → plain text
+  return `
+    <div class="h">${title}</div>
+    <div>${escapeHtml(String(value))}</div>
+  `;
+}
+``
+
+function sectionListHtml(key, arr) {
+  if (!arr || !arr.length) return '';
+  const title = titleFor(key);
+  return `
+    <div class="h">${title}</div>
+    <ul>${arr.map(x=>`<li>${escapeHtml(String(x))}</li>`).join('')}</ul>
+  `;
+}
+
+function titleFor(key) {
+  return ({
+    what: "What this risk means",
+    animated_example: "Animated example",
+    quick_checks: "Quick checks",
+    how_to_test: "How to test",
+    expected_outcomes: "Expected outcomes",
+    minimal_example: "Minimal example"
+  })[key] || key;
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+}
+
+document.getElementById('copyBtn').onclick = ()=>{
+  const text = card.innerText.trim();
+  navigator.clipboard.writeText(text);
+};
+</script>
+</body>
+</html>
+``

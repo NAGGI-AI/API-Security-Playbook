@@ -1,0 +1,24 @@
+{
+  "id": "API3",
+  "name": "Broken Object Property Level Authorization (BOPLA)",
+  "what_it_means": "API accepts or returns properties a user should not read or modify (merge of Excessive Data Exposure + Mass Assignment).",
+  "animated_example": "Filling a form where hidden admin checkboxes are still clickable if you know their names.",
+  "quick_checks": [
+    "Strict request schema validation; reject extra/sensitive properties",
+    "Response allowlists/DTOs (return only necessary fields)",
+    "Field-level authorization for create/update operations",
+    "Disable automatic binding to model fields by default",
+    "Use explicit ‘writeable’ and ‘readable’ property maps per role",
+    "Sensitive flags (isAdmin, roles) are server-controlled only"
+  ],
+  "how_to_test": [
+    "Add disallowed fields (e.g., isAdmin: true) in POST/PATCH",
+    "Remove required fields or change types",
+    "Request sensitive fields in response and inspect payload"
+  ],
+  "expected_outcomes": [
+    "400 with schema errors for extra/wrong fields",
+    "Responses contain minimal necessary attributes only"
+  ],
+  "minimal_example": "POST /users { name: 'Ana', role: 'admin' } → rejected; response omits internal flags like token, secrets"
+}

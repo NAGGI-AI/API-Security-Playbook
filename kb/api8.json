@@ -1,0 +1,23 @@
+{
+  "id": "API8",
+  "name": "Security Misconfiguration",
+  "what_it_means": "Unsafe defaults or forgotten hardening (open CORS, verbose errors, unused methods, missing headers, hardcoded secrets).",
+  "animated_example": "Leaving windows open after installing a new security door.",
+  "quick_checks": [
+    "CORS restricted to known origins/methods/headers (no *)",
+    "Disable unused HTTP methods (TRACE, PUT/DELETE if unused)",
+    "Generic errors (no stacks/paths); banner/version minimization",
+    "Security headers (HSTS, CSP, X-Frame-Options, etc.)",
+    "Secrets managed in vault; not in code/images/env files"
+  ],
+  "how_to_test": [
+    "Preflight CORS probes; attempt cross-origin reads",
+    "Trigger errors and inspect for stack traces/paths",
+    "Probe OPTIONS/TRACE; scan for header gaps and configs"
+  ],
+  "expected_outcomes": [
+    "Minimal information exposure; tight method/origin controls",
+    "No secrets or environment details leaked"
+  ],
+  "minimal_example": "Wildcard CORS + verbose SQL error → misconfiguration; fix to strict origin + generic error"
+}

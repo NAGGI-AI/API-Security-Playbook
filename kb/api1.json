@@ -1,0 +1,27 @@
+{
+  "id": "API1",
+  "name": "Broken Object Level Authorization (BOLA)",
+  "what_it_means": "The API does not verify that the requester owns or is entitled to the object referenced by an ID, allowing access by simply changing the identifier.",
+  "animated_example": "Changing the apartment number on a keycard and it still opens the door — that’s BOLA.",
+  "quick_checks": [
+    "Server-side ownership/tenant checks on every object operation (GET/PUT/PATCH/DELETE)",
+    "Consistent 403/404 for unauthorized object access (no existence leaks)",
+    "IDs validated and mapped to subject before DB calls (prevent enumeration)",
+    "Multi-tenant isolation enforced on backend (not UI only)",
+    "Authorization logic centralized and covered by unit tests",
+    "Failed object-access attempts are logged with subject/object IDs",
+    "No insecure ‘owner = request.body.userId’ style trust in client data",
+    "Random/non-sequential IDs for externally visible objects (when feasible)"
+  ],
+  "how_to_test": [
+    "Change /objects/{myId} → another valid ID and observe",
+    "Attempt cross-tenant IDs using two test tenants",
+    "Try update/delete with modified object IDs",
+    "Measure error/timing differences for valid vs. invalid IDs"
+  ],
+  "expected_outcomes": [
+    "403 Forbidden or 404 Not Found with generic message",
+    "No object fields from other users; denial events logged"
+  ],
+  "minimal_example": "GET /badge/requests/123 → change to /badge/requests/124 → must return 403/404 (never other user’s data)"
+}

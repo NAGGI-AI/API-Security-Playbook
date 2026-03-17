@@ -1,0 +1,23 @@
+{
+  "id": "API5",
+  "name": "Broken Function Level Authorization (BFLA)",
+  "what_it_means": "API fails to enforce permissions on actions/endpoints, letting basic users invoke admin or restricted functions.",
+  "animated_example": "Pressing the elevator’s ‘staff only’ button and it still takes you to the restricted floor.",
+  "quick_checks": [
+    "Server-side authorization on every action; admin routes isolated",
+    "HTTP method ↔ privilege mapping defined and enforced",
+    "MFA/step-up auth for privileged operations",
+    "No security-by-UI; backend blocks hidden/maintenance functions",
+    "Comprehensive allow/deny policies with least privilege"
+  ],
+  "how_to_test": [
+    "Invoke /admin/* with low-privilege token",
+    "Use disallowed methods (DELETE where not permitted)",
+    "Call maintenance/debug endpoints directly"
+  ],
+  "expected_outcomes": [
+    "403 Forbidden for unauthorized function access",
+    "Privileged attempts logged with actor and scope"
+  ],
+  "minimal_example": "Normal user → POST /admin/rebuildIndex → 403; admin with MFA → 200"
+}

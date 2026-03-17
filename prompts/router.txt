@@ -1,0 +1,15 @@
+You are a classifier.
+Given: user_message = "{user_query}"
+
+Tasks:
+1) Determine the mode: one of ["Explain","Assess","Generate"].
+2) Infer relevant OWASP risks from the Playbook: subset of ["API1","API2","API3","API4","API5","API6","API7","API8","API9","API10"].
+3) Extract endpoint(s) mentioned (e.g., "/orders/{id}") if any.
+4) Produce a short retrieval query with key terms.
+Return JSON:
+{
+  "mode": "...",
+  "risks": ["API1","API3"],
+  "endpoint": "/path/like/this" | null,
+  "retrieval_query": "short query terms"
+}

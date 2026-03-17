@@ -1,0 +1,22 @@
+{
+  "id": "API7",
+  "name": "Server-Side Request Forgery (SSRF)",
+  "what_it_means": "API fetches a user-supplied URL without strict validation, allowing requests to internal networks, metadata services, or localhost.",
+  "animated_example": "Handing your company courier a note that secretly tells them to enter restricted buildings for you.",
+  "quick_checks": [
+    "Allowlist of outbound domains; block RFC1918/localhost/metadata IPs",
+    "Restrict schemes to https/http; disable redirects; DNS pinning",
+    "Force egress through filtering proxy; validate MIME types",
+    "No raw upstream responses reflected to clients"
+  ],
+  "how_to_test": [
+    "imageProxy?url=http://169.254.169.254/",
+    "http://127.0.0.1, http://10.0.0.1",
+    "file://, ftp:// schemes; redirect chains to internal IPs"
+  ],
+  "expected_outcomes": [
+    "Policy error; no internal responses; outbound only via proxy",
+    "Attempts logged with requested target"
+  ],
+  "minimal_example": "GET /fetch?url=http://169.254.169.254/latest/meta-data → blocked"
+}

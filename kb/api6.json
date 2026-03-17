@@ -1,0 +1,22 @@
+{
+  "id": "API6",
+  "name": "Unrestricted Access to Sensitive Business Flows",
+  "what_it_means": "Critical workflows (payments, ticketing, check-in/out) can be automated, replayed, or executed out of sequence due to weak backend state/velocity controls.",
+  "animated_example": "Skipping the queue barriers and running straight to the finish line — repeatedly.",
+  "quick_checks": [
+    "Backend enforces step order/state (cannot skip steps)",
+    "Idempotency/uniqueness tokens to prevent replays",
+    "Rate/velocity limits and bot defenses on sensitive steps",
+    "Server validates preconditions (no UI-only checks)"
+  ],
+  "how_to_test": [
+    "Execute steps out of order",
+    "Rapidly replay a critical step with a script",
+    "Attempt to skip validations and jump to final action"
+  ],
+  "expected_outcomes": [
+    "Rejections with state/sequence errors; throttling on velocity",
+    "No double-charging/double-booking"
+  ],
+  "minimal_example": "POST /checkout without successful /validate → 409/422; repeat /pay rapidly → throttled"
+}

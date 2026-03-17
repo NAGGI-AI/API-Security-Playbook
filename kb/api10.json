@@ -1,0 +1,22 @@
+{
+  "id": "API10",
+  "name": "Unsafe Consumption of APIs",
+  "what_it_means": "Trusting upstream/external APIs without validation, TLS checks, or safe failure allows data poisoning, spoofing, or logic abuse.",
+  "animated_example": "Eating mystery food without checking the label — could be spoiled or mislabeled.",
+  "quick_checks": [
+    "Validate upstream responses against strict schemas/types",
+    "TLS validation/cert pinning; timeouts/retries/circuit breakers",
+    "Fail securely (no fail-open); sanitize before use",
+    "Cache poisoning protections; verify source authenticity"
+  ],
+  "how_to_test": [
+    "Malformed/oversized upstream responses; inconsistent types",
+    "Invalid/self-signed certificates; simulate timeouts/errors",
+    "Manipulated nested objects; missing required fields"
+  ],
+  "expected_outcomes": [
+    "Graceful failure with safe defaults; no state corruption",
+    "No leakage of upstream internals; events logged"
+  ],
+  "minimal_example": "Upstream /profiles returns unexpected fields → local service rejects and logs; operation aborted"
+}
