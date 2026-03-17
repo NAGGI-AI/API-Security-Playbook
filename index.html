@@ -76,88 +76,101 @@ const sectionsBar = document.getElementById('sections');
 const card = document.getElementById('card');
 let currentRisk = null;
 let currentSection = "all";
-const baseUrl = "http://localhost:8000";
 
+// Build the left list
 function makeRiskItem(id, name) {
   const d = document.createElement('div');
   d.className = 'item';
   d.textContent = `${id} — ${name}`;
   d.dataset.id = id;
-  d.onclick = ()=> {
-    riskList.querySelectorAll('.item').forEach(x=>x.classList.remove('active'));
+  d.onclick = () => {
+    riskList.querySelectorAll('.item').forEach(x => x.classList.remove('active'));
     d.classList.add('active');
     currentRisk = id;
     fetchAndRender();
   };
   return d;
 }
+risks.forEach(([id, name]) => riskList.appendChild(makeRiskItem(id, name)));
 
-risks.forEach(([id, name])=> riskList.appendChild(makeRiskItem(id, name)));
-
-sectionsBar.querySelectorAll('.chip').forEach(c=>{
-  c.onclick = ()=>{
-    sectionsBar.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+// Section chips
+sectionsBar.querySelectorAll('.chip').forEach(c => {
+  c.onclick = () => {
+    sectionsBar.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active');
     currentSection = c.dataset.section;
     fetchAndRender();
   };
 });
 
+// ---- Static fetch from /kb instead of backend API ----
+async function fetchRiskJson(riskId) {
+  // Files are named kb/api1.json ... kb/api10.json (lowercase)
+  const path = `kb/${riskId.toLowerCase()}.json`;
+  const res = await fetch(path);
+  if (!res.ok) {
+    const txt = await res.text().catch(()=> '');
+    throw new Error(`Failed to fetch ${path} — HTTP ${res.status} ${res.statusText} ${txt}`);
+  }
+  return await res.json();
+}
+
 async function fetchAndRender() {
   if (!currentRisk) { card.textContent = 'Select a risk on the left.'; return; }
   card.textContent = 'Loading…';
   try {
-    let url = `${baseUrl}/risk?id=${encodeURIComponent(currentRisk)}`;
-    if (currentSection !== 'all') url += `&section=${encodeURIComponent(currentSection)}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    card.innerHTML = render(data);
+    const doc = await fetchRiskJson(currentRisk);
+    const full = {
+      id: doc.id,
+      name: doc.name,
+      what: doc.what_it_means,
+      animated_example: doc.animated_example,
+      quick_checks: doc.quick_checks,
+      how_to_test: doc.how_to_test,
+      expected_outcomes: doc.expected_outcomes,
+      minimal_example: doc.minimal_example
+    };
+
+    if (currentSection !== 'all') {
+      card.innerHTML = sectionHtml(full.id, full.name, currentSection, full[currentSection]);
+    } else {
+      card.innerHTML = `
+        <div class="small muted">Source: Playbook</div>
+        <div class="h">${full.id} — ${full.name}</div>
+        ${sectionHtml(full.id, full.name, 'what', full.what)}
+        ${sectionHtml(full.id, full.name, 'animated_example', full.animated_example)}
+        ${sectionListHtml('quick_checks', full.quick_checks)}
+        ${sectionListHtml('how_to_test', full.how_to_test)}
+        ${sectionListHtml('expected_outcomes', full.expected_outcomes)}
+        ${sectionHtml(full.id, full.name, 'minimal_example', full.minimal_example)}
+      `;
+    }
   } catch (e) {
     card.textContent = 'Error: ' + e.message;
   }
 }
 
-function render(data) {
-  const r = data.risk || {};
-  if (currentSection !== 'all') {
-    const key = currentSection;
-    const value = r[key];
-    return sectionHtml(r.id, r.name, key, value);
-  }
-  // all sections
-  return `
-    <div class="small muted">Source: Playbook</div>
-    <div class="h">${r.id} — ${r.name}</div>
-    ${sectionHtml(r.id, r.name, 'what', r.what)}
-    ${sectionHtml(r.id, r.name, 'animated_example', r.animated_example)}
-    ${sectionListHtml('quick_checks', r.quick_checks)}
-    ${sectionListHtml('how_to_test', r.how_to_test)}
-    ${sectionListHtml('expected_outcomes', r.expected_outcomes)}
-    ${sectionHtml(r.id, r.name, 'minimal_example', r.minimal_example)}
-  `;
-}
-
+// Rendering helpers
 function sectionHtml(id, name, key, value) {
-  if (!value) return '';
+  if (value === undefined || value === null) return '';
   const title = titleFor(key);
 
-  // ✅ Bullet sections (arrays) → real list
+  // Bullet sections (arrays) → <ul><li>
   if (Array.isArray(value)) {
     return `
       <div class="h">${title}</div>
       <ul>
-        ${value.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+        ${value.map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}
       </ul>
     `;
   }
 
-  // ✅ Text sections → plain text
+  // Text sections
   return `
     <div class="h">${title}</div>
     <div>${escapeHtml(String(value))}</div>
   `;
 }
-``
 
 function sectionListHtml(key, arr) {
   if (!arr || !arr.length) return '';
@@ -180,7 +193,7 @@ function titleFor(key) {
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+  return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
 }
 
 document.getElementById('copyBtn').onclick = ()=>{
