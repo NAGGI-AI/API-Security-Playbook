@@ -3,62 +3,436 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>API security playbook agent — Reader</title>
+<title>Security Playbook Agent</title>
 <style>
-  :root { --bg:#0f172a; --panel:#111827; --soft:#1f2937; --accent:#10b981; --text:#e5e7eb; --muted:#9ca3af; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui, Segoe UI, Arial; }
-  .app { display:flex; height:100vh; }
-  .sidebar { width:320px; background:var(--panel); border-right:1px solid #222; padding:16px; overflow:auto; }
-  h1 { font-size:16px; margin:0 0 12px; }
-  .muted { color:var(--muted); }
-  .list { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-  .item { padding:10px 12px; border:1px solid #1f2937; border-radius:8px; cursor:pointer; }
-  .item.active { border-color:var(--accent); background:#0d1f1a; }
-  .main { flex:1; display:flex; flex-direction:column; }
-  .toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 16px; border-bottom:1px solid #222; background:#0b1220; }
-  .sections { display:flex; flex-wrap:wrap; gap:8px; }
-  .chip { padding:6px 10px; border:1px solid #374151; border-radius:999px; cursor:pointer; color:#cbd5e1; }
-  .chip.active { background:var(--accent); border-color:var(--accent); color:#052e1a; font-weight:600; }
-  .content { padding:16px; overflow:auto; }
-  .card { background:#0d1b2a; border:1px solid #1f2937; border-radius:12px; padding:16px; max-width:1000px; }
-  .h { font-weight:700; margin:16px 0 8px; }
-  ul { margin:8px 0 8px 18px; }
-  .small { font-size:12px; }
-  .row { display:flex; gap:8px; align-items:center; }
-  .copy { background:#122; border:1px solid #1f2937; color:#9bd; cursor:pointer; padding:6px 10px; border-radius:8px; }
+  /* ─── Design tokens ─────────────────────────────────────── */
+  :root {
+    --bg:       #080e1a;
+    --panel:    #0d1424;
+    --panel2:   #0f1830;
+    --soft:     #1a2540;
+    --border:   #1e2d48;
+    --accent:   #10d9a0;
+    --accent2:  #3b82f6;
+    --vuln-accent: #f59e0b;
+    --vuln-dark:   #1a1200;
+    --text:     #e2e8f0;
+    --muted:    #7a90b0;
+    --card-bg:  #0b1628;
+    --step-bg:  #0a1220;
+    --glow-api: 0 0 18px #10d9a030;
+    --glow-vuln:0 0 18px #f59e0b30;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13.5px/1.6 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── Layout ────────────────────────────────────────────── */
+  .app { display: flex; height: 100vh; }
+
+  /* ─── Sidebar ───────────────────────────────────────────── */
+  .sidebar {
+    width: 290px;
+    min-width: 230px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #0d1835 0%, #0b1220 100%);
+    flex-shrink: 0;
+  }
+  .app-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .brand-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px #10d9a050;
+  }
+  .brand-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .brand-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 10px 0; }
+  .sidebar-body::-webkit-scrollbar { width: 4px; }
+  .sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Agent group header */
+  .agent-group { margin-bottom: 4px; }
+  .agent-header {
+    padding: 10px 16px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+  .agent-header:hover { background: var(--soft); }
+  .agent-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .agent-dot.api  { background: var(--accent);      box-shadow: 0 0 8px var(--accent); }
+  .agent-dot.vuln { background: var(--vuln-accent);  box-shadow: 0 0 8px var(--vuln-accent); }
+  .agent-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
+  .agent-label.api  { color: var(--accent); }
+  .agent-label.vuln { color: var(--vuln-accent); }
+  .agent-count {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--soft);
+    border-radius: 10px;
+    padding: 1px 6px;
+  }
+  .agent-chevron {
+    font-size: 10px;
+    color: var(--muted);
+    transition: transform .2s;
+  }
+  .agent-group.collapsed .agent-chevron { transform: rotate(-90deg); }
+  .agent-group.collapsed .item-list { display: none; }
+
+  /* Risk / vuln items */
+  .item-list { padding: 0 8px 4px; display: flex; flex-direction: column; gap: 2px; }
+
+  .item {
+    padding: 8px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--muted);
+    transition: background .15s, color .15s, border-color .15s;
+    border: 1px solid transparent;
+    line-height: 1.4;
+  }
+  .item:hover { background: var(--soft); color: var(--text); }
+
+  .item.active-api {
+    background: #061f14;
+    border-color: var(--accent);
+    color: #a7f3d0;
+    box-shadow: var(--glow-api);
+  }
+  .item.active-vuln {
+    background: #1a1200;
+    border-color: var(--vuln-accent);
+    color: #fde68a;
+    box-shadow: var(--glow-vuln);
+  }
+  .item-id {
+    font-size: 10px;
+    font-weight: 700;
+    opacity: .6;
+    margin-right: 4px;
+  }
+
+  /* Vuln search */
+  .vuln-search {
+    padding: 6px 16px 4px;
+  }
+  .vuln-search input {
+    width: 100%;
+    background: var(--soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .vuln-search input:focus { border-color: var(--vuln-accent); }
+  .vuln-search input::placeholder { color: var(--muted); }
+
+  /* ─── Main panel ────────────────────────────────────────── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  /* Toolbar */
+  .toolbar {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: #090f1e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .chip:hover { border-color: #4a6080; color: var(--text); }
+  .chip.active-api  { background: var(--accent);      border-color: var(--accent);      color: #052e1a; font-weight: 700; }
+  .chip.active-vuln { background: var(--vuln-accent);  border-color: var(--vuln-accent);  color: #1a0a00; font-weight: 700; }
+
+  .copy-btn {
+    background: var(--soft);
+    border: 1px solid var(--border);
+    color: #8ab4d0;
+    cursor: pointer;
+    padding: 5px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .copy-btn:hover { background: var(--border); color: var(--text); }
+
+  /* Content area */
+  .content { flex: 1; overflow-y: auto; padding: 20px; }
+  .content::-webkit-scrollbar { width: 5px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    max-width: 980px;
+    line-height: 1.65;
+  }
+  .card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .card-title.api-color  { color: var(--accent); }
+  .card-title.vuln-color { color: var(--vuln-accent); }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: .4px;
+    margin-bottom: 14px;
+  }
+  .badge.api  { background: #052e20; color: var(--accent);     border: 1px solid #0d5c40; }
+  .badge.vuln { background: #1a1000; color: var(--vuln-accent); border: 1px solid #6b4c00; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--muted);
+    margin: 18px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title.api-color  { color: var(--accent); }
+  .section-title.vuln-color { color: var(--vuln-accent); }
+
+  .section-body { font-size: 13.5px; color: #c4d3e8; }
+  ul.play-list { margin-left: 18px; }
+  ul.play-list li { margin-bottom: 5px; }
+
+  /* Animated steps */
+  .steps-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 6px;
+  }
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 11px 14px;
+    background: var(--step-bg);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    opacity: 0;
+    transform: translateX(-16px);
+    transition: opacity .38s ease, transform .38s ease;
+    position: relative;
+  }
+  .step:first-child { border-radius: 10px 10px 0 0; }
+  .step:last-child  { border-radius: 0 0 10px 10px; }
+  .step:not(:last-child) { border-bottom: none; }
+  .step.show { opacity: 1; transform: translateX(0); }
+
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-num.api  { background: #052e20; color: var(--accent);     border: 1px solid var(--accent); }
+  .step-num.vuln { background: #1a1000; color: var(--vuln-accent); border: 1px solid var(--vuln-accent); }
+
+  .step-text { font-size: 13px; color: #c4d3e8; font-family: 'Courier New', monospace; }
+
+  /* Step replay btn */
+  .replay-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+    letter-spacing: .3px;
+    transition: opacity .15s;
+  }
+  .replay-btn.api  { background: #052e20; color: var(--accent); }
+  .replay-btn.vuln { background: #1a1000; color: var(--vuln-accent); }
+  .replay-btn:hover { opacity: .8; }
+
+  /* Placeholder */
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    gap: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .placeholder-icon { font-size: 42px; opacity: .35; }
+  .placeholder-text { font-size: 14px; opacity: .6; }
+
+  /* Scan line animation on brand icon */
+  @keyframes scanline {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 0% 200%; }
+  }
+  .brand-icon-inner {
+    width: 100%; height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(180deg, transparent 45%, rgba(16,217,160,.25) 50%, transparent 55%);
+    background-size: 100% 200%;
+    animation: scanline 2.5s linear infinite;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Pulse dot */
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .5; transform: scale(.7); }
+  }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
 </style>
 </head>
 <body>
 <div class="app">
+
+  <!-- ═══ Sidebar ══════════════════════════════════════════════ -->
   <aside class="sidebar">
-    <h1>API security playbook agent</h1>
-    <div class="muted small">Choose a risk to view its Playbook sections. (Playbook)</div>
-    <div class="list" id="riskList"></div>
+    <div class="sidebar-header">
+      <div class="app-brand">
+        <div class="brand-icon">
+          <div class="brand-icon-inner">🛡</div>
+        </div>
+        <div>
+          <div class="brand-text">Security Playbook Agent</div>
+        </div>
+      </div>
+      <div class="brand-sub">API Security &amp; Vulnerability Intelligence</div>
+    </div>
+
+    <div class="sidebar-body">
+
+      <!-- API Playbook group -->
+      <div class="agent-group" id="apiGroup">
+        <div class="agent-header" onclick="toggleGroup('apiGroup')">
+          <span class="agent-dot api pulse"></span>
+          <span class="agent-label api">API Security Playbook</span>
+          <span class="agent-count">10</span>
+          <span class="agent-chevron">▼</span>
+        </div>
+        <div class="item-list" id="apiList"></div>
+      </div>
+
+      <!-- Vulnerability Playbook group -->
+      <div class="agent-group" id="vulnGroup">
+        <div class="agent-header" onclick="toggleGroup('vulnGroup')">
+          <span class="agent-dot vuln pulse"></span>
+          <span class="agent-label vuln">Vulnerability Playbook</span>
+          <span class="agent-count" id="vulnCount">—</span>
+          <span class="agent-chevron">▼</span>
+        </div>
+        <div class="vuln-search">
+          <input type="text" id="vulnSearch" placeholder="Search vulnerabilities…" oninput="filterVulns(this.value)" />
+        </div>
+        <div class="item-list" id="vulnList"></div>
+      </div>
+
+    </div>
   </aside>
+
+  <!-- ═══ Main panel ═══════════════════════════════════════════ -->
   <main class="main">
+
+    <!-- Toolbar / chips -->
     <div class="toolbar">
-      <div class="sections" id="sections">
-        <div class="chip active" data-section="all">All</div>
-        <div class="chip" data-section="what">What this risk means</div>
-        <div class="chip" data-section="animated_example">Animated example</div>
-        <div class="chip" data-section="quick_checks">Quick checks</div>
-        <div class="chip" data-section="how_to_test">How to test</div>
-        <div class="chip" data-section="expected_outcomes">Expected outcomes</div>
-        <div class="chip" data-section="minimal_example">Minimal example</div>
+      <div class="chips" id="chipsBar">
+        <!-- chips injected by JS -->
       </div>
-      <div class="row">
-        <button class="copy" id="copyBtn">Copy</button>
-      </div>
+      <button class="copy-btn" id="copyBtn">⎘ Copy</button>
     </div>
+
+    <!-- Card area -->
     <div class="content">
-      <div class="card" id="card">Select a risk on the left.</div>
+      <div id="card">
+        <div class="placeholder">
+          <div class="placeholder-icon">🔍</div>
+          <div class="placeholder-text">Select a risk or vulnerability on the left to view its Playbook.</div>
+        </div>
+      </div>
     </div>
+
   </main>
 </div>
 
 <script>
-const risks = [
+/* ─────────────────────────────────────────────────────────
+   DATA
+───────────────────────────────────────────────────────── */
+const API_RISKS = [
   ["API1","Broken Object Level Authorization (BOLA)"],
   ["API2","Broken Authentication"],
   ["API3","Broken Object Property Level Authorization (BOPLA)"],
@@ -71,58 +445,150 @@ const risks = [
   ["API10","Unsafe Consumption of APIs"]
 ];
 
-const riskList = document.getElementById('riskList');
-const sectionsBar = document.getElementById('sections');
-const card = document.getElementById('card');
-let currentRisk = null;
+const API_CHIPS = [
+  { key: "all",               label: "All" },
+  { key: "what",              label: "What this risk means" },
+  { key: "animated_example",  label: "Animated example" },
+  { key: "quick_checks",      label: "Quick checks" },
+  { key: "how_to_test",       label: "How to test" },
+  { key: "expected_outcomes", label: "Expected outcomes" },
+  { key: "minimal_example",   label: "Minimal example" }
+];
+
+const VULN_CHIPS = [
+  { key: "all",              label: "All" },
+  { key: "description",      label: "Description" },
+  { key: "remediation",      label: "Remediation" },
+  { key: "animated_example", label: "Animated example" }
+];
+
+/* ─────────────────────────────────────────────────────────
+   STATE
+───────────────────────────────────────────────────────── */
+let mode          = null;   // 'api' | 'vuln'
+let currentId     = null;
 let currentSection = "all";
+let vulnData      = [];
+let filteredVulns = [];
+let animTimer     = null;
 
-// Build the left list
-function makeRiskItem(id, name) {
-  const d = document.createElement('div');
-  d.className = 'item';
-  d.textContent = `${id} — ${name}`;
-  d.dataset.id = id;
-  d.onclick = () => {
-    riskList.querySelectorAll('.item').forEach(x => x.classList.remove('active'));
-    d.classList.add('active');
-    currentRisk = id;
-    fetchAndRender();
-  };
-  return d;
-}
-risks.forEach(([id, name]) => riskList.appendChild(makeRiskItem(id, name)));
+/* ─────────────────────────────────────────────────────────
+   INIT — build sidebar lists
+───────────────────────────────────────────────────────── */
+const apiList  = document.getElementById('apiList');
+const vulnList = document.getElementById('vulnList');
 
-// Section chips
-sectionsBar.querySelectorAll('.chip').forEach(c => {
-  c.onclick = () => {
-    sectionsBar.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
-    c.classList.add('active');
-    currentSection = c.dataset.section;
-    fetchAndRender();
-  };
+// API list
+API_RISKS.forEach(([id, name]) => {
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = `<span class="item-id">${id}</span>${name}`;
+  el.dataset.id = id;
+  el.onclick = () => selectApi(id, el);
+  apiList.appendChild(el);
 });
 
-// ---- Static fetch from /kb instead of backend API ----
-async function fetchRiskJson(riskId) {
-  // Files are named kb/api1.json ... kb/api10.json (lowercase)
-  const path = `kb/${riskId.toLowerCase()}.json`;
-  const res = await fetch(path);
-  if (!res.ok) {
-    const txt = await res.text().catch(()=> '');
-    throw new Error(`Failed to fetch ${path} — HTTP ${res.status} ${res.statusText} ${txt}`);
+// Vuln list — loaded from JSON
+async function loadVulns() {
+  try {
+    const res = await fetch('vuln-kb/vulns.json');
+    vulnData = await res.json();
+    filteredVulns = vulnData;
+    document.getElementById('vulnCount').textContent = vulnData.length;
+    renderVulnList(vulnData);
+  } catch(e) {
+    document.getElementById('vulnCount').textContent = 'err';
+    console.error('Failed to load vulns.json', e);
   }
-  return await res.json();
+}
+loadVulns();
+
+function renderVulnList(list) {
+  vulnList.innerHTML = '';
+  list.forEach(v => {
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `<span class="item-id">${v.id}</span>${v.name}`;
+    el.dataset.id = v.id;
+    el.onclick = () => selectVuln(v.id, el);
+    vulnList.appendChild(el);
+  });
 }
 
-async function fetchAndRender() {
-  if (!currentRisk) { card.textContent = 'Select a risk on the left.'; return; }
-  card.textContent = 'Loading…';
+function filterVulns(q) {
+  const lq = q.trim().toLowerCase();
+  filteredVulns = lq ? vulnData.filter(v => v.name.toLowerCase().includes(lq) || String(v.id).includes(lq)) : vulnData;
+  renderVulnList(filteredVulns);
+}
+
+/* ─────────────────────────────────────────────────────────
+   GROUP COLLAPSE
+───────────────────────────────────────────────────────── */
+function toggleGroup(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+/* ─────────────────────────────────────────────────────────
+   SELECTION
+───────────────────────────────────────────────────────── */
+function clearAllActive() {
+  document.querySelectorAll('.item').forEach(x => x.classList.remove('active-api','active-vuln'));
+}
+
+function selectApi(id, el) {
+  clearAllActive();
+  el.classList.add('active-api');
+  mode = 'api';
+  currentId = id;
+  currentSection = 'all';
+  renderChips(API_CHIPS, 'api');
+  fetchAndRenderApi();
+}
+
+function selectVuln(id, el) {
+  clearAllActive();
+  el.classList.add('active-vuln');
+  mode = 'vuln';
+  currentId = id;
+  currentSection = 'all';
+  renderChips(VULN_CHIPS, 'vuln');
+  renderVuln();
+}
+
+/* ─────────────────────────────────────────────────────────
+   CHIPS
+───────────────────────────────────────────────────────── */
+function renderChips(chips, type) {
+  const bar = document.getElementById('chipsBar');
+  bar.innerHTML = '';
+  chips.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'chip' + (c.key === currentSection ? ` active-${type}` : '');
+    el.textContent = c.label;
+    el.dataset.key = c.key;
+    el.onclick = () => {
+      currentSection = c.key;
+      bar.querySelectorAll('.chip').forEach(x => x.classList.remove('active-api','active-vuln'));
+      el.classList.add(`active-${type}`);
+      if (mode === 'api') fetchAndRenderApi();
+      else renderVuln();
+    };
+    bar.appendChild(el);
+  });
+}
+
+/* ─────────────────────────────────────────────────────────
+   API PLAYBOOK RENDERING
+───────────────────────────────────────────────────────── */
+async function fetchAndRenderApi() {
+  const card = document.getElementById('card');
+  card.innerHTML = '<div class="placeholder"><div class="placeholder-text">Loading…</div></div>';
   try {
-    const doc = await fetchRiskJson(currentRisk);
-    const full = {
-      id: doc.id,
-      name: doc.name,
+    const res = await fetch(`kb/${currentId.toLowerCase()}.json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const doc = await res.json();
+    const d = {
+      id: doc.id, name: doc.name,
       what: doc.what_it_means,
       animated_example: doc.animated_example,
       quick_checks: doc.quick_checks,
@@ -130,57 +596,122 @@ async function fetchAndRender() {
       expected_outcomes: doc.expected_outcomes,
       minimal_example: doc.minimal_example
     };
-
-    if (currentSection !== 'all') {
-      card.innerHTML = sectionHtml(full.id, full.name, currentSection, full[currentSection]);
+    if (currentSection === 'all') {
+      card.innerHTML = `
+        <div class="badge api">API SECURITY PLAYBOOK</div>
+        <div class="card-title api-color">${esc(d.id)} — ${esc(d.name)}</div>
+        ${apiSection('what', d.what)}
+        ${apiAnimSection(d.animated_example)}
+        ${apiListSection('Quick checks', d.quick_checks)}
+        ${apiListSection('How to test', d.how_to_test)}
+        ${apiListSection('Expected outcomes', d.expected_outcomes)}
+        ${apiSection('minimal_example', d.minimal_example)}
+      `;
+    } else if (currentSection === 'animated_example') {
+      card.innerHTML = `
+        <div class="badge api">API SECURITY PLAYBOOK</div>
+        <div class="card-title api-color">${esc(d.id)} — ${esc(d.name)}</div>
+        ${apiAnimSection(d.animated_example)}
+      `;
+    } else if (Array.isArray(d[currentSection])) {
+      card.innerHTML = `
+        <div class="badge api">API SECURITY PLAYBOOK</div>
+        <div class="card-title api-color">${esc(d.id)} — ${esc(d.name)}</div>
+        ${apiListSection(titleFor(currentSection), d[currentSection])}
+      `;
     } else {
       card.innerHTML = `
-        <div class="small muted">Source: Playbook</div>
-        <div class="h">${full.id} — ${full.name}</div>
-        ${sectionHtml(full.id, full.name, 'what', full.what)}
-        ${sectionHtml(full.id, full.name, 'animated_example', full.animated_example)}
-        ${sectionListHtml('quick_checks', full.quick_checks)}
-        ${sectionListHtml('how_to_test', full.how_to_test)}
-        ${sectionListHtml('expected_outcomes', full.expected_outcomes)}
-        ${sectionHtml(full.id, full.name, 'minimal_example', full.minimal_example)}
+        <div class="badge api">API SECURITY PLAYBOOK</div>
+        <div class="card-title api-color">${esc(d.id)} — ${esc(d.name)}</div>
+        ${apiSection(currentSection, d[currentSection])}
       `;
     }
-  } catch (e) {
-    card.textContent = 'Error: ' + e.message;
+    if (card.querySelector('.steps-wrap')) animateSteps('api');
+  } catch(e) {
+    card.innerHTML = `<div class="section-body" style="color:#f87171">Error: ${esc(e.message)}</div>`;
   }
 }
 
-// Rendering helpers
-function sectionHtml(id, name, key, value) {
-  if (value === undefined || value === null) return '';
-  const title = titleFor(key);
-
-  // Bullet sections (arrays) → <ul><li>
-  if (Array.isArray(value)) {
+function apiSection(key, val) {
+  if (!val) return '';
+  return `
+    <div class="section-title api-color">${esc(titleFor(key))}</div>
+    <div class="section-body">${esc(String(val))}</div>
+  `;
+}
+function apiListSection(title, arr) {
+  if (!arr || !arr.length) return '';
+  return `
+    <div class="section-title api-color">${esc(title)}</div>
+    <ul class="play-list section-body">${arr.map(x=>`<li>${esc(String(x))}</li>`).join('')}</ul>
+  `;
+}
+function apiAnimSection(val) {
+  if (!val) return '';
+  if (Array.isArray(val)) {
     return `
-      <div class="h">${title}</div>
-      <ul>
-        ${value.map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}
-      </ul>
+      <div class="section-title api-color">Animated example</div>
+      <div class="steps-wrap">${val.map((s,i)=>stepHtml(i+1,esc(String(s)),'api')).join('')}</div>
+      <button class="replay-btn api" onclick="animateSteps('api')">↺ Replay</button>
     `;
   }
-
-  // Text sections
   return `
-    <div class="h">${title}</div>
-    <div>${escapeHtml(String(value))}</div>
+    <div class="section-title api-color">Animated example</div>
+    <div class="section-body" style="font-style:italic;color:#a0c0d8">${esc(String(val))}</div>
   `;
 }
 
-function sectionListHtml(key, arr) {
-  if (!arr || !arr.length) return '';
-  const title = titleFor(key);
-  return `
-    <div class="h">${title}</div>
-    <ul>${arr.map(x=>`<li>${escapeHtml(String(x))}</li>`).join('')}</ul>
+/* ─────────────────────────────────────────────────────────
+   VULNERABILITY PLAYBOOK RENDERING
+───────────────────────────────────────────────────────── */
+function renderVuln() {
+  const card = document.getElementById('card');
+  const v = vulnData.find(x => String(x.id) === String(currentId));
+  if (!v) { card.innerHTML = '<div class="section-body">Not found.</div>'; return; }
+
+  const showDesc  = currentSection === 'all' || currentSection === 'description';
+  const showRemed = currentSection === 'all' || currentSection === 'remediation';
+  const showAnim  = currentSection === 'all' || currentSection === 'animated_example';
+
+  card.innerHTML = `
+    <div class="badge vuln">VULNERABILITY PLAYBOOK</div>
+    <div class="card-title vuln-color">${esc(v.name)}</div>
+    ${showDesc  ? `<div class="section-title vuln-color">Description</div><div class="section-body">${esc(v.description || 'No description available.')}</div>` : ''}
+    ${showRemed ? `<div class="section-title vuln-color">Remediation</div><div class="section-body">${esc(v.remediation || 'No remediation data available.')}</div>` : ''}
+    ${showAnim && v.animated_example ? `
+      <div class="section-title vuln-color">Animated example</div>
+      <div class="steps-wrap">${v.animated_example.map((s,i)=>stepHtml(i+1,esc(String(s)),'vuln')).join('')}</div>
+      <button class="replay-btn vuln" onclick="animateSteps('vuln')">↺ Replay</button>
+    ` : ''}
   `;
+  if (card.querySelector('.steps-wrap')) animateSteps('vuln');
 }
 
+/* ─────────────────────────────────────────────────────────
+   STEP ANIMATION
+───────────────────────────────────────────────────────── */
+function stepHtml(n, text, type) {
+  return `<div class="step"><span class="step-num ${type}">${n}</span><span class="step-text">${text}</span></div>`;
+}
+
+function animateSteps(type) {
+  if (animTimer) clearTimeout(animTimer);
+  const steps = document.querySelectorAll('.steps-wrap .step');
+  steps.forEach(s => s.classList.remove('show'));
+  let i = 0;
+  function showNext() {
+    if (i < steps.length) {
+      steps[i].classList.add('show');
+      i++;
+      animTimer = setTimeout(showNext, 480);
+    }
+  }
+  animTimer = setTimeout(showNext, 100);
+}
+
+/* ─────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────── */
 function titleFor(key) {
   return ({
     what: "What this risk means",
@@ -188,19 +719,23 @@ function titleFor(key) {
     quick_checks: "Quick checks",
     how_to_test: "How to test",
     expected_outcomes: "Expected outcomes",
-    minimal_example: "Minimal example"
+    minimal_example: "Minimal example",
+    description: "Description",
+    remediation: "Remediation"
   })[key] || key;
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-document.getElementById('copyBtn').onclick = ()=>{
-  const text = card.innerText.trim();
-  navigator.clipboard.writeText(text);
+/* ─────────────────────────────────────────────────────────
+   COPY
+───────────────────────────────────────────────────────── */
+document.getElementById('copyBtn').onclick = () => {
+  const text = document.getElementById('card').innerText.trim();
+  navigator.clipboard.writeText(text).catch(() => {});
 };
 </script>
 </body>
 </html>
-``
