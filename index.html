@@ -247,6 +247,19 @@
   .badge.api  { background: #052e20; color: var(--accent);     border: 1px solid #0d5c40; }
   .badge.vuln { background: #1a1000; color: var(--vuln-accent); border: 1px solid #6b4c00; }
 
+  /* One-line summary */
+  .vuln-summary {
+    font-size: 13px;
+    color: #c8a84b;
+    font-style: italic;
+    margin-bottom: 12px;
+    padding: 7px 12px;
+    background: #1a1200;
+    border-left: 3px solid var(--vuln-accent);
+    border-radius: 0 6px 6px 0;
+    line-height: 1.5;
+  }
+
   .section-title {
     font-size: 11px;
     font-weight: 700;
@@ -448,7 +461,7 @@ const API_RISKS = [
 const API_CHIPS = [
   { key: "all",               label: "All" },
   { key: "what",              label: "What this risk means" },
-  { key: "animated_example",  label: "Animated example" },
+  { key: "animated_example",  label: "Examples" },
   { key: "quick_checks",      label: "Quick checks" },
   { key: "how_to_test",       label: "How to test" },
   { key: "expected_outcomes", label: "Expected outcomes" },
@@ -459,7 +472,7 @@ const VULN_CHIPS = [
   { key: "all",              label: "All" },
   { key: "description",      label: "Description" },
   { key: "remediation",      label: "Remediation" },
-  { key: "animated_example", label: "Animated example" }
+  { key: "animated_example", label: "Examples" }
 ];
 
 /* ─────────────────────────────────────────────────────────
@@ -650,7 +663,7 @@ function apiAnimSection(val) {
   if (!val) return '';
   if (Array.isArray(val)) {
     return `
-      <div class="section-title api-color">Animated example</div>
+      <div class="section-title api-color">Examples</div>
       <div class="steps-wrap">${val.map((s,i)=>stepHtml(i+1,esc(String(s)),'api')).join('')}</div>
       <button class="replay-btn api" onclick="animateSteps('api')">↺ Replay</button>
     `;
@@ -676,10 +689,11 @@ function renderVuln() {
   card.innerHTML = `
     <div class="badge vuln">VULNERABILITY PLAYBOOK</div>
     <div class="card-title vuln-color">${esc(v.name)}</div>
+    ${v.summary ? `<div class="vuln-summary">${esc(v.summary)}</div>` : ''}
     ${showDesc  ? `<div class="section-title vuln-color">Description</div><div class="section-body">${esc(v.description || 'No description available.')}</div>` : ''}
     ${showRemed ? `<div class="section-title vuln-color">Remediation</div><div class="section-body">${esc(v.remediation || 'No remediation data available.')}</div>` : ''}
     ${showAnim && v.animated_example ? `
-      <div class="section-title vuln-color">Animated example</div>
+      <div class="section-title vuln-color">Examples</div>
       <div class="steps-wrap">${v.animated_example.map((s,i)=>stepHtml(i+1,esc(String(s)),'vuln')).join('')}</div>
       <button class="replay-btn vuln" onclick="animateSteps('vuln')">↺ Replay</button>
     ` : ''}
@@ -715,7 +729,7 @@ function animateSteps(type) {
 function titleFor(key) {
   return ({
     what: "What this risk means",
-    animated_example: "Animated example",
+    animated_example: "Examples",
     quick_checks: "Quick checks",
     how_to_test: "How to test",
     expected_outcomes: "Expected outcomes",
