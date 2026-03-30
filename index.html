@@ -5,384 +5,276 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Security Playbook Agent</title>
 <style>
-  /* ─── Design tokens ──────────────────────────────────── */
-  :root {
-    --bg:       #080e1a;
-    --panel:    #0d1424;
-    --panel2:   #0f1830;
-    --soft:     #1a2540;
-    --border:   #1e2d48;
-    --accent:   #10d9a0;
-    --accent2:  #3b82f6;
-    --text:     #e2e8f0;
-    --muted:    #7a90b0;
-    --card-bg:  #0b1628;
-    --step-bg:  #0a1220;
-    --glow-api: 0 0 18px #10d9a030;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font: 13.5px/1.6 'Segoe UI', system-ui, sans-serif;
-    height: 100vh;
-    overflow: hidden;
-  }
+:root {
+  --bg:         #080e1a;
+  --panel:      #0d1424;
+  --soft:       #1a2540;
+  --border:     #1e2d48;
+  --accent:     #10d9a0;
+  --accent2:    #3b82f6;
+  --vc-accent:  #a78bfa;   /* violet – Vulnerability Classification */
+  --llm-accent: #f472b6;   /* pink   – LLM */
+  --api-accent: #10d9a0;   /* teal   – API */
+  --wa-accent:  #38bdf8;   /* sky    – Web App */
+  --text:       #e2e8f0;
+  --muted:      #7a90b0;
+  --card-bg:    #0b1628;
+  --step-bg:    #0a1220;
+  --glow-api:   0 0 18px #10d9a030;
+  --glow-vc:    0 0 18px #a78bfa30;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:13.5px/1.6 'Segoe UI',system-ui,sans-serif;height:100vh;overflow:hidden}
 
-  /* ─── Layout ─────────────────────────────────────────── */
-  .app { display: flex; height: 100vh; }
+/* ── layout ── */
+.app{display:flex;height:100vh}
 
-  /* ─── Sidebar ────────────────────────────────────────── */
-  .sidebar {
-    width: 290px;
-    min-width: 230px;
-    background: var(--panel);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+/* ── sidebar ── */
+.sidebar{width:300px;min-width:240px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:18px 16px 14px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#0d1835,#0b1220);flex-shrink:0}
+.app-brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.brand-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 0 12px #10d9a050}
+.brand-text{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.brand-sub{font-size:11px;color:var(--muted);margin-top:2px}
 
-  .sidebar-header {
-    padding: 18px 16px 14px;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(135deg, #0d1835 0%, #0b1220 100%);
-    flex-shrink: 0;
-  }
-  .app-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 4px;
-  }
-  .brand-icon {
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-    box-shadow: 0 0 12px #10d9a050;
-  }
-  .brand-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
-  .brand-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sidebar-body{flex:1;overflow-y:auto;padding:10px 0}
+.sidebar-body::-webkit-scrollbar{width:4px}
+.sidebar-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-  .sidebar-body { flex: 1; overflow-y: auto; padding: 10px 0; }
-  .sidebar-body::-webkit-scrollbar { width: 4px; }
-  .sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+/* group */
+.group{margin-bottom:2px}
+.group-header{padding:10px 16px 8px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.group-header:hover{background:var(--soft)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.api{background:var(--api-accent);box-shadow:0 0 8px var(--api-accent)}
+.dot.vc {background:var(--vc-accent); box-shadow:0 0 8px var(--vc-accent)}
+.dot.llm{background:var(--llm-accent);box-shadow:0 0 8px var(--llm-accent)}
+.dot.waapi{background:var(--api-accent);box-shadow:0 0 8px var(--api-accent)}
+.dot.wa {background:var(--wa-accent); box-shadow:0 0 8px var(--wa-accent)}
+.glabel{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.glabel.api  {color:var(--api-accent)}
+.glabel.vc   {color:var(--vc-accent)}
+.glabel.llm  {color:var(--llm-accent)}
+.glabel.waapi{color:var(--api-accent)}
+.glabel.wa   {color:var(--wa-accent)}
+.gcnt{margin-left:auto;font-size:10px;color:var(--muted);background:var(--soft);border-radius:10px;padding:1px 6px}
+.chevron{font-size:10px;color:var(--muted);transition:transform .2s}
+.group.collapsed .chevron{transform:rotate(-90deg)}
+.group.collapsed .group-body{display:none}
 
-  /* Agent group header */
-  .agent-group { margin-bottom: 4px; }
-  .agent-header {
-    padding: 10px 16px 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-  }
-  .agent-header:hover { background: var(--soft); }
-  .agent-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .agent-dot.api { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .agent-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-  }
-  .agent-label.api { color: var(--accent); }
-  .agent-count {
-    margin-left: auto;
-    font-size: 10px;
-    color: var(--muted);
-    background: var(--soft);
-    border-radius: 10px;
-    padding: 1px 6px;
-  }
-  .agent-chevron {
-    font-size: 10px;
-    color: var(--muted);
-    transition: transform .2s;
-  }
-  .agent-group.collapsed .agent-chevron { transform: rotate(-90deg); }
-  .agent-group.collapsed .item-list { display: none; }
+/* sub-group (categories inside VC) */
+.sub-group{margin:0 8px 2px}
+.sub-header{padding:7px 10px;display:flex;align-items:center;gap:7px;cursor:pointer;border-radius:7px;user-select:none}
+.sub-header:hover{background:var(--soft)}
+.sub-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sub-label{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.sub-chevron{font-size:9px;color:var(--muted);margin-left:auto;transition:transform .2s}
+.sub-group.collapsed .sub-chevron{transform:rotate(-90deg)}
+.sub-group.collapsed .sub-body{display:none}
+.sub-body{padding:0 0 4px 0}
 
-  /* Risk items */
-  .item-list { padding: 0 8px 4px; display: flex; flex-direction: column; gap: 2px; }
+/* items */
+.item-list{padding:0 8px 4px;display:flex;flex-direction:column;gap:2px}
+.item{padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--muted);transition:background .15s,color .15s,border-color .15s;border:1px solid transparent;line-height:1.4}
+.item:hover{background:var(--soft);color:var(--text)}
+.item.active-api{background:#061f14;border-color:var(--api-accent);color:#a7f3d0;box-shadow:var(--glow-api)}
+.item.active-vc {background:#12082a;border-color:var(--vc-accent); color:#ddd6fe;box-shadow:var(--glow-vc)}
+.item-id{font-size:10px;font-weight:700;opacity:.6;margin-right:4px}
 
-  .item {
-    padding: 8px 10px;
-    border-radius: 7px;
-    cursor: pointer;
-    font-size: 12.5px;
-    color: var(--muted);
-    transition: background .15s, color .15s, border-color .15s;
-    border: 1px solid transparent;
-    line-height: 1.4;
-  }
-  .item:hover { background: var(--soft); color: var(--text); }
+/* category items inside VC (the vulnerabilities) */
+.vc-item{padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);transition:background .15s,color .15s;border:1px solid transparent;line-height:1.35;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.vc-item:hover{background:var(--soft);color:var(--text)}
+.vc-item.active-vc{background:#12082a;border-color:var(--vc-accent);color:#ddd6fe;box-shadow:var(--glow-vc)}
+.vc-item-name{flex:1;font-size:12px}
+.sev-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 
-  .item.active-api {
-    background: #061f14;
-    border-color: var(--accent);
-    color: #a7f3d0;
-    box-shadow: var(--glow-api);
-  }
-  .item-id {
-    font-size: 10px;
-    font-weight: 700;
-    opacity: .6;
-    margin-right: 4px;
-  }
+/* search */
+.vc-search{padding:6px 10px 4px}
+.vc-search input{width:100%;background:var(--soft);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 10px;outline:none;transition:border-color .2s}
+.vc-search input:focus{border-color:var(--vc-accent)}
+.vc-search input::placeholder{color:var(--muted)}
 
-  /* ─── Main panel ─────────────────────────────────────── */
-  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+/* ── main ── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.toolbar{padding:10px 16px;border-bottom:1px solid var(--border);background:#090f1e;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:5px 12px;border:1px solid var(--border);border-radius:999px;cursor:pointer;font-size:12px;color:var(--muted);transition:all .15s;white-space:nowrap}
+.chip:hover{border-color:#4a6080;color:var(--text)}
+.chip.active-api{background:var(--api-accent);border-color:var(--api-accent);color:#052e1a;font-weight:700}
+.chip.active-vc {background:var(--vc-accent); border-color:var(--vc-accent); color:#1e0a3c;font-weight:700}
+.copy-btn{background:var(--soft);border:1px solid var(--border);color:#8ab4d0;cursor:pointer;padding:5px 14px;border-radius:7px;font-size:12px;transition:all .15s;white-space:nowrap}
+.copy-btn:hover{background:var(--border);color:var(--text)}
 
-  /* Toolbar */
-  .toolbar {
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    background: #090f1e;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-  }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip {
-    padding: 5px 12px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    cursor: pointer;
-    font-size: 12px;
-    color: var(--muted);
-    transition: all .15s;
-    white-space: nowrap;
-  }
-  .chip:hover { border-color: #4a6080; color: var(--text); }
-  .chip.active-api { background: var(--accent); border-color: var(--accent); color: #052e1a; font-weight: 700; }
+.content{flex:1;overflow-y:auto;padding:20px}
+.content::-webkit-scrollbar{width:5px}
+.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-  .copy-btn {
-    background: var(--soft);
-    border: 1px solid var(--border);
-    color: #8ab4d0;
-    cursor: pointer;
-    padding: 5px 14px;
-    border-radius: 7px;
-    font-size: 12px;
-    transition: all .15s;
-    white-space: nowrap;
-  }
-  .copy-btn:hover { background: var(--border); color: var(--text); }
+/* cards */
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:20px 22px;max-width:980px;line-height:1.65}
+.card-title{font-size:17px;font-weight:700;margin-bottom:4px;line-height:1.3}
+.card-title.api-color{color:var(--api-accent)}
+.card-title.vc-color {color:var(--vc-accent)}
 
-  /* Content area */
-  .content { flex: 1; overflow-y: auto; padding: 20px; }
-  .content::-webkit-scrollbar { width: 5px; }
-  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.4px;margin-bottom:14px}
+.badge.api{background:#052e20;color:var(--api-accent);border:1px solid #0d5c40}
+.badge.llm{background:#2d0a1a;color:var(--llm-accent);border:1px solid #7c1340}
+.badge.waapi{background:#052e20;color:var(--api-accent);border:1px solid #0d5c40}
+.badge.wa {background:#0a1e30;color:var(--wa-accent); border:1px solid #0a4060}
 
-  /* Cards */
-  .card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px 22px;
-    max-width: 980px;
-    line-height: 1.65;
-  }
-  .card-title {
-    font-size: 17px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    line-height: 1.3;
-  }
-  .card-title.api-color { color: var(--accent); }
+.sev-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 10px;border-radius:4px;letter-spacing:.5px;margin-left:10px;vertical-align:middle}
+.sev-Critical{background:#3b0d0d;color:#f87171;border:1px solid #7c1f1f}
+.sev-High    {background:#2d1600;color:#fb923c;border:1px solid #7c3a00}
+.sev-Medium  {background:#1e1a00;color:#fbbf24;border:1px solid #5a4c00}
+.sev-Low     {background:#002010;color:#4ade80;border:1px solid #0d5c30}
 
-  .badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 4px;
-    letter-spacing: .4px;
-    margin-bottom: 14px;
-  }
-  .badge.api { background: #052e20; color: var(--accent); border: 1px solid #0d5c40; }
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.section-title.api-color{color:var(--api-accent)}
+.section-title.vc-color {color:var(--vc-accent)}
+.section-body{font-size:13.5px;color:#c4d3e8}
+ul.play-list{margin-left:18px}
+ul.play-list li{margin-bottom:5px}
 
-  .section-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .7px;
-    color: var(--muted);
-    margin: 18px 0 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .section-title.api-color { color: var(--accent); }
+/* CWE links */
+.cwe-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.cwe-chip{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--soft);color:#94a3b8;border:1px solid var(--border);text-decoration:none}
+.cwe-chip:hover{color:var(--text);border-color:#4a6080}
 
-  .section-body { font-size: 13.5px; color: #c4d3e8; }
-  ul.play-list { margin-left: 18px; }
-  ul.play-list li { margin-bottom: 5px; }
+/* animated steps */
+.steps-wrap{display:flex;flex-direction:column;gap:0;margin-top:6px}
+.step{display:flex;align-items:flex-start;gap:12px;padding:11px 14px;background:var(--step-bg);border:1px solid var(--border);border-radius:0;opacity:0;transform:translateX(-16px);transition:opacity .38s ease,transform .38s ease}
+.step:first-child{border-radius:10px 10px 0 0}
+.step:last-child{border-radius:0 0 10px 10px}
+.step:not(:last-child){border-bottom:none}
+.step.show{opacity:1;transform:translateX(0)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;background:#052e20;color:var(--api-accent);border:1px solid var(--api-accent)}
+.step-text{font-size:13px;color:#c4d3e8;font-family:'Courier New',monospace}
+.replay-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;border:none;font-weight:600;letter-spacing:.3px;transition:opacity .15s;background:#052e20;color:var(--api-accent)}
+.replay-btn:hover{opacity:.8}
 
-  /* Animated steps */
-  .steps-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    margin-top: 6px;
-  }
-  .step {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 11px 14px;
-    background: var(--step-bg);
-    border: 1px solid var(--border);
-    border-radius: 0;
-    opacity: 0;
-    transform: translateX(-16px);
-    transition: opacity .38s ease, transform .38s ease;
-    position: relative;
-  }
-  .step:first-child { border-radius: 10px 10px 0 0; }
-  .step:last-child  { border-radius: 0 0 10px 10px; }
-  .step:not(:last-child) { border-bottom: none; }
-  .step.show { opacity: 1; transform: translateX(0); }
+/* VC vuln card layout */
+.vc-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.cat-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.4px;background:#12082a;color:var(--vc-accent);border:1px solid #4c1d8a}
+.vc-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:12px;color:var(--muted)}
+.vc-nav span{cursor:pointer;color:var(--vc-accent);font-weight:600}
+.vc-nav span:hover{text-decoration:underline}
 
-  .step-num {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700;
-    flex-shrink: 0;
-    margin-top: 1px;
-    background: #052e20; color: var(--accent); border: 1px solid var(--accent);
-  }
+/* placeholder */
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:12px;color:var(--muted);text-align:center}
+.placeholder-icon{font-size:42px;opacity:.35}
+.placeholder-text{font-size:14px;opacity:.6}
 
-  .step-text { font-size: 13px; color: #c4d3e8; font-family: 'Courier New', monospace; }
-
-  /* Step replay btn */
-  .replay-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    cursor: pointer;
-    border: none;
-    font-weight: 600;
-    letter-spacing: .3px;
-    transition: opacity .15s;
-    background: #052e20; color: var(--accent);
-  }
-  .replay-btn:hover { opacity: .8; }
-
-  /* Placeholder */
-  .placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 60vh;
-    gap: 12px;
-    color: var(--muted);
-    text-align: center;
-  }
-  .placeholder-icon { font-size: 42px; opacity: .35; }
-  .placeholder-text { font-size: 14px; opacity: .6; }
-
-  /* Scan line animation on brand icon */
-  @keyframes scanline {
-    0%   { background-position: 0% 0%; }
-    100% { background-position: 0% 200%; }
-  }
-  .brand-icon-inner {
-    width: 100%; height: 100%;
-    border-radius: 8px;
-    background: linear-gradient(180deg, transparent 45%, rgba(16,217,160,.25) 50%, transparent 55%);
-    background-size: 100% 200%;
-    animation: scanline 2.5s linear infinite;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  /* Pulse dot */
-  @keyframes pulse {
-    0%,100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: .5; transform: scale(.7); }
-  }
-  .pulse { animation: pulse 2s ease-in-out infinite; }
+/* animations */
+@keyframes scanline{0%{background-position:0% 0%}100%{background-position:0% 200%}}
+.brand-icon-inner{width:100%;height:100%;border-radius:8px;background:linear-gradient(180deg,transparent 45%,rgba(16,217,160,.25) 50%,transparent 55%);background-size:100% 200%;animation:scanline 2.5s linear infinite;display:flex;align-items:center;justify-content:center}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+.pulse{animation:pulse 2s ease-in-out infinite}
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- ─── Sidebar ─────────────────────────────────────────── -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="app-brand">
-        <div class="brand-icon">
-          <div class="brand-icon-inner">&#x1F6E1;</div>
-        </div>
-        <div>
-          <div class="brand-text">Security Playbook Agent</div>
-        </div>
+<!-- ── Sidebar ── -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="app-brand">
+      <div class="brand-icon"><div class="brand-icon-inner">&#x1F6E1;</div></div>
+      <div>
+        <div class="brand-text">Security Playbook Agent</div>
       </div>
-      <div class="brand-sub">API Security Intelligence</div>
     </div>
+    <div class="brand-sub">API Security &amp; Vulnerability Intelligence</div>
+  </div>
 
-    <div class="sidebar-body">
+  <div class="sidebar-body">
 
-      <!-- API Playbook group -->
-      <div class="agent-group" id="apiGroup">
-        <div class="agent-header" onclick="toggleGroup('apiGroup')">
-          <span class="agent-dot api pulse"></span>
-          <span class="agent-label api">API Security Playbook</span>
-          <span class="agent-count">10</span>
-          <span class="agent-chevron">&#9660;</span>
-        </div>
+    <!-- API Playbook -->
+    <div class="group" id="grp-api">
+      <div class="group-header" onclick="toggleGroup('grp-api')">
+        <span class="dot api pulse"></span>
+        <span class="glabel api">API Security Playbook</span>
+        <span class="gcnt">10</span>
+        <span class="chevron">&#9660;</span>
+      </div>
+      <div class="group-body">
         <div class="item-list" id="apiList"></div>
       </div>
-
     </div>
-  </aside>
 
-  <!-- ─── Main panel ──────────────────────────────────────── -->
-  <main class="main">
-
-    <!-- Toolbar / chips -->
-    <div class="toolbar">
-      <div class="chips" id="chipsBar">
-        <!-- chips injected by JS -->
+    <!-- Vulnerability Classification -->
+    <div class="group" id="grp-vc">
+      <div class="group-header" onclick="toggleGroup('grp-vc')">
+        <span class="dot vc pulse"></span>
+        <span class="glabel vc">Vulnerability Classification</span>
+        <span class="gcnt" id="vcTotalCount">312</span>
+        <span class="chevron">&#9660;</span>
       </div>
-      <button class="copy-btn" id="copyBtn">&#x2398; Copy</button>
-    </div>
+      <div class="group-body">
 
-    <!-- Card area -->
-    <div class="content">
-      <div id="card">
-        <div class="placeholder">
-          <div class="placeholder-icon">&#x1F50D;</div>
-          <div class="placeholder-text">Select a risk on the left to view its Playbook.</div>
+        <!-- Search -->
+        <div class="vc-search">
+          <input type="text" id="vcSearch" placeholder="Search vulnerabilities&#x2026;" oninput="filterVC(this.value)" />
         </div>
+
+        <!-- LLM sub-group -->
+        <div class="sub-group" id="sg-llm">
+          <div class="sub-header" onclick="toggleSub('sg-llm')">
+            <span class="sub-dot" style="background:var(--llm-accent);box-shadow:0 0 6px var(--llm-accent)"></span>
+            <span class="sub-label" style="color:var(--llm-accent)">LLM Application Security</span>
+            <span class="gcnt" id="llmCount">50</span>
+            <span class="sub-chevron">&#9660;</span>
+          </div>
+          <div class="sub-body" id="llm-cats"></div>
+        </div>
+
+        <!-- Web API sub-group -->
+        <div class="sub-group" id="sg-waapi">
+          <div class="sub-header" onclick="toggleSub('sg-waapi')">
+            <span class="sub-dot" style="background:var(--api-accent);box-shadow:0 0 6px var(--api-accent)"></span>
+            <span class="sub-label" style="color:var(--api-accent)">Web API Security</span>
+            <span class="gcnt" id="waapiCount">78</span>
+            <span class="sub-chevron">&#9660;</span>
+          </div>
+          <div class="sub-body" id="waapi-cats"></div>
+        </div>
+
+        <!-- Web App sub-group -->
+        <div class="sub-group" id="sg-wa">
+          <div class="sub-header" onclick="toggleSub('sg-wa')">
+            <span class="sub-dot" style="background:var(--wa-accent);box-shadow:0 0 6px var(--wa-accent)"></span>
+            <span class="sub-label" style="color:var(--wa-accent)">Web Application Security</span>
+            <span class="gcnt" id="waCount">184</span>
+            <span class="sub-chevron">&#9660;</span>
+          </div>
+          <div class="sub-body" id="wa-cats"></div>
+        </div>
+
       </div>
     </div>
 
-  </main>
+  </div>
+</aside>
+
+<!-- ── Main ── -->
+<main class="main">
+  <div class="toolbar">
+    <div class="chips" id="chipsBar"></div>
+    <button class="copy-btn" id="copyBtn">&#x2398; Copy</button>
+  </div>
+  <div class="content">
+    <div id="card">
+      <div class="placeholder">
+        <div class="placeholder-icon">&#x1F50D;</div>
+        <div class="placeholder-text">Select a risk or vulnerability on the left to view its Playbook.</div>
+      </div>
+    </div>
+  </div>
+</main>
 </div>
 
 <script>
-/* ─────────────────────────────────────────────────────────
-   DATA
-───────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════════════════ */
 const API_RISKS = [
   ["API1","Broken Object Level Authorization (BOLA)"],
   ["API2","Broken Authentication"],
@@ -395,208 +287,345 @@ const API_RISKS = [
   ["API9","Improper Inventory Management"],
   ["API10","Unsafe Consumption of APIs"]
 ];
-
 const API_CHIPS = [
-  { key: "all",               label: "All" },
-  { key: "what",              label: "What this risk means" },
-  { key: "animated_example",  label: "Examples" },
-  { key: "quick_checks",      label: "Quick checks" },
-  { key: "how_to_test",       label: "How to test" },
-  { key: "expected_outcomes", label: "Expected outcomes" },
-  { key: "minimal_example",   label: "Minimal example" }
+  {key:"all",label:"All"},{key:"what",label:"What this risk means"},
+  {key:"animated_example",label:"Examples"},{key:"quick_checks",label:"Quick checks"},
+  {key:"how_to_test",label:"How to test"},{key:"expected_outcomes",label:"Expected outcomes"},
+  {key:"minimal_example",label:"Minimal example"}
+];
+const VC_CHIPS = [
+  {key:"all",label:"All"},{key:"description",label:"Description"},
+  {key:"remediation",label:"Remediation"}
 ];
 
-/* ─────────────────────────────────────────────────────────
+const SEV_COLOR = {Critical:"#f87171",High:"#fb923c",Medium:"#fbbf24",Low:"#4ade80"};
+
+/* ═══════════════════════════════════════════════════════════
    STATE
-───────────────────────────────────────────────────────── */
-let currentId      = null;
-let currentSection = "all";
+═══════════════════════════════════════════════════════════ */
+let mode           = null;   // 'api' | 'vc'
+let currentApiId   = null;
+let currentSection = 'all';
+let currentVuln    = null;   // {source,catIdx,vulnIdx}
 let animTimer      = null;
 
-/* ─────────────────────────────────────────────────────────
-   INIT — build sidebar list
-───────────────────────────────────────────────────────── */
-const apiList = document.getElementById('apiList');
+// VC data
+let vcData = {llm:null, waapi:null, wa:null};
+let vcSearch = '';
 
-API_RISKS.forEach(([id, name]) => {
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+// Build API list
+const apiListEl = document.getElementById('apiList');
+API_RISKS.forEach(([id,name]) => {
   const el = document.createElement('div');
   el.className = 'item';
   el.innerHTML = `<span class="item-id">${id}</span>${name}`;
-  el.dataset.id = id;
   el.onclick = () => selectApi(id, el);
-  apiList.appendChild(el);
+  apiListEl.appendChild(el);
 });
 
-/* ─────────────────────────────────────────────────────────
-   GROUP COLLAPSE
-───────────────────────────────────────────────────────── */
-function toggleGroup(id) {
-  document.getElementById(id).classList.toggle('collapsed');
+// Load VC data
+Promise.all([
+  fetch('vuln-classification/llm.json').then(r=>r.json()),
+  fetch('vuln-classification/api.json').then(r=>r.json()),
+  fetch('vuln-classification/webapp.json').then(r=>r.json())
+]).then(([llm, waapi, wa]) => {
+  vcData.llm   = llm;
+  vcData.waapi = waapi;
+  vcData.wa    = wa;
+  buildVCSidebar();
+}).catch(e => console.error('Failed to load VC data:', e));
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR – COLLAPSE
+═══════════════════════════════════════════════════════════ */
+function toggleGroup(id) { document.getElementById(id).classList.toggle('collapsed'); }
+function toggleSub(id)   { document.getElementById(id).classList.toggle('collapsed'); }
+
+/* ═══════════════════════════════════════════════════════════
+   VC SIDEBAR BUILD
+═══════════════════════════════════════════════════════════ */
+function buildVCSidebar(query) {
+  const q = (query || '').toLowerCase().trim();
+  ['llm','waapi','wa'].forEach(key => {
+    const d = vcData[key];
+    if (!d) return;
+    const containerId = key === 'waapi' ? 'waapi-cats' : (key + '-cats');
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    let totalShown = 0;
+
+    d.categories.forEach((cat, catIdx) => {
+      const matchingVulns = q
+        ? cat.vulnerabilities.filter(v => v.name.toLowerCase().includes(q) || cat.name.toLowerCase().includes(q))
+        : cat.vulnerabilities;
+
+      if (matchingVulns.length === 0) return;
+      totalShown += matchingVulns.length;
+
+      const sgId = `vc-sg-${key}-${catIdx}`;
+      const sg = document.createElement('div');
+      sg.className = 'sub-group' + (q ? '' : ' collapsed');
+      sg.id = sgId;
+
+      const accentVar = key === 'llm' ? 'var(--llm-accent)' : key === 'waapi' ? 'var(--api-accent)' : 'var(--wa-accent)';
+      sg.innerHTML = `
+        <div class="sub-header" onclick="toggleSub('${sgId}')">
+          <span class="sub-dot" style="background:${accentVar}"></span>
+          <span class="sub-label" style="color:${accentVar};font-size:10px">${esc(cat.id)}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:4px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cat.name)}</span>
+          <span class="gcnt">${matchingVulns.length}</span>
+          <span class="sub-chevron">&#9660;</span>
+        </div>
+        <div class="sub-body" id="${sgId}-body"></div>
+      `;
+      container.appendChild(sg);
+
+      const body = sg.querySelector(`#${sgId}-body`);
+      const list = document.createElement('div');
+      list.style.cssText = 'padding:0 4px 4px 12px;display:flex;flex-direction:column;gap:1px';
+
+      matchingVulns.forEach(vuln => {
+        const realIdx = cat.vulnerabilities.indexOf(vuln);
+        const item = document.createElement('div');
+        item.className = 'vc-item';
+        const sc = SEV_COLOR[vuln.severity] || '#94a3b8';
+        item.innerHTML = `<span class="vc-item-name">${esc(vuln.name)}</span><span class="sev-dot" style="background:${sc}" title="${esc(vuln.severity)}"></span>`;
+        item.onclick = () => selectVuln(key, catIdx, realIdx, item);
+        list.appendChild(item);
+      });
+
+      body.appendChild(list);
+    });
+
+    // Update counts
+    const countId = key === 'waapi' ? 'waapiCount' : (key === 'llm' ? 'llmCount' : 'waCount');
+    if (q) document.getElementById(countId).textContent = totalShown;
+    else   document.getElementById(countId).textContent = d.categories.reduce((a,c)=>a+c.vulnerabilities.length,0);
+  });
 }
 
-/* ─────────────────────────────────────────────────────────
+function filterVC(q) {
+  vcSearch = q;
+  buildVCSidebar(q);
+  if (q) {
+    ['sg-llm','sg-waapi','sg-wa'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('collapsed');
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    SELECTION
-───────────────────────────────────────────────────────── */
+═══════════════════════════════════════════════════════════ */
 function clearAllActive() {
-  document.querySelectorAll('.item').forEach(x => x.classList.remove('active-api'));
+  document.querySelectorAll('.item.active-api, .item.active-vc, .vc-item.active-vc').forEach(x => {
+    x.classList.remove('active-api','active-vc');
+  });
 }
 
+// ── API ──
 function selectApi(id, el) {
   clearAllActive();
   el.classList.add('active-api');
-  currentId = id;
+  mode = 'api';
+  currentApiId = id;
   currentSection = 'all';
-  renderChips(API_CHIPS);
+  renderChips(API_CHIPS, 'api');
   fetchAndRenderApi();
 }
 
-/* ─────────────────────────────────────────────────────────
+// ── VC vuln ──
+function selectVuln(source, catIdx, vulnIdx, el) {
+  clearAllActive();
+  el.classList.add('active-vc');
+  mode = 'vc';
+  currentVuln = {source, catIdx, vulnIdx};
+  currentSection = 'all';
+  renderChips(VC_CHIPS, 'vc');
+  renderVuln();
+}
+
+/* ═══════════════════════════════════════════════════════════
    CHIPS
-───────────────────────────────────────────────────────── */
-function renderChips(chips) {
+═══════════════════════════════════════════════════════════ */
+function renderChips(chips, type) {
   const bar = document.getElementById('chipsBar');
   bar.innerHTML = '';
   chips.forEach(c => {
     const el = document.createElement('div');
-    el.className = 'chip' + (c.key === currentSection ? ' active-api' : '');
+    el.className = `chip${c.key === currentSection ? ' active-'+type : ''}`;
     el.textContent = c.label;
-    el.dataset.key = c.key;
     el.onclick = () => {
       currentSection = c.key;
-      bar.querySelectorAll('.chip').forEach(x => x.classList.remove('active-api'));
-      el.classList.add('active-api');
-      fetchAndRenderApi();
+      bar.querySelectorAll('.chip').forEach(x => x.classList.remove('active-api','active-vc'));
+      el.classList.add('active-'+type);
+      if (mode === 'api') fetchAndRenderApi();
+      else renderVuln();
     };
     bar.appendChild(el);
   });
 }
 
-/* ─────────────────────────────────────────────────────────
-   API PLAYBOOK RENDERING
-───────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   API PLAYBOOK RENDER
+═══════════════════════════════════════════════════════════ */
 async function fetchAndRenderApi() {
   const card = document.getElementById('card');
   card.innerHTML = '<div class="placeholder"><div class="placeholder-text">Loading\u2026</div></div>';
   try {
-    const res = await fetch(`kb/${currentId.toLowerCase()}.json`);
+    const res = await fetch(`kb/${currentApiId.toLowerCase()}.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const doc = await res.json();
     const d = {
-      id: doc.id, name: doc.name,
-      what: doc.what_it_means,
-      animated_example: doc.animated_example,
-      quick_checks: doc.quick_checks,
-      how_to_test: doc.how_to_test,
-      expected_outcomes: doc.expected_outcomes,
-      minimal_example: doc.minimal_example
+      id:doc.id, name:doc.name,
+      what:doc.what_it_means,
+      animated_example:doc.animated_example,
+      quick_checks:doc.quick_checks,
+      how_to_test:doc.how_to_test,
+      expected_outcomes:doc.expected_outcomes,
+      minimal_example:doc.minimal_example
     };
     if (currentSection === 'all') {
       card.innerHTML = `
         <div class="badge api">API SECURITY PLAYBOOK</div>
         <div class="card-title api-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
-        ${apiSection('what', d.what)}
+        ${apiSection('what',d.what)}
         ${apiAnimSection(d.animated_example)}
-        ${apiListSection('Quick checks', d.quick_checks)}
-        ${apiListSection('How to test', d.how_to_test)}
-        ${apiListSection('Expected outcomes', d.expected_outcomes)}
-        ${apiSection('minimal_example', d.minimal_example)}
-      `;
+        ${apiListSection('Quick checks',d.quick_checks)}
+        ${apiListSection('How to test',d.how_to_test)}
+        ${apiListSection('Expected outcomes',d.expected_outcomes)}
+        ${apiSection('minimal_example',d.minimal_example)}`;
     } else if (currentSection === 'animated_example') {
       card.innerHTML = `
         <div class="badge api">API SECURITY PLAYBOOK</div>
         <div class="card-title api-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
-        ${apiAnimSection(d.animated_example)}
-      `;
+        ${apiAnimSection(d.animated_example)}`;
     } else if (Array.isArray(d[currentSection])) {
       card.innerHTML = `
         <div class="badge api">API SECURITY PLAYBOOK</div>
         <div class="card-title api-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
-        ${apiListSection(titleFor(currentSection), d[currentSection])}
-      `;
+        ${apiListSection(titleFor(currentSection),d[currentSection])}`;
     } else {
       card.innerHTML = `
         <div class="badge api">API SECURITY PLAYBOOK</div>
         <div class="card-title api-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
-        ${apiSection(currentSection, d[currentSection])}
-      `;
+        ${apiSection(currentSection,d[currentSection])}`;
     }
     if (card.querySelector('.steps-wrap')) animateSteps();
   } catch(e) {
     card.innerHTML = `<div class="section-body" style="color:#f87171">Error: ${esc(e.message)}</div>`;
   }
 }
-
-function apiSection(key, val) {
-  if (!val) return '';
-  return `
-    <div class="section-title api-color">${esc(titleFor(key))}</div>
-    <div class="section-body">${esc(String(val))}</div>
-  `;
-}
-function apiListSection(title, arr) {
-  if (!arr || !arr.length) return '';
-  return `
-    <div class="section-title api-color">${esc(title)}</div>
-    <ul class="play-list section-body">${arr.map(x=>`<li>${esc(String(x))}</li>`).join('')}</ul>
-  `;
-}
-function apiAnimSection(val) {
-  if (!val) return '';
-  if (Array.isArray(val)) {
-    return `
-      <div class="section-title api-color">Examples</div>
+function apiSection(key,val){if(!val)return '';return `<div class="section-title api-color">${esc(titleFor(key))}</div><div class="section-body">${esc(String(val))}</div>`;}
+function apiListSection(title,arr){if(!arr||!arr.length)return '';return `<div class="section-title api-color">${esc(title)}</div><ul class="play-list section-body">${arr.map(x=>`<li>${esc(String(x))}</li>`).join('')}</ul>`;}
+function apiAnimSection(val){
+  if(!val)return '';
+  if(Array.isArray(val)){
+    return `<div class="section-title api-color">Examples</div>
       <div class="steps-wrap">${val.map((s,i)=>`<div class="step"><span class="step-num">${i+1}</span><span class="step-text">${esc(String(s))}</span></div>`).join('')}</div>
-      <button class="replay-btn" onclick="animateSteps()">\u25b6 Replay</button>
-    `;
+      <button class="replay-btn" onclick="animateSteps()">\u25b6 Replay</button>`;
   }
-  return `
-    <div class="section-title api-color">Animated example</div>
-    <div class="section-body" style="font-style:italic;color:#a0c0d8">${esc(String(val))}</div>
+  return `<div class="section-title api-color">Animated example</div><div class="section-body" style="font-style:italic;color:#a0c0d8">${esc(String(val))}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VULNERABILITY CLASSIFICATION RENDER
+═══════════════════════════════════════════════════════════ */
+function renderVuln() {
+  const card = document.getElementById('card');
+  const {source, catIdx, vulnIdx} = currentVuln;
+  const d = vcData[source];
+  if (!d) return;
+  const cat  = d.categories[catIdx];
+  const vuln = cat.vulnerabilities[vulnIdx];
+
+  const badgeCls  = source === 'llm' ? 'llm' : source === 'waapi' ? 'waapi' : 'wa';
+  const colorVar  = source === 'llm' ? 'var(--llm-accent)' : source === 'waapi' ? 'var(--api-accent)' : 'var(--wa-accent)';
+  const framework = d.framework;
+
+  // Build CWE chips
+  const cweLinks = buildCweChips(vuln.cwe);
+
+  const showDesc  = currentSection === 'all' || currentSection === 'description';
+  const showRemed = currentSection === 'all' || currentSection === 'remediation';
+
+  card.innerHTML = `
+    <div class="badge ${badgeCls}">${esc(framework)}</div>
+    <div class="vc-meta">
+      <span class="cat-badge">${esc(cat.full || cat.id + ' \u2014 ' + cat.name)}</span>
+      <span class="sev-badge sev-${esc(vuln.severity)}">${esc(vuln.severity)}</span>
+    </div>
+    <div class="card-title" style="color:${colorVar}">${esc(vuln.name)}</div>
+
+    ${vuln.cwe ? `
+      <div class="section-title" style="color:${colorVar}">CWE Reference</div>
+      <div class="cwe-wrap">${cweLinks}</div>` : ''}
+
+    ${showDesc && vuln.description ? `
+      <div class="section-title" style="color:${colorVar}">Description</div>
+      <div class="section-body">${esc(vuln.description)}</div>` : ''}
+
+    ${showRemed && vuln.remediation ? `
+      <div class="section-title" style="color:${colorVar}">Remediation</div>
+      <div class="section-body">${esc(vuln.remediation)}</div>` : ''}
   `;
 }
 
-/* ─────────────────────────────────────────────────────────
+function buildCweChips(cweStr) {
+  if (!cweStr) return '';
+  // Extract all CWE-NNN patterns and URLs
+  const parts = cweStr.split(/\s*\|\s*/);
+  return parts.map(part => {
+    part = part.trim();
+    const urlMatch = part.match(/https?:\/\/[^\s]+/);
+    const cweMatch = part.match(/CWE-(\d+)/);
+    if (urlMatch && cweMatch) {
+      return `<a class="cwe-chip" href="${esc(urlMatch[0])}" target="_blank" rel="noopener">CWE-${cweMatch[1]}</a>`;
+    } else if (cweMatch) {
+      return `<a class="cwe-chip" href="https://cwe.mitre.org/data/definitions/${cweMatch[1]}.html" target="_blank" rel="noopener">CWE-${cweMatch[1]}</a>`;
+    } else if (part) {
+      return `<span class="cwe-chip">${esc(part)}</span>`;
+    }
+    return '';
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
    STEP ANIMATION
-───────────────────────────────────────────────────────── */
+═══════════════════════════════════════════════════════════ */
 function animateSteps() {
   if (animTimer) clearTimeout(animTimer);
   const steps = document.querySelectorAll('.steps-wrap .step');
   steps.forEach(s => s.classList.remove('show'));
   let i = 0;
   function showNext() {
-    if (i < steps.length) {
-      steps[i].classList.add('show');
-      i++;
-      animTimer = setTimeout(showNext, 480);
-    }
+    if (i < steps.length) { steps[i++].classList.add('show'); animTimer = setTimeout(showNext, 480); }
   }
   animTimer = setTimeout(showNext, 100);
 }
 
-/* ─────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════
    HELPERS
-───────────────────────────────────────────────────────── */
+═══════════════════════════════════════════════════════════ */
 function titleFor(key) {
-  return ({
-    what: "What this risk means",
-    animated_example: "Examples",
-    quick_checks: "Quick checks",
-    how_to_test: "How to test",
-    expected_outcomes: "Expected outcomes",
-    minimal_example: "Minimal example"
-  })[key] || key;
+  return ({what:"What this risk means",animated_example:"Examples",quick_checks:"Quick checks",
+           how_to_test:"How to test",expected_outcomes:"Expected outcomes",minimal_example:"Minimal example",
+           description:"Description",remediation:"Remediation"})[key] || key;
 }
-
 function esc(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-/* ─────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════
    COPY
-───────────────────────────────────────────────────────── */
+═══════════════════════════════════════════════════════════ */
 document.getElementById('copyBtn').onclick = () => {
-  const text = document.getElementById('card').innerText.trim();
-  navigator.clipboard.writeText(text).catch(() => {});
+  navigator.clipboard.writeText(document.getElementById('card').innerText.trim()).catch(()=>{});
 };
 </script>
 </body>

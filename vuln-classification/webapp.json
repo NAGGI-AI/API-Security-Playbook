@@ -1,0 +1,1364 @@
+{
+  "title": "Web Application Security",
+  "framework": "OWASP Top 10 Web App – 2025",
+  "categories": [
+    {
+      "id": "A01:2025",
+      "name": "Broken Access Control",
+      "full": "A01:2025 – Broken Access Control",
+      "vulnerabilities": [
+        {
+          "name": "Broken Access Control",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Broken Access Control occurs when authorization checks are missing, incorrectly implemented, or enforced only on the client side. This allows users to access restricted resources, perform unauthorized actions, or manipulate data outside their permitted scope.",
+          "remediation": "Implement server‑side authorization for every request using a deny‑by‑default policy. Centralize access control logic, enforce least‑privilege principles, and validate user permissions consistently across all application endpoints."
+        },
+        {
+          "name": "Insecure Direct Object Reference (IDOR)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/639.html",
+          "description": "IDOR occurs when application objects are referenced directly using user‑controlled identifiers without verifying whether the authenticated user is authorized to access the referenced resource.",
+          "remediation": "Validate object ownership and access rights on every request. Avoid exposing sequential or predictable identifiers and use indirect references such as UUIDs combined with strict authorization checks."
+        },
+        {
+          "name": "Authorization Bypass",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "Authorization Bypass occurs when application logic flaws allow protected functions or workflows to be accessed without proper authorization checks due to missing, inconsistent, or flawed access control enforcement.",
+          "remediation": "Ensure authorization checks are applied uniformly across all entry points. Avoid relying on client‑side controls and perform security testing to identify direct URL access and workflow bypass scenarios."
+        },
+        {
+          "name": "Privilege Escalation",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/269.html",
+          "description": "Privilege Escalation allows an attacker to gain higher privileges than intended, enabling access to administrative or sensitive functions reserved for higher‑privileged roles.",
+          "remediation": "Strictly separate privileges by role, validate authorization on every sensitive action, and ensure role or permission values cannot be modified through client‑side input or request manipulation."
+        },
+        {
+          "name": "Forceful Browsing",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/425.html",
+          "description": "Forceful Browsing occurs when users can access unauthorized pages or functionality by manually guessing or modifying URLs without proper access validation.",
+          "remediation": "Restrict direct URL access by enforcing authorization checks at the controller or service layer. Avoid exposing sensitive endpoints and apply deny‑by‑default routing policies."
+        },
+        {
+          "name": "Unrestricted URL Access",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Unrestricted URL Access exists when users can directly access protected endpoints without authentication or authorization enforcement, often due to misconfigured route protections.",
+          "remediation": "Apply centralized access control for all URLs, ensure authentication and authorization middleware protects every endpoint, and regularly audit routing configurations."
+        },
+        {
+          "name": "Unauthorized Access to Sensitive Pages",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Sensitive application pages (admin panels, dashboards, configuration screens) are accessible without proper authorization, exposing critical data or administrative functionality.",
+          "remediation": "Apply strict access control policies to sensitive pages, enforce role‑based access restrictions, and ensure sensitive endpoints are inaccessible to unauthorized users."
+        },
+        {
+          "name": "Parameter Manipulation",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/472.html",
+          "description": "Parameter Manipulation occurs when attackers modify request parameters (IDs, role flags, price values) to bypass access controls or gain unauthorized functionality.",
+          "remediation": "Do not trust client‑supplied parameters. Perform server‑side validation, enforce authorization checks based on session context, and ignore access‑relevant parameters from client input."
+        },
+        {
+          "name": "Parameter Tampering",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/472.html",
+          "description": "Parameter Tampering involves altering hidden fields, cookies, or query parameters to escalate privileges or access unauthorized data.",
+          "remediation": "Protect sensitive parameters using server‑side validation, integrity checks, and secure session handling. Never store authorization decisions in client‑controlled data."
+        },
+        {
+          "name": "Execution After Redirect (EAR)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/698.html",
+          "description": "Execution After Redirect occurs when application logic continues executing sensitive code after issuing a redirect, potentially allowing unauthorized operations to complete.",
+          "remediation": "Explicitly terminate execution after redirects using proper control statements. Review control flow to ensure sensitive logic is not executed post‑redirect."
+        },
+        {
+          "name": "Easily-Guessable Administration Area",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Administrative interfaces are exposed using predictable or well‑known URLs, allowing attackers to discover and access admin functionality.",
+          "remediation": "Restrict access to admin interfaces using strong authentication and authorization. Avoid relying on obscurity and ensure admin endpoints are protected server‑side."
+        },
+        {
+          "name": "Horizontal Privilege Escalation",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Horizontal Privilege Escalation allows users to access or modify resources belonging to other users at the same privilege level.",
+          "remediation": "Validate user‑to‑resource relationships on every request. Enforce ownership checks and ensure users can access only their own data."
+        },
+        {
+          "name": "Vertical Privilege Escalation",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/269.html",
+          "description": "Vertical Privilege Escalation occurs when a low‑privileged user gains access to higher‑privileged functionality, such as administrative operations.",
+          "remediation": "Enforce strict role separation, validate privilege levels on every sensitive request, and prevent role manipulation via client inputs or tokens."
+        },
+        {
+          "name": "Missing Function-Level Access Control",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "Function‑level access control is missing when backend functions or APIs do not validate whether a user is authorized to perform a specific operation.",
+          "remediation": "Apply authorization checks at the function or method level. Ensure each operation explicitly validates the caller’s permission before execution."
+        },
+        {
+          "name": "Broken Broken Access Control via Cookie",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/565.html",
+          "description": "Access control decisions are based on insecure or client‑modifiable cookies, allowing attackers to manipulate cookie values to gain unauthorized access.",
+          "remediation": "Never rely on client‑side cookies for authorization decisions. Store access control data server‑side, protect cookies with HttpOnly and Secure flags, and validate permissions on the server."
+        }
+      ]
+    },
+    {
+      "id": "A02:2025",
+      "name": "Cryptographic Failures",
+      "full": "A02:2025 – Cryptographic Failures",
+      "vulnerabilities": [
+        {
+          "name": "Insecure Data Transmission / Unencrypted Data in Transit",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/319.html",
+          "description": "Sensitive data is transmitted over unencrypted or weakly encrypted communication channels, exposing it to interception, manipulation, or man‑in‑the‑middle (MITM) attacks.",
+          "remediation": "Enforce HTTPS for all external and internal communications, use TLS 1.2 or higher, disable insecure protocols, and ensure certificates are correctly configured and validated."
+        },
+        {
+          "name": "Insecure TLS Version Enabled",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/326.html",
+          "description": "Insecure TLS Version Enabled – security vulnerability affecting application security and data integrity.",
+          "remediation": "Disable deprecated TLS/SSL versions, enforce TLS 1.2 or TLS 1.3 only, and regularly review cryptographic configurations against industry standards."
+        },
+        {
+          "name": "Remove Weak Ciphers in TLS 1.2",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/326.html",
+          "description": "The server supports weak or obsolete cipher suites (e.g., RC4, 3DES), reducing the effective security of encrypted connections.",
+          "remediation": "Configure TLS to use strong, modern cipher suites (AES‑GCM, ChaCha20‑Poly1305), disable weak ciphers, and follow current cryptographic recommendations."
+        },
+        {
+          "name": "CCS Injection (SSL/TLS MITM Vulnerability)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/326.html",
+          "description": "Incorrect handling of TLS ChangeCipherSpec messages allows attackers to perform man‑in‑the‑middle attacks and weaken encrypted sessions.",
+          "remediation": "Upgrade affected TLS libraries, use secure TLS implementations, and apply vendor security patches addressing CCS injection vulnerabilities."
+        },
+        {
+          "name": "Invalid SSL Certificate",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/295.html",
+          "description": "Invalid SSL Certificate – security vulnerability affecting application security and data integrity.",
+          "remediation": "Enforce strict certificate validation, use trusted certificate authorities, monitor certificate expiration, and implement proper certificate chain validation."
+        },
+        {
+          "name": "BREACH Attack Detected",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/311.html",
+          "description": "Applications using HTTP compression with secrets in responses are vulnerable to BREACH attacks, allowing attackers to infer sensitive data.",
+          "remediation": "Disable HTTP compression for sensitive responses, separate secrets from user input, and apply random padding where compression is required."
+        },
+        {
+          "name": "Insecure Password Storage",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/916.html",
+          "description": "Passwords are stored using weak hashing algorithms or without proper salting, making them susceptible to offline brute‑force or rainbow‑table attacks.",
+          "remediation": "Use strong adaptive hashing algorithms such as bcrypt, Argon2, or PBKDF2 with unique salts and adequate work factors."
+        },
+        {
+          "name": "Plain-Text Password",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/312.html",
+          "description": "Plain-Text Password – security vulnerability affecting application security and data integrity.",
+          "remediation": "Never store or transmit passwords in plain text. Hash passwords using industry‑approved algorithms and ensure secure transmission via TLS."
+        },
+        {
+          "name": "Weak Encoding – Encode Used Instead of Encryption",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/261.html",
+          "description": "Data is merely encoded (Base64, URL encoding) rather than cryptographically encrypted, providing no real confidentiality protection.",
+          "remediation": "Use strong encryption algorithms (AES‑256, RSA/ECC for key exchange) for sensitive data rather than reversible encoding mechanisms."
+        },
+        {
+          "name": "Insecure Key Storage",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/312.html",
+          "description": "Cryptographic keys are stored in insecure locations such as source code, configuration files, or client‑side storage.",
+          "remediation": "Store keys in secure key management systems (HSMs, cloud KMS), restrict access, and rotate keys regularly."
+        },
+        {
+          "name": "Cacheable HTTPS Response",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/525.html",
+          "description": "Sensitive content delivered over HTTPS is cacheable by browsers or proxies, increasing the risk of data exposure.",
+          "remediation": "Set appropriate Cache‑Control and Pragma headers to prevent caching of sensitive responses."
+        },
+        {
+          "name": "Unencrypted View State Parameter",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/311.html",
+          "description": "View state or state‑management parameters are transmitted or stored without encryption, allowing tampering or information disclosure.",
+          "remediation": "Encrypt and sign view state data, validate integrity on the server side, and avoid storing sensitive data in client‑controlled state."
+        },
+        {
+          "name": "Sensitive Data in Local Storage",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/312.html",
+          "description": "Sensitive information stored in browser local storage is vulnerable to theft via XSS or malicious extensions.",
+          "remediation": "Avoid storing sensitive data in local storage; use secure HTTP‑only cookies or server‑side session storage instead."
+        },
+        {
+          "name": "Sensitive Information Disclosure in Cookie",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/315.html",
+          "description": "Cookies contain sensitive data such as credentials or session secrets in readable form.",
+          "remediation": "Store only opaque identifiers in cookies, apply HttpOnly and Secure flags, and protect sensitive data server‑side."
+        },
+        {
+          "name": "Sensitive Data in URL",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/598.html",
+          "description": "Sensitive information is passed via URL parameters, exposing it through logs, browser history, and referrer headers.",
+          "remediation": "Never include sensitive data in URLs. Use POST requests and secure request bodies protected by TLS."
+        },
+        {
+          "name": "Database Connection String Disclosed",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/312.html",
+          "description": "Database credentials or connection strings are exposed through error messages, configuration leaks, or source code.",
+          "remediation": "Protect configuration files, avoid exposing stack traces, store secrets securely, and restrict access to connection details."
+        },
+        {
+          "name": "Missing HTTP Strict-Transport-Security (HSTS)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/523.html",
+          "description": "Lack of HSTS allows clients to fall back to unencrypted connections, making them susceptible to downgrade attacks.",
+          "remediation": "Enable HSTS with appropriate max‑age values and preload where applicable to enforce HTTPS usage."
+        },
+        {
+          "name": "Use of Broken or Risky Cryptographic Algorithm",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/327.html",
+          "description": "Applications use outdated or insecure cryptographic algorithms such as MD5, SHA‑1, or DES.",
+          "remediation": "Replace weak algorithms with modern standards (SHA‑256+, AES‑256), and review cryptographic usage periodically."
+        },
+        {
+          "name": "Hard-coded Cryptographic Key",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/321.html",
+          "description": "Encryption keys are embedded directly in source code, making them easily discoverable and reusable by attackers.",
+          "remediation": "Remove hard‑coded keys, use secure key management solutions, and rotate keys regularly with appropriate access controls."
+        }
+      ]
+    },
+    {
+      "id": "A03:2025",
+      "name": "Injection",
+      "full": "A03:2025 – Injection",
+      "vulnerabilities": [
+        {
+          "name": "SQL Injection",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "SQL Injection occurs when untrusted input is concatenated into SQL queries without proper parameterization, allowing attackers to manipulate database queries, access unauthorized data, or modify database contents.",
+          "remediation": "Use parameterized queries (prepared statements) or ORM frameworks, strictly validate input, avoid dynamic query construction, and apply least‑privilege permissions for database accounts."
+        },
+        {
+          "name": "Blind SQL Injection",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "Blind SQL Injection exploits application behavior differences or response timing to infer database information when error messages are suppressed.",
+          "remediation": "Apply parameterized queries, normalize error responses, use ORM frameworks, and enable database activity monitoring to detect anomalous query patterns."
+        },
+        {
+          "name": "NoSQL Injection",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/943.html",
+          "description": "NoSQL Injection occurs when user input is directly embedded into NoSQL queries, allowing attackers to manipulate query logic and bypass authentication or authorization.",
+          "remediation": "Use safe query APIs, enforce strict input validation, avoid dynamic query construction, and validate query structure before execution."
+        },
+        {
+          "name": "Cross-Site Scripting (XSS) – Reflected",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/79.html",
+          "description": "Reflected XSS occurs when user input is immediately reflected in HTTP responses without proper encoding, allowing malicious scripts to execute in a victim’s browser.",
+          "remediation": "Apply context‑aware output encoding, validate and sanitize inputs, enforce Content Security Policy (CSP), and avoid inline scripts."
+        },
+        {
+          "name": "Cross-Site Scripting (XSS) – Stored",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/79.html",
+          "description": "Stored XSS arises when malicious input is permanently stored (e.g., database) and later rendered to users, impacting all visitors.",
+          "remediation": "Encode output on rendering, sanitize stored input, apply CSP headers, and avoid unsafe rendering mechanisms."
+        },
+        {
+          "name": "Cross-Site Scripting (DOM-Based)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/79.html",
+          "description": "DOM‑based XSS occurs when client‑side JavaScript modifies the DOM using untrusted data without proper validation or encoding.",
+          "remediation": "Avoid dangerous JavaScript APIs (innerHTML, document.write), validate client‑side input, and apply DOM‑safe coding practices."
+        },
+        {
+          "name": "HTML Injection",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/80.html",
+          "description": "HTML Injection allows attackers to inject HTML markup into web pages, potentially leading to UI manipulation or XSS escalation.",
+          "remediation": "Escape HTML output, sanitize user input, and enforce strict rendering contexts."
+        },
+        {
+          "name": "CRLF Injection",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/93.html",
+          "description": "CRLF Injection occurs when unvalidated input is used in HTTP headers, allowing attackers to split responses or inject malicious content.",
+          "remediation": "Sanitize input used in headers, disallow CRLF characters, and apply strict validation rules."
+        },
+        {
+          "name": "LDAP Injection",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/90.html",
+          "description": "LDAP Injection arises when user input is directly included in LDAP queries, enabling attackers to alter directory queries and bypass authentication.",
+          "remediation": "Use parameterized LDAP queries, escape special characters, and validate input rigorously."
+        },
+        {
+          "name": "XML External Entity (XXE)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/611.html",
+          "description": "XXE occurs when XML parsers process external entities, allowing attackers to read local files, access internal systems, or cause DoS.",
+          "remediation": "Disable external entities, use secure XML parsers, and validate XML input."
+        },
+        {
+          "name": "XML Entity Expansion (Billion Laughs)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/776.html",
+          "description": "Excessive entity expansion leads to resource exhaustion and denial of service.",
+          "remediation": "Limit entity expansion, disable DTD processing, and configure parser limits."
+        },
+        {
+          "name": "CSV Injection",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1236.html",
+          "description": "CSV Injection occurs when malicious formulas are included in exported CSV files and executed by spreadsheet applications.",
+          "remediation": "Escape formula characters (=, +, -, @) and sanitize all exported data."
+        },
+        {
+          "name": "Remote Code Execution (RCE)",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/94.html",
+          "description": "RCE occurs when user input is executed as code, granting attackers full control of the system.",
+          "remediation": "Avoid dynamic code execution, apply allowlists, isolate execution environments, and validate all input."
+        },
+        {
+          "name": "Local File Inclusion (LFI)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/98.html",
+          "description": "LFI allows attackers to include local files by manipulating file path parameters.",
+          "remediation": "Validate file paths, use allowlists, and prevent directory traversal."
+        },
+        {
+          "name": "Remote File Inclusion (RFI)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/98.html",
+          "description": "RFI enables attackers to include remote malicious files, often resulting in RCE.",
+          "remediation": "Disable remote includes, validate file paths, and enforce strict input validation."
+        },
+        {
+          "name": "OS Command Injection",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/78.html",
+          "description": "Occurs when user input is passed to system commands, allowing attackers to execute arbitrary OS commands.",
+          "remediation": "Avoid shell execution, use safe APIs, apply allowlists, and sanitize input."
+        },
+        {
+          "name": "Server-Side Template Injection (SSTI)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/94.html",
+          "description": "Server‑Side Template Injection occurs when user‑controlled input is embedded into server‑side templates without proper sanitization. This allows attackers to execute arbitrary template expressions, often leading to remote code execution, data exposure, or full system compromise depending on the template engine.",
+          "remediation": "Avoid rendering user input directly in templates. Use logic‑less templates, enforce strict input validation, disable template expression evaluation where possible, and sandbox template execution environments. Apply allowlists for template variables."
+        },
+        {
+          "name": "XPath Injection",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/643.html",
+          "description": "XPath Injection occurs when untrusted input is concatenated into XPath queries, allowing attackers to manipulate XML queries, bypass authentication, or extract unauthorized XML data.",
+          "remediation": "Use parameterized XPath queries, sanitize special characters, validate input strictly, and avoid dynamic XPath query construction based on user input."
+        },
+        {
+          "name": "Host Header Injection",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/644.html",
+          "description": "Host Header Injection occurs when applications trust the Host header without validation, enabling attackers to poison caches, bypass security controls, generate malicious links, or facilitate SSRF attacks.",
+          "remediation": "Do not trust client‑supplied Host headers. Validate against a server‑side allowlist, hardcode allowed domains, and avoid using Host headers for security‑critical logic."
+        },
+        {
+          "name": "Content Spoofing",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/20.html",
+          "description": "Content Spoofing occurs when attackers manipulate user‑controlled input to inject misleading or fake content into web pages, potentially tricking users into believing malicious content is legitimate.",
+          "remediation": "Sanitize and validate all user input rendered in responses, enforce output encoding, and avoid dynamically generating trust‑sensitive page content based on untrusted data."
+        },
+        {
+          "name": "Improper Input Validation",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/20.html",
+          "description": "Improper Input Validation occurs when applications fail to validate, normalize, or constrain user input, enabling multiple downstream attacks including injection, logic bypass, and data corruption.",
+          "remediation": "Implement strict server‑side validation using allowlists, enforce type and length checks, normalize inputs, and reject unexpected or malformed data consistently."
+        },
+        {
+          "name": "Missing Filename Validation",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/20.html",
+          "description": "Missing Filename Validation allows attackers to manipulate file names or paths, leading to directory traversal, unauthorized file access, or file overwrite vulnerabilities.",
+          "remediation": "Validate filenames against allowlists, enforce fixed directory paths, prevent path traversal characters, and avoid accepting raw user input for file system operations."
+        },
+        {
+          "name": "HTTP Request Smuggling",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/444.html",
+          "description": "HTTP Request Smuggling exploits inconsistencies in how front‑end proxies and back‑end servers interpret HTTP request boundaries, enabling attackers to bypass security controls or hijack user sessions.",
+          "remediation": "Ensure consistent request parsing across all components, disable ambiguous HTTP headers, apply strict request normalization, and keep web servers and proxies fully patched."
+        },
+        {
+          "name": "HTTP Response Splitting",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/113.html",
+          "description": "HTTP Response Splitting occurs when unvalidated input is included in HTTP headers, allowing attackers to inject CRLF characters and manipulate server responses, potentially leading to XSS or cache poisoning.",
+          "remediation": "Sanitize all data used in HTTP headers, reject CRLF characters, apply strict encoding, and avoid passing user input directly into header values."
+        }
+      ]
+    },
+    {
+      "id": "A04:2025",
+      "name": "Insecure Design",
+      "full": "A04:2025 – Insecure Design",
+      "vulnerabilities": [
+        {
+          "name": "Business Logic Error",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/840.html",
+          "description": "Business Logic Errors arise when application workflows do not correctly enforce business rules, allowing attackers to abuse legitimate functionality to gain unintended outcomes such as financial loss, privilege abuse, or data manipulation.",
+          "remediation": "Perform threat modeling on business workflows, enforce server‑side validation of business rules, introduce abuse‑case testing, and implement compensating controls such as rate limiting and anomaly detection."
+        },
+        {
+          "name": "Business Logic – Immutable Data Bypass",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/472.html",
+          "description": "Occurs when client‑controlled immutable values (prices, roles, account IDs) can be modified and accepted by the server, allowing manipulation of protected business logic.",
+          "remediation": "Never trust client‑side enforcement for immutable values. Recalculate critical values server‑side and validate integrity against trusted data sources."
+        },
+        {
+          "name": "Insecure Password Reset – Insufficient Questions",
+          "severity": "High",
+          "cwe": "CWE-640https://cwe.mitre.org/data/definitions/640.html",
+          "description": "Password reset mechanisms rely on weak or insufficient verification questions, enabling attackers to guess answers and reset accounts.",
+          "remediation": "Eliminate security questions where possible. Use multi‑factor, token‑based reset flows with strong identity verification and limited retry attempts."
+        },
+        {
+          "name": "Insecure Password Reset – No Email Verification",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/640.html",
+          "description": "Password reset functionality allows password changes without verifying ownership of the associated email account.",
+          "remediation": "Require email‑based verification with secure, time‑bound tokens and ensure password resets are only finalized after identity validation."
+        },
+        {
+          "name": "Account Takeover via Security Question Bypass",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/640.html",
+          "description": "Account Takeover via Security Question Bypass – security vulnerability affecting application security and data integrity.",
+          "remediation": "Apply OWASP best practices; validate inputs; enforce least privilege; keep components updated."
+        },
+        {
+          "name": "Password Reset Token Expiration Missing",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/640.html",
+          "description": "Password reset tokens do not expire, allowing attackers to reuse stolen or intercepted tokens indefinitely.",
+          "remediation": "Apply short expiration windows for reset tokens, enforce one‑time use, and invalidate tokens immediately after successful password changes."
+        },
+        {
+          "name": "Password Reset Token Forgery",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/345.html",
+          "description": "Attackers can forge or predict password reset tokens due to weak randomness or insufficient validation.",
+          "remediation": "Generate cryptographically secure, random tokens, sign tokens where applicable, and validate them server‑side before password changes."
+        },
+        {
+          "name": "OTP Bypass",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "One‑Time Password verification can be bypassed due to logical flaws, reuse, or incorrect validation.",
+          "remediation": "Ensure OTPs are one‑time, time‑bound, and validated server‑side. Apply retry limits, binding OTPs to user sessions and devices."
+        },
+        {
+          "name": "Missing Step-Up Authentication",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/308.html",
+          "description": "Sensitive actions are permitted without requiring additional authentication, increasing risk when sessions are hijacked or compromised.",
+          "remediation": "Introduce step‑up authentication (MFA, re‑authentication) for high‑risk actions such as credential changes, financial transactions, or admin operations."
+        },
+        {
+          "name": "Captcha Bypass",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/799.html",
+          "description": "Captcha mechanisms can be bypassed or are missing, enabling automated attacks such as credential stuffing or brute force.",
+          "remediation": "Use modern CAPTCHA solutions, validate server‑side, rotate challenges, and combine with behavioral analysis and rate limiting."
+        },
+        {
+          "name": "Anti-Automation Control Missing",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/799.html",
+          "description": "Applications lack protections against automated abuse, enabling large‑scale exploitation of legitimate functionality.",
+          "remediation": "Implement rate limiting, bot detection, behavioral analytics, and velocity checks for sensitive workflows."
+        },
+        {
+          "name": "Missing Anti-Scripting Control",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/799.html",
+          "description": "Insufficient controls allow script‑based automation to abuse application functionality.",
+          "remediation": "Apply request throttling, tokenized workflows, integrity checks, and behavioral monitoring to limit scripted abuse."
+        },
+        {
+          "name": "Race Conditions",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/362.html",
+          "description": "Race Conditions occur when multiple concurrent requests manipulate shared resources without proper synchronization, causing logic bypass or inconsistent state.",
+          "remediation": "Use transactional processing, locking mechanisms, atomic operations, and idempotent request handling."
+        },
+        {
+          "name": "Easily-Guessable Security Questions",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/640.html",
+          "description": "Security questions rely on easily obtainable information, enabling attackers to guess answers.",
+          "remediation": "Avoid security questions entirely. Prefer MFA‑protected recovery mechanisms and identity‑verified workflows."
+        },
+        {
+          "name": "Missing Character Length / Limit Validation",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/20.html",
+          "description": "Missing Character Length / Limit Validation – security vulnerability affecting application security and data integrity. Applications fail to enforce input length limits, allowing buffer abuse, logic bypass, or injection attacks.",
+          "remediation": "Enforce strict input length and format validation server‑side and reject out‑of‑range values."
+        },
+        {
+          "name": "Broken Functionality",
+          "severity": "Medium",
+          "cwe": " https://cwe.mitre.org/data/definitions/840.html",
+          "description": "Incomplete or incorrectly implemented features allow attackers to exploit inconsistent application states.",
+          "remediation": "Test business workflows end‑to‑end, validate assumptions in design, and enforce consistent server‑side logic."
+        },
+        {
+          "name": "Insufficient Workflow Validation",
+          "severity": "Medium",
+          "cwe": " https://cwe.mitre.org/data/definitions/840.html",
+          "description": "Business workflows can be skipped, reordered, or repeated due to missing validation of execution sequence.",
+          "remediation": "Enforce workflow state transitions server‑side and validate step sequencing for sensitive processes."
+        },
+        {
+          "name": "Negative Logic Flaw",
+          "severity": "Medium",
+          "cwe": " https://cwe.mitre.org/data/definitions/840.html",
+          "description": "Incorrect conditional logic (e.g., relying on negation or default allow paths) leads to unintended authorization or logic outcomes.",
+          "remediation": "Implement positive validation, deny‑by‑default conditions, and thoroughly review conditional logic paths."
+        }
+      ]
+    },
+    {
+      "id": "A05:2025",
+      "name": "Security Misconfiguration",
+      "full": "A05:2025 – Security Misconfiguration",
+      "vulnerabilities": [
+        {
+          "name": "Security Misconfiguration",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/16.html",
+          "description": "Security Misconfiguration represents a broad failure to correctly configure applications, frameworks, servers, containers, cloud services, or security controls. Common causes include unsafe default settings, unnecessary features enabled, lack of environment hardening, and inconsistent configurations across environments. These weaknesses significantly increase the attack surface and often enable chained exploitation of other vulnerabilities.",
+          "remediation": "Define and enforce secure configuration baselines for all components. Disable unused services, APIs, and features. Automate configuration management using infrastructure‑as‑code, perform regular configuration audits, and ensure parity between development, staging, and production environments."
+        },
+        {
+          "name": "ASP.NET Debugging Enabled",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/94.html",
+          "description": "When ASP.NET debugging is enabled in production, detailed stack traces, file paths, source references, and internal execution context are exposed to users. This sensitive information assists attackers in reconnaissance and helps tailor exploitation techniques.",
+          "remediation": "Disable debug mode in all production deployments. Implement custom error pages for users while logging detailed errors securely on the backend. Restrict debugging functionality strictly to isolated development environments."
+        },
+        {
+          "name": "Default Credentials Used",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/1188.html",
+          "description": "Applications, middleware, or infrastructure components retain vendor‑supplied default credentials. Attackers frequently test these credentials immediately after discovering exposed services, leading to instant compromise.",
+          "remediation": "Remove all default passwords before deployment. Enforce mandatory credential changes on first use, apply strong password policies, and require MFA for administrative access."
+        },
+        {
+          "name": "Default Server Page Disclosure",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Default server pages often reveal software stack details such as server type, framework, version numbers, or directory structures, which attackers use to identify known vulnerabilities.",
+          "remediation": "Disable or remove default pages and replace them with minimal custom error pages that do not disclose implementation details."
+        },
+        {
+          "name": "Directory Listing / Directory Indexing",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/548.html",
+          "description": "Directory indexing exposes file and folder listings to unauthenticated users, potentially revealing source code, configuration files, backups, or sensitive artifacts.",
+          "remediation": "Disable directory indexing at the web server level and enforce restrictive file‑system permissions. Expose only explicitly intended resources."
+        },
+        {
+          "name": "Improper Error Handling",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/209.html",
+          "description": "Verbose error handling exposes stack traces, database queries, system paths, or internal logic details, assisting attackers during exploitation.",
+          "remediation": "Return generic error messages to users while logging detailed technical errors securely server‑side. Disable debug output in production."
+        },
+        {
+          "name": "Information Disclosure",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Excessive information such as internal identifiers, configuration values, or system metadata is exposed unnecessarily through responses or headers.",
+          "remediation": "Apply the principle of least information disclosure. Review all responses and headers to ensure only essential data is exposed."
+        },
+        {
+          "name": "Sensitive Information Disclosure",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Sensitive data such as credentials, tokens, PII, or secrets are exposed via misconfigured APIs, pages, or logs.",
+          "remediation": "Remove sensitive data from responses, encrypt data at rest and in transit, and restrict access using role‑based controls."
+        },
+        {
+          "name": "Server Banner Disclosure",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "HTTP response headers disclose server software names and versions, enabling targeted exploitation.",
+          "remediation": "Disable or obfuscate server banners and framework identification headers."
+        },
+        {
+          "name": "Internal IP Disclosure",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Exposure of internal IP addresses facilitates network mapping and lateral movement planning by attackers.",
+          "remediation": "Sanitize responses, review proxy/load‑balancer configurations, and prevent internal infrastructure details from being exposed."
+        },
+        {
+          "name": "Internal IP Disclosure via BigIP Cookie",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Load balancer cookies reveal internal server IPs or routing information.",
+          "remediation": "Configure load balancers to use opaque cookie values and suppress internal addressing."
+        },
+        {
+          "name": "Java Servlet Version Disclosure in HTTP Headers",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Java servlet containers may disclose implementation and version details through HTTP response headers such as Server or X-Powered-By. This information enables attackers to fingerprint the application stack, correlate it with known vulnerabilities, and tailor exploitation strategies against specific servlet versions.",
+          "remediation": "Configure the application server (Tomcat, Jetty, WebLogic) to suppress version headers. Use reverse proxies to sanitize outbound headers and ensure platform version details are not disclosed in responses."
+        },
+        {
+          "name": "X-AspNet-Version Header Disclosure",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "ASP.NET applications may expose framework version information via the X-AspNet-Version header, aiding attackers in identifying exploitable framework flaws.",
+          "remediation": "Disable the X-AspNet-Version header in IIS or application configuration and apply consistent header hardening across all deployments."
+        },
+        {
+          "name": "X-Powered-By Header Disclosure",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "The X-Powered-By header reveals the underlying framework or language runtime, enabling targeted reconnaissance.",
+          "remediation": "Remove the header at server and framework level. Prefer minimal response headers with only operationally required metadata."
+        },
+        {
+          "name": "Filepath Disclosure",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Stack traces, error messages, or debug output reveal internal filesystem paths, exposing directory structures and application layout.",
+          "remediation": "Suppress detailed errors in production, sanitize error responses, and log detailed diagnostics securely on the server side only."
+        },
+        {
+          "name": "SQL Query Disclosure in Error Message",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Database errors disclose raw SQL queries, table names, or schema information, significantly lowering the barrier to SQL Injection.",
+          "remediation": "Use generic error handling, disable verbose DB errors, and log query details securely for internal troubleshooting."
+        },
+        {
+          "name": "Source Code Disclosure",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/540.html",
+          "description": "Application source code is exposed through misconfigured servers, backup files, or version control artifacts left in web‑accessible directories.",
+          "remediation": "Restrict web root access, remove backup and temporary files, secure deployment pipelines, and block access to .git, .bak, .zip, and similar artifacts."
+        },
+        {
+          "name": "Spring Boot Actuator Exposed",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Spring Boot actuator endpoints expose metrics, environment variables, configuration properties, and internal health data that assist attackers.",
+          "remediation": "Disable unnecessary actuator endpoints, restrict access using authentication and authorization, and expose them only within trusted internal networks."
+        },
+        {
+          "name": "Test Page Detected",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Development or diagnostic test pages remain accessible in production environments, often revealing internal application behavior.",
+          "remediation": "Remove all test and example pages before production deployment and apply automated checks to prevent accidental inclusion."
+        },
+        {
+          "name": "Missing Content Security Policy (CSP) Header",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/693.html",
+          "description": "Without CSP, browsers cannot restrict where scripts or resources are loaded from, increasing exposure to XSS and content injection attacks.",
+          "remediation": "Define strict CSP headers using allowlists and apply least‑privilege policies for scripts, frames, and resources."
+        },
+        {
+          "name": "CSP Header Misconfiguration / Unsafe Directives",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1021.html",
+          "description": "CSP directives such as unsafe-inline or unsafe-eval weaken browser protections and re‑enable script injection risks.",
+          "remediation": "Eliminate unsafe directives, adopt nonce‑based or hash‑based CSPs, and validate policies with report‑only mode before enforcement."
+        },
+        {
+          "name": "Missing X-Frame-Options Header",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1021.html",
+          "description": "Unsafe CSP directives (unsafe-inline, unsafe-eval) significantly weaken browser‑enforced protections.",
+          "remediation": "Remove unsafe directives, validate CSP effectiveness, and test policies in report‑only mode before enforcement."
+        },
+        {
+          "name": "Missing X-Content-Type-Options Header",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/693.html",
+          "description": "Browsers may perform MIME sniffing, treating content as executable when it should not be.",
+          "remediation": "Set X-Content-Type-Options: nosniff across all responses."
+        },
+        {
+          "name": "Missing Cache-Control / Pragma Header",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/525.html",
+          "description": "Sensitive content may be cached in browsers or intermediary proxies, increasing risk of data leakage.",
+          "remediation": "Configure Cache-Control: no-store, no-cache, must-revalidate and appropriate Pragma headers for sensitive responses."
+        },
+        {
+          "name": "SameSite Cookie Attribute Missing",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1275.html",
+          "description": "Cookies without SameSite protection are vulnerable to CSRF attacks.",
+          "remediation": "Apply SameSite=Lax or SameSite=Strict based on application needs and validate cross‑site behavior."
+        },
+        {
+          "name": "Unsecured Cookies – HTTPOnly Flag Missing",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1004.html",
+          "description": "Cookies accessible to JavaScript can be stolen via XSS.",
+          "remediation": "Mark all sensitive cookies as HttpOnly and protect session identifiers server‑side."
+        },
+        {
+          "name": "Unsecured Cookies – Secure Flag Missing",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/614.html",
+          "description": "Cookies may be transmitted over unencrypted channels if Secure flag is not set.",
+          "remediation": "Enforce HTTPS and set Secure flag on all sensitive cookies."
+        },
+        {
+          "name": "Clickjacking",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1021.html",
+          "description": "Users can be tricked into interacting with hidden UI elements embedded within malicious frames.",
+          "remediation": "Use X‑Frame‑Options and CSP frame‑ancestors to prevent unauthorized framing."
+        },
+        {
+          "name": "Insecure HTTP Methods Enabled",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/650.html",
+          "description": "Dangerous or unused HTTP methods (PUT, DELETE, TRACE) are enabled, increasing attack surface.",
+          "remediation": "Disable unused HTTP methods and enforce method‑based authorization checks."
+        },
+        {
+          "name": "HTTP Verb Tampering",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/650.html",
+          "description": "Attackers manipulate HTTP verbs to bypass authorization logic tied to expected methods.",
+          "remediation": "Enforce method checks server‑side and validate access per HTTP verb."
+        },
+        {
+          "name": "Arbitrary Cross-Origin Resource Sharing (CORS)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/942.html",
+          "description": "Overly permissive CORS policies allow unauthorized domains to read or interact with sensitive API responses.",
+          "remediation": "Restrict allowed origins explicitly and avoid wildcards for production APIs."
+        },
+        {
+          "name": "CORS Misconfiguration with Credentials",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/942.html",
+          "description": "Allowing credentials with broad CORS access exposes authenticated data cross‑origin.",
+          "remediation": "Disallow credentials unless strictly necessary and never combine with wildcard origins."
+        },
+        {
+          "name": "Unrestricted Cross-Domain Access",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/942.html",
+          "description": "External domains gain unrestricted access to application resources.",
+          "remediation": "Implement strict CORS allowlists and enforce proper origin validation."
+        },
+        {
+          "name": "Auto-Complete Feature Enabled on Sensitive Fields",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/522.html",
+          "description": "Browsers store sensitive data such as passwords or tokens, increasing exposure risk.",
+          "remediation": "Disable autocomplete for sensitive form fields and rely on secure credential storage mechanisms."
+        },
+        {
+          "name": "Email Addresses Disclosed",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Email addresses are exposed unnecessarily, enabling phishing or enumeration attacks.",
+          "remediation": "Mask email addresses where possible and restrict visibility using authorization checks."
+        },
+        {
+          "name": "Unprotected Sensitive File",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/552.html",
+          "description": "Sensitive files are publicly accessible due to incorrect permissions or placement in web root.",
+          "remediation": "Store sensitive files outside web‑accessible directories and apply strict OS‑level permissions."
+        },
+        {
+          "name": "WAF Misconfiguration",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/693.html",
+          "description": "Improperly configured WAF rules provide insufficient protection and false security confidence.",
+          "remediation": "Continuously tune WAF policies, review alerts, and test rule effectiveness against application traffic."
+        },
+        {
+          "name": "Microsoft IIS Tilde Directory Enumeration",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/548.html",
+          "description": "IIS short‑name enumeration allows attackers to infer hidden files and directories.",
+          "remediation": "Disable 8.3 filename support in IIS, apply patches, and restrict directory access permissions."
+        }
+      ]
+    },
+    {
+      "id": "A06:2025",
+      "name": "Vulnerable & Outdated Components",
+      "full": "A06:2025 – Vulnerable & Outdated Components",
+      "vulnerabilities": [
+        {
+          "name": "Outdated and Vulnerable Software",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Applications rely on software, frameworks, runtimes, or libraries that are no longer maintained or patched. Known vulnerabilities in these components can be exploited directly without needing additional weaknesses in application logic, often leading to full system compromise.",
+          "remediation": "Establish a formal component lifecycle management process. Maintain an inventory of all software dependencies, monitor vendor security advisories, perform regular patching, and remove unsupported components from production environments."
+        },
+        {
+          "name": "Using Components with Known Vulnerabilities",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Applications include dependencies with publicly disclosed vulnerabilities (CVEs) that attackers can reliably exploit using known techniques and tools.",
+          "remediation": "Continuously scan dependencies using SCA tools, remediate high and critical risks promptly, apply compensating controls if immediate upgrades are not possible, and track accepted risks formally."
+        },
+        {
+          "name": "Out-of-date Version (jQuery)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Outdated jQuery versions contain known vulnerabilities such as XSS, prototype pollution, and unsafe DOM manipulation.",
+          "remediation": "Upgrade jQuery to the latest supported version, remove unused libraries, and apply CSP controls to reduce client‑side exploitation risk."
+        },
+        {
+          "name": "Out-of-date Version (AngularJS)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "AngularJS is end‑of‑life and contains unresolved security flaws that expose applications to client‑side injection and logic bypass issues.",
+          "remediation": "Migrate to actively supported frameworks (Angular, React, Vue), and refactor legacy code to modern secure patterns."
+        },
+        {
+          "name": "Out-of-date Version (React)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Out-of-date Version (React) – security vulnerability affecting application security and data integrity.",
+          "remediation": "Keep React updated, pin dependency versions, review third‑party components, and monitor advisories from the React security team."
+        },
+        {
+          "name": "Out-of-date Version (Vue.js)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Outdated Vue.js releases may expose applications to client‑side logic and template injection issues.",
+          "remediation": "Upgrade Vue.js regularly, remove unsupported plugins, and lock dependency versions with integrity validation."
+        },
+        {
+          "name": "Out-of-date Version (Bootstrap)",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Older Bootstrap versions expose XSS risks through unsafe JavaScript components and outdated templates.",
+          "remediation": "Upgrade to supported Bootstrap versions and review usage of JS components that process dynamic content."
+        },
+        {
+          "name": "Out-of-date Version (Apache)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Out-of-date Version (Apache) – security vulnerability affecting application security and data integrity.",
+          "remediation": "Apply OWASP best practices; validate inputs; enforce least privilege; keep components updated."
+        },
+        {
+          "name": "Out-of-date Version (Tomcat)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Outdated Tomcat servers may expose deserialization, JSP injection, or authentication bypass flaws.",
+          "remediation": "Upgrade Tomcat, restrict management interfaces, and secure deployment descriptors."
+        },
+        {
+          "name": "Out-of-date Version (OpenSSL)",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Out-of-date Version (OpenSSL) – security vulnerability affecting application security and data integrity.",
+          "remediation": "Upgrade OpenSSL immediately on disclosure of critical CVEs and ensure dependent components are also updated."
+        },
+        {
+          "name": "Out-of-date Version (IIS)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Legacy IIS versions may expose directory traversal, execution, or authentication flaws.",
+          "remediation": "Apply OS‑level patches, upgrade IIS versions, and remove legacy features."
+        },
+        {
+          "name": "Out-of-date Version (Nginx)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Unpatched Nginx versions may allow request smuggling, DoS, or header‑handling vulnerabilities.",
+          "remediation": "Upgrade Nginx, standardize config hardening, and validate reverse‑proxy behavior."
+        },
+        {
+          "name": "Out-of-date Version (WordPress)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Outdated WordPress core, themes, or plugins frequently expose SQL injection, authentication bypass, and file upload flaws.",
+          "remediation": "Enable automatic updates, remove unused plugins/themes, and apply strict access control on admin interfaces."
+        },
+        {
+          "name": "Out-of-date Version (PHP)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Unsupported PHP versions contain unresolved security flaws, exposing applications to memory corruption and injection risks.",
+          "remediation": "Upgrade to supported PHP versions and audit code for deprecated or unsafe functions."
+        },
+        {
+          "name": "Out-of-date Version (Python Runtime)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Outdated Python runtimes lack fixes for security flaws in standard libraries and interpreters.",
+          "remediation": "Upgrade Python runtimes, rebuild environments, and update dependent packages."
+        },
+        {
+          "name": "Out-of-date Version (JBoss)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Legacy JBoss versions frequently expose management consoles and remote invocation flaws.",
+          "remediation": "Upgrade JBoss, secure management ports, and restrict admin access."
+        },
+        {
+          "name": "Out-of-date Version (Lodash)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Older Lodash versions may contain prototype pollution vulnerabilities impacting application integrity.",
+          "remediation": "Upgrade Lodash and review dependent packages for inherited vulnerabilities."
+        },
+        {
+          "name": "Out-of-date Version (Moment.js)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Moment.js is in maintenance mode, and outdated usage may introduce parsing or logic vulnerabilities.",
+          "remediation": "Migrate to modern date libraries (Luxon, Day.js) and minimize legacy usage."
+        },
+        {
+          "name": "Out-of-date Version (jQuery UI / Migrate)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Legacy jQuery UI/Migrate utilities reintroduce deprecated behavior, increasing XSS risk.",
+          "remediation": "Remove migrate dependencies, modernize code, and use supported UI frameworks."
+        },
+        {
+          "name": "Out-of-date Version (Handlebars.js)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Older Handlebars versions expose template injection vulnerabilities.",
+          "remediation": "Upgrade Handlebars, disable unsafe helpers, and sanitize template inputs."
+        },
+        {
+          "name": "Out-of-date Version (CKEditor)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Legacy CKEditor versions may allow XSS or arbitrary script injection.",
+          "remediation": "Upgrade CKEditor, enable content filtering, and restrict HTML input capabilities."
+        },
+        {
+          "name": "Out-of-date Version (pdf.js)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Vulnerable pdf.js versions may allow script execution through malicious PDF documents.",
+          "remediation": "Upgrade pdf.js and sandbox document rendering environments."
+        },
+        {
+          "name": "Out-of-date Version (Jolokia)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1035.html",
+          "description": "Unpatched Jolokia endpoints expose JMX operations that can be abused for system control and data extraction.",
+          "remediation": "Upgrade Jolokia, restrict access, and disable unnecessary endpoints."
+        },
+        {
+          "name": "Unpatched Third-Party Plugin / Library",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1104.html",
+          "description": "Third‑party plugins or libraries remain unpatched, introducing supply‑chain risks and inherited vulnerabilities.",
+          "remediation": "Continuously monitor third‑party dependencies, apply patches promptly, enforce SBOM usage, and restrict unverified plugins."
+        }
+      ]
+    },
+    {
+      "id": "A07:2025",
+      "name": "Identification & Authentication Failures",
+      "full": "A07:2025 – Identification & Authentication Failures",
+      "vulnerabilities": [
+        {
+          "name": "Authentication Bypass",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "Authentication Bypass occurs when application logic flaws allow access without proper credential verification. This can result from missing authentication checks, flawed conditional logic, trusting client‑side authentication state, or insecure token validation. Successful exploitation leads directly to unauthorized access and full account compromise.",
+          "remediation": "Enforce mandatory server‑side authentication checks for all protected endpoints. Do not rely on client‑supplied authentication flags. Validate session and token states centrally and test authentication workflows for bypass conditions during security reviews."
+        },
+        {
+          "name": "Account Lockout – No Lockout Policy",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/307.html",
+          "description": "The application does not restrict repeated authentication attempts, allowing attackers to perform unlimited password guessing attacks.",
+          "remediation": "Implement account lockout or progressive throttling after a defined number of failed attempts. Combine lockout policies with CAPTCHA challenges, alerting, and monitoring to prevent abuse."
+        },
+        {
+          "name": "Account Lockout Abuse / DoS",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/307.html",
+          "description": "Poorly designed lockout mechanisms allow attackers to intentionally lock legitimate user accounts, resulting in denial of service.",
+          "remediation": "Use adaptive lockout mechanisms with IP‑based rate limiting, CAPTCHA verification, and alerts rather than permanent account locks. Provide secure account recovery options."
+        },
+        {
+          "name": "Weak Lockout Mechanism",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/307.html",
+          "description": "Lockout mechanisms are easily bypassed due to predictable thresholds, missing reset conditions, or lack of contextual controls.",
+          "remediation": "Implement progressive delays, behavioral detection, and rate limiting rather than simple counter‑based lockout logic."
+        },
+        {
+          "name": "Brute Force Attack",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/307.html",
+          "description": "Attackers attempt large volumes of credential guesses to gain unauthorized access, often using automation.",
+          "remediation": "Apply rate limiting, account throttling, CAPTCHA, anomaly detection, and MFA to reduce attack effectiveness."
+        },
+        {
+          "name": "Credential Stuffing",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/307.html",
+          "description": "Attackers use previously breached credential pairs to access user accounts, exploiting password reuse.",
+          "remediation": "Enable MFA, detect known breached passwords, monitor abnormal login behavior, and implement IP reputation controls."
+        },
+        {
+          "name": "Session Fixation",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/384.html",
+          "description": "Attackers force victims to use a known session identifier, allowing session takeover after authentication.",
+          "remediation": "Regenerate session IDs upon authentication and privilege changes. Do not accept user‑supplied session identifiers."
+        },
+        {
+          "name": "Session Hijacking",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/384.html",
+          "description": "Attackers steal valid session tokens via XSS, network interception, or insecure storage.",
+          "remediation": "Protect sessions with Secure and HttpOnly cookies, enforce HTTPS, implement proper session expiration, and monitor session anomalies."
+        },
+        {
+          "name": "Insufficient Session Expiration",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/613.html",
+          "description": "Sessions remain active for excessive periods, increasing impact if stolen.",
+          "remediation": "Implement idle and absolute session timeouts and revoke sessions after inactivity."
+        },
+        {
+          "name": "Session Not Terminated After Logout",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/613.html",
+          "description": "Logout does not invalidate the session token, allowing reuse by attackers.",
+          "remediation": "Invalidate sessions server‑side on logout and ensure tokens cannot be reused."
+        },
+        {
+          "name": "Session Timeout Missing or Inadequate",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/613.html",
+          "description": "Sessions persist indefinitely due to missing timeout enforcement.",
+          "remediation": "Enforce strict timeout policies and invalidate inactive sessions."
+        },
+        {
+          "name": "Session Token in URL",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/598.html",
+          "description": "Session tokens appear in URLs, exposing them via logs, browser history, and referrer headers.",
+          "remediation": "Store session tokens in secure cookies only and never pass them in URLs."
+        },
+        {
+          "name": "Weak Session Management",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "Session identifiers are predictable, improperly protected, or poorly rotated.",
+          "remediation": "Generate cryptographically strong session identifiers, protect them using secure cookie flags, and rotate sessions on privilege changes."
+        },
+        {
+          "name": "Weak Password Policy",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/521.html",
+          "description": "Passwords lack sufficient complexity, making them vulnerable to guessing and automated attacks.",
+          "remediation": "Enforce length, complexity, and breached‑password checks. Encourage passphrases and MFA usage."
+        },
+        {
+          "name": "Missing Password Complexity Requirements",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/521.html",
+          "description": "Missing Password Complexity Requirements – security vulnerability affecting application security and data integrity.",
+          "remediation": "Apply OWASP best practices; validate inputs; enforce least privilege; keep components updated."
+        },
+        {
+          "name": "Weak Password Change / Reset Functionality",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/640.html",
+          "description": "Password reset mechanisms rely on weak verification or reusable tokens.",
+          "remediation": "Use cryptographically strong, time‑bound reset tokens, enforce one‑time use, and require identity verification."
+        },
+        {
+          "name": "User Enumeration via Login / Forgot Password",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/204.html",
+          "description": "User Enumeration via Login / Forgot Password – security vulnerability affecting application security and data integrity.",
+          "remediation": "Use uniform responses for authentication and recovery flows and log details internally."
+        },
+        {
+          "name": "Browser Cache Weakness",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/525.html",
+          "description": "Browser Cache Weakness – security vulnerability affecting application security and data integrity. Sensitive pages are cached in browsers or shared systems.",
+          "remediation": "Apply no‑cache response headers for sensitive content."
+        },
+        {
+          "name": "Concurrent Login Enabled",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "Concurrent Login Enabled – security vulnerability affecting application security and data integrity. Accounts allow simultaneous logins, increasing risk when credentials are compromised.",
+          "remediation": "Implement optional session limits and alert users of concurrent activity."
+        },
+        {
+          "name": "Unmasked Password Field",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/522.html",
+          "description": "Unmasked Password Field – security vulnerability affecting application security and data integrity. Password input is displayed in clear text, enabling shoulder surfing or screen capture attacks.",
+          "remediation": "Mask password fields and prevent client‑side logging or auto‑complete for sensitive inputs."
+        },
+        {
+          "name": "Missing Multi-Factor Authentication (MFA)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/308.html",
+          "description": "Missing Multi-Factor Authentication (MFA) – security vulnerability affecting application security and data integrity. Single‑factor authentication allows account compromise through credential theft.",
+          "remediation": "Implement MFA for all sensitive accounts and privileged user roles."
+        },
+        {
+          "name": "Insecure Remember-Me Token",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/565.html",
+          "description": "Insecure Remember-Me Token – security vulnerability affecting application security and data integrity. Persistent login tokens are weak, reusable, or improperly protected.",
+          "remediation": "Generate secure, random remember‑me tokens, store hashed values server‑side, and rotate tokens periodically."
+        }
+      ]
+    },
+    {
+      "id": "A08:2025",
+      "name": "Software & Data Integrity Failures",
+      "full": "A08:2025 – Software & Data Integrity Failures",
+      "vulnerabilities": [
+        {
+          "name": "Unrestricted File Upload / Malicious File Upload",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/434.html",
+          "description": "The application allows users to upload files without sufficient validation of file type, content, or storage location. Attackers can upload malicious scripts, web shells, executables, or malware, potentially leading to remote code execution, persistent compromise, or hosting of malicious content.",
+          "remediation": "Enforce strict allowlists for file types and MIME validation, impose file size limits, rename uploaded files, store them outside web‑accessible directories, and disable execution permissions. Implement malware scanning and content inspection for all uploads."
+        },
+        {
+          "name": "Unvalidated Redirect",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/601.html",
+          "description": "The application redirects users to external URLs based on unvalidated input. Attackers can craft malicious links that redirect victims to phishing or malware sites, abusing user trust.",
+          "remediation": "Avoid dynamic redirects based on user input. If redirects are required, enforce strict allowlists of trusted destinations and validate URLs server‑side."
+        },
+        {
+          "name": "Unvalidated URL Redirect (DOM-Based)",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/601.html",
+          "description": "Unvalidated URL Redirect (DOM-Based) – security vulnerability affecting application security and data integrity. Client‑side JavaScript reads untrusted input from the URL and performs redirection without validation, enabling phishing and open‑redirect abuse.",
+          "remediation": "Validate destination URLs in JavaScript, restrict redirects to known locations, and avoid using client‑side input directly for navigation logic."
+        },
+        {
+          "name": "Reverse Tabnabbing",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/829.html",
+          "description": "Reverse Tabnabbing – security vulnerability affecting application security and data integrity.Links opened using target=\"_blank\" allow the newly opened page to manipulate the original page via window.opener, enabling phishing or content manipulation.",
+          "remediation": "Add rel=\"noopener noreferrer\" to all externally opened links and review frontend navigation behavior."
+        },
+        {
+          "name": "Deserialization of Untrusted Data",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/502.html",
+          "description": "Deserialization of Untrusted Data – security vulnerability affecting application security and data integrity. The application deserializes attacker‑controlled data without validation, allowing creation of arbitrary objects, leading to remote code execution or logic manipulation.",
+          "remediation": "Avoid deserialization of untrusted data. Use safe formats (JSON with strict schemas), enforce type validation, and cryptographically sign serialized objects."
+        },
+        {
+          "name": "Insecure Deserialization",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/502.html",
+          "description": "Insecure Deserialization – security vulnerability affecting application security and data integrity. Insecure object deserialization allows attackers to tamper with serialized objects to execute malicious code or alter application behavior.",
+          "remediation": "Implement allowlisted deserialization, integrity checks, and restrict use of native serialization libraries where possible."
+        },
+        {
+          "name": "Subresource Integrity (SRI) Missing",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/494.html",
+          "description": "Subresource Integrity (SRI) Missing – security vulnerability affecting application security and data integrity.External scripts or resources are loaded without integrity verification, enabling compromised third‑party resources to execute malicious code.",
+          "remediation": "Implement Subresource Integrity hashes for externally loaded scripts and host critical libraries locally where feasible."
+        },
+        {
+          "name": "Cross-Site Request Forgery (CSRF)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/352.html",
+          "description": "Cross-Site Request Forgery (CSRF) – security vulnerability affecting application security and data integrity.CSRF forces authenticated users to perform unintended actions via forged requests, exploiting trust in the user’s session.",
+          "remediation": "Use anti‑CSRF tokens, enforce SameSite cookies, validate Origin/Referer headers, and ensure state‑changing actions require POST requests."
+        },
+        {
+          "name": "Software Supply Chain Attack",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/494.html",
+          "description": "Software Supply Chain Attack – security vulnerability affecting application security and data integrity. Compromised third‑party libraries, build dependencies, or update mechanisms inject malicious code into applications.",
+          "remediation": "Maintain SBOMs, validate third‑party sources, pin dependency versions, monitor CVEs, and verify integrity of build artifacts."
+        },
+        {
+          "name": "Insecure CI/CD Pipeline",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/693.html",
+          "description": "Insecure CI/CD Pipeline – security vulnerability affecting application security and data integrity. CI/CD pipelines lack access controls, integrity checks, or secret protection, allowing attackers to inject malicious builds.",
+          "remediation": "Secure pipeline access, restrict privileges, protect secrets, enforce signed builds, and integrate security scanning into pipelines."
+        },
+        {
+          "name": "Auto-Update Without Integrity Check",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/494.html",
+          "description": "Auto-Update Without Integrity Check – security vulnerability affecting application security and data integrity. Automatic updates are applied without validating authenticity or integrity, enabling malicious updates.",
+          "remediation": "Verify digital signatures, enforce checksums, and validate update sources before deployment."
+        }
+      ]
+    },
+    {
+      "id": "A09:2025",
+      "name": "Security Logging & Monitoring Failures",
+      "full": "A09:2025 – Security Logging & Monitoring Failures",
+      "vulnerabilities": [
+        {
+          "name": "Insufficient Logging and Monitoring",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/778.html",
+          "description": "Insufficient Logging and Monitoring – security vulnerability affecting application security and data integrity. Security‑relevant events are not logged or monitored, allowing attacks to persist undetected.",
+          "remediation": "Define security logging standards, centralize logs, and monitor authentication, authorization, and data access events."
+        },
+        {
+          "name": "Missing Audit Trail / Audit Logging",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/223.html",
+          "description": "Missing Audit Trail / Audit Logging – security vulnerability affecting application security and data integrity. The system cannot reconstruct user actions due to missing audit trails.",
+          "remediation": "Implement tamper‑resistant audit logs for all sensitive actions and retain logs per compliance requirements."
+        },
+        {
+          "name": "Log Injection",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/117.html",
+          "description": "Log Injection – security vulnerability affecting application security and data integrity.cUnvalidated input is written to logs, allowing attackers to inject misleading entries or conceal malicious activity.",
+          "remediation": "Sanitize all log entries and avoid logging raw user input."
+        },
+        {
+          "name": "Missing Security Event Logging",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/778.html",
+          "description": "Missing Security Event Logging – security vulnerability affecting application security and data integrity.Critical security events such as failed logins or access violations are not logged.",
+          "remediation": "Log all security‑relevant events and integrate with SIEM tools."
+        },
+        {
+          "name": "Inadequate Log Management",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/532.html",
+          "description": "Inadequate Log Management – security vulnerability affecting application security and data integrity. Logs are poorly retained, unprotected, or lack review mechanisms.",
+          "remediation": "Secure log storage, enforce retention policies, and monitor logs continuously."
+        },
+        {
+          "name": "Missing Intrusion Detection and Alerting",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/778.html",
+          "description": "Missing Intrusion Detection and Alerting – security vulnerability affecting application security and data integrity. No alerts are generated on suspicious behavior, delaying incident response.",
+          "remediation": "Integrate IDS/IPS and SIEM solutions with automated alerting."
+        },
+        {
+          "name": "Missing Access Control Logging",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/223.html",
+          "description": "Missing Access Control Logging – security vulnerability affecting application security and data integrity. Authorization decisions are not logged, limiting forensic capabilities.",
+          "remediation": "Log all access control decisions, especially denials and privilege changes."
+        },
+        {
+          "name": "Sensitive Data Written to Logs",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/532.html",
+          "description": "Sensitive Data Written to Logs – security vulnerability affecting application security and data integrity. Logs contain passwords, tokens, or PII, creating secondary data leakage vectors.",
+          "remediation": "Mask sensitive data in logs and restrict log access."
+        }
+      ]
+    },
+    {
+      "id": "A10:2025",
+      "name": "Server-Side Request Forgery (SSRF)",
+      "full": "A10:2025 – Server-Side Request Forgery (SSRF)",
+      "vulnerabilities": [
+        {
+          "name": "Server-Side Request Forgery (SSRF)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Server-Side Request Forgery (SSRF) – security vulnerability affecting application security and data integrity. The application fetches attacker‑controlled URLs, enabling access to internal services or cloud metadata endpoints.",
+          "remediation": "Validate URLs, enforce allowlists, block internal IP ranges, and restrict outbound network access."
+        },
+        {
+          "name": "Blind SSRF",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Blind SSRF – security vulnerability affecting application security and data integrity. SSRF exploitation occurs without visible responses, often detected via out‑of‑band interactions.",
+          "remediation": "Limit outbound requests, monitor egress traffic, and use network‑level restrictions."
+        },
+        {
+          "name": "SSRF to Internal Network / Cloud Metadata",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "SSRF to Internal Network / Cloud Metadata – security vulnerability affecting application security and data integrity. Attackers access internal services or cloud metadata (e.g., IAM credentials) via SSRF.",
+          "remediation": "Block metadata IP ranges, enforce strict egress controls, and implement service‑level authentication."
+        },
+        {
+          "name": "Host Header Injection Leading to SSRF",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Manipulation of Host headers causes backend requests to unintended internal services.",
+          "remediation": "Do not trust Host headers and enforce explicit host validation."
+        },
+        {
+          "name": "SSRF via File Upload",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "SSRF via File Upload – security vulnerability affecting application security and data integrity. Uploaded files trigger server‑side URL fetching, enabling SSRF through crafted payloads.",
+          "remediation": "Validate uploaded file content, disable automatic fetching, and sandbox file processing."
+        }
+      ]
+    }
+  ]
+}

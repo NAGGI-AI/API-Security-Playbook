@@ -1,0 +1,426 @@
+{
+  "title": "LLM Application Security",
+  "framework": "OWASP LLM Top 10 v2.0 – 2025",
+  "categories": [
+    {
+      "id": "LLM01:2025",
+      "name": "Prompt Injection",
+      "full": "LLM01:2025 – Prompt Injection",
+      "vulnerabilities": [
+        {
+          "name": "Prompt Injection",
+          "severity": "Critical",
+          "cwe": "CWE-77, CWE-74",
+          "description": "Attacker crafts inputs to manipulate LLM behavior by overriding system prompts or hijacking model instructions.",
+          "remediation": "Implement prompt hardening, input validation, output filtering, and privilege separation between system/user contexts."
+        },
+        {
+          "name": "Direct Prompt Injection",
+          "severity": "Critical",
+          "cwe": "CWE-77",
+          "description": "Attacker directly injects malicious instructions into user-visible prompt fields to override system behavior.",
+          "remediation": "Validate and sanitize user inputs; enforce strict separation between instructions and data."
+        },
+        {
+          "name": "Indirect Prompt Injection",
+          "severity": "High",
+          "cwe": "CWE-74",
+          "description": "Malicious instructions embedded in external content (web pages, documents) retrieved by the LLM at runtime.",
+          "remediation": "Sanitize all external content before processing; mark content source contexts; apply content trust levels."
+        },
+        {
+          "name": "Prompt Jailbreaking",
+          "severity": "High",
+          "cwe": "CWE-77",
+          "description": "Adversarial prompts bypass safety guardrails and alignment policies of the LLM.",
+          "remediation": "Implement multi-layered safety filters, red-teaming, and adversarial training. Monitor jailbreak attempts."
+        },
+        {
+          "name": "Instruction Hijacking via Retrieved Content",
+          "severity": "High",
+          "cwe": "CWE-77",
+          "description": "Malicious content in retrieved data overrides original instructions causing unintended model actions.",
+          "remediation": "Enforce context isolation; validate retrieved content; use output validation layers."
+        }
+      ]
+    },
+    {
+      "id": "LLM02:2025",
+      "name": "Sensitive Information Disclosure",
+      "full": "LLM02:2025 – Sensitive Information Disclosure",
+      "vulnerabilities": [
+        {
+          "name": "Sensitive Information Disclosure via LLM",
+          "severity": "High",
+          "cwe": "CWE-200",
+          "description": "LLM inadvertently reveals sensitive information including PII, credentials, or proprietary data in responses.",
+          "remediation": "Implement output filtering, data minimization in training, and access controls on model deployment."
+        },
+        {
+          "name": "Training Data Leakage / Memorization",
+          "severity": "High",
+          "cwe": "CWE-209",
+          "description": "LLM memorizes and reproduces sensitive training data (PII, credentials, trade secrets) during inference.",
+          "remediation": "Apply differential privacy, data sanitization pre-training, and output monitoring for sensitive data patterns."
+        },
+        {
+          "name": "PII Exposure in LLM Responses",
+          "severity": "Critical",
+          "cwe": "CWE-359",
+          "description": "Personally Identifiable Information (PII) is exposed through LLM responses due to memorization or permissive queries.",
+          "remediation": "Implement PII detection/redaction in outputs; enforce data minimization; conduct privacy impact assessments."
+        },
+        {
+          "name": "Confidential Data Extraction via Prompting",
+          "severity": "High",
+          "cwe": "CWE-200",
+          "description": "Attacker crafts queries to extract confidential information stored in the LLM context or training data.",
+          "remediation": "Apply query rate limiting, output filtering, and context window isolation."
+        },
+        {
+          "name": "Privacy Violation via LLM Processing",
+          "severity": "High",
+          "cwe": "CWE-359",
+          "description": "LLM processing of personal data leads to privacy violations through unintended disclosure or aggregation.",
+          "remediation": "Conduct DPIAs, apply data minimization, implement consent management, and audit LLM data flows."
+        }
+      ]
+    },
+    {
+      "id": "LLM03:2025",
+      "name": "Supply Chain Vulnerabilities",
+      "full": "LLM03:2025 – Supply Chain Vulnerabilities",
+      "vulnerabilities": [
+        {
+          "name": "Malicious Model Dependencies",
+          "severity": "High",
+          "cwe": "CWE-1104",
+          "description": "Compromised third-party libraries or tools used in LLM pipeline introduce malicious functionality.",
+          "remediation": "Enforce SBOM, verify package integrity, use dependency scanning tools."
+        },
+        {
+          "name": "Compromised Pre-trained Models",
+          "severity": "Critical",
+          "cwe": "CWE-494",
+          "description": "Pre-trained model weights from untrusted sources contain backdoors or malicious modifications.",
+          "remediation": "Only use models from verified sources; validate model checksums; implement model provenance tracking."
+        },
+        {
+          "name": "Vulnerable Third-Party LLM Integrations",
+          "severity": "High",
+          "cwe": "CWE-1035",
+          "description": "Third-party LLM plugins, APIs, or SDKs contain known vulnerabilities exploitable in the LLM pipeline.",
+          "remediation": "Inventory all third-party components; apply regular patching; use isolated integration environments."
+        },
+        {
+          "name": "Malicious Plugin / Extension for LLM",
+          "severity": "High",
+          "cwe": "CWE-829",
+          "description": "Untrusted or compromised LLM plugins execute malicious code or exfiltrate data during operation.",
+          "remediation": "Implement plugin sandboxing, code signing, and least-privilege execution for all LLM extensions."
+        },
+        {
+          "name": "Tainted Model Weights",
+          "severity": "Critical",
+          "cwe": "CWE-506",
+          "description": "Model weights are tampered post-training to introduce hidden behaviors or backdoor triggers.",
+          "remediation": "Cryptographically sign model artifacts; verify integrity at load time; maintain secure model registry."
+        }
+      ]
+    },
+    {
+      "id": "LLM04:2025",
+      "name": "Data and Model Poisoning",
+      "full": "LLM04:2025 – Data and Model Poisoning",
+      "vulnerabilities": [
+        {
+          "name": "Training Data Poisoning",
+          "severity": "Critical",
+          "cwe": "CWE-20",
+          "description": "Attacker injects malicious samples into training datasets to introduce biases, backdoors, or unsafe behaviors.",
+          "remediation": "Validate training data sources; implement anomaly detection on datasets; use data provenance tracking."
+        },
+        {
+          "name": "Fine-tuning Data Manipulation",
+          "severity": "High",
+          "cwe": "CWE-20",
+          "description": "Malicious data injected during fine-tuning phase to override safety alignment or implant backdoors.",
+          "remediation": "Audit fine-tuning datasets; restrict fine-tuning access; monitor model behavior changes post fine-tuning."
+        },
+        {
+          "name": "RAG Data Poisoning",
+          "severity": "High",
+          "cwe": "CWE-20",
+          "description": "Attacker contaminates the RAG knowledge base to influence LLM responses with false or harmful content.",
+          "remediation": "Validate and sanitize RAG data sources; implement access controls on vector databases; monitor retrieval patterns."
+        },
+        {
+          "name": "Backdoor Attacks on LLM",
+          "severity": "Critical",
+          "cwe": "CWE-506",
+          "description": "Hidden triggers embedded in training data cause the model to behave maliciously on specific inputs.",
+          "remediation": "Conduct adversarial testing; implement runtime behavior monitoring; use interpretability tools."
+        },
+        {
+          "name": "Adversarial Input Attacks",
+          "severity": "High",
+          "cwe": "CWE-20",
+          "description": "Carefully crafted inputs cause the LLM to misclassify, malfunction, or produce harmful outputs.",
+          "remediation": "Implement adversarial training, input preprocessing, and anomaly detection on model inputs."
+        }
+      ]
+    },
+    {
+      "id": "LLM05:2025",
+      "name": "Improper Output Handling",
+      "full": "LLM05:2025 – Improper Output Handling",
+      "vulnerabilities": [
+        {
+          "name": "Cross-Site Scripting (XSS) via LLM Output",
+          "severity": "High",
+          "cwe": "CWE-79",
+          "description": "LLM-generated content containing malicious scripts rendered in a browser without sanitization leads to XSS.",
+          "remediation": "HTML-encode all LLM outputs rendered in browsers; implement CSP; sanitize before rendering."
+        },
+        {
+          "name": "Code Injection via LLM Output",
+          "severity": "Critical",
+          "cwe": "CWE-94",
+          "description": "Unvalidated LLM-generated code executed directly allows arbitrary code execution.",
+          "remediation": "Never execute LLM output directly; validate and sandbox all generated code before execution."
+        },
+        {
+          "name": "SQL Injection via LLM-Generated Query",
+          "severity": "Critical",
+          "cwe": "CWE-89",
+          "description": "LLM-generated SQL queries containing malicious content executed against databases.",
+          "remediation": "Use parameterized queries; validate LLM SQL output; apply database least privilege."
+        },
+        {
+          "name": "Path Traversal via LLM-Generated Path",
+          "severity": "High",
+          "cwe": "CWE-22",
+          "description": "LLM generates file paths with traversal sequences that allow access to unauthorized files.",
+          "remediation": "Validate and canonicalize all LLM-generated file paths; use allowlists for permitted directories."
+        },
+        {
+          "name": "Unvalidated LLM Output Execution",
+          "severity": "High",
+          "cwe": "CWE-116",
+          "description": "Direct execution or rendering of LLM output without validation allows injection into downstream components.",
+          "remediation": "Implement output validation layers; treat LLM output as untrusted input to downstream systems."
+        },
+        {
+          "name": "LLM-Enabled Server-Side Injection",
+          "severity": "High",
+          "cwe": "CWE-74",
+          "description": "LLM output fed into server-side interpreters (shell, template engines) without sanitization.",
+          "remediation": "Escape and validate all LLM outputs before use in interpreters; use safe API equivalents."
+        }
+      ]
+    },
+    {
+      "id": "LLM06:2025",
+      "name": "Excessive Agency",
+      "full": "LLM06:2025 – Excessive Agency",
+      "vulnerabilities": [
+        {
+          "name": "Excessive Permissions for LLM Agents",
+          "severity": "High",
+          "cwe": "CWE-250",
+          "description": "LLM agents granted permissions beyond what is necessary for tasks, enabling broader impact from compromised outputs.",
+          "remediation": "Apply least privilege principles; audit agent permissions; restrict actions to minimum necessary scope."
+        },
+        {
+          "name": "Unnecessary LLM Functionality / Feature Creep",
+          "severity": "Medium",
+          "cwe": "CWE-272",
+          "description": "LLM system includes unnecessary capabilities or API access that expands attack surface.",
+          "remediation": "Minimize LLM capabilities; disable unused integrations; regularly audit what the agent can do."
+        },
+        {
+          "name": "Lack of Human Oversight for LLM Actions",
+          "severity": "High",
+          "cwe": "CWE-284",
+          "description": "LLM agents take consequential real-world actions without human review or approval mechanisms.",
+          "remediation": "Implement human-in-the-loop checkpoints for high-risk actions; require confirmation for destructive operations."
+        },
+        {
+          "name": "Autonomous Action Without Approval",
+          "severity": "High",
+          "cwe": "CWE-284",
+          "description": "LLM autonomously executes sensitive operations (send emails, delete files) without user consent.",
+          "remediation": "Require explicit user approval for all sensitive actions; implement action audit trails."
+        },
+        {
+          "name": "Over-privileged LLM Plugin / Tool",
+          "severity": "High",
+          "cwe": "CWE-250",
+          "description": "LLM tool plugins with excessive permissions allow broad unintended system access or data exposure.",
+          "remediation": "Scope plugin permissions tightly; review and approve each plugin capability; use sandboxed execution."
+        }
+      ]
+    },
+    {
+      "id": "LLM07:2025",
+      "name": "System Prompt Leakage",
+      "full": "LLM07:2025 – System Prompt Leakage",
+      "vulnerabilities": [
+        {
+          "name": "System Prompt Extraction",
+          "severity": "High",
+          "cwe": "CWE-200",
+          "description": "Attacker crafts queries to extract confidential system prompt instructions from the LLM.",
+          "remediation": "Implement prompt hardening; do not rely on system prompt secrecy for security; use access control layers."
+        },
+        {
+          "name": "Confidential Instruction Disclosure via Prompt",
+          "severity": "High",
+          "cwe": "CWE-200",
+          "description": "Sensitive business logic or credentials embedded in system prompts are disclosed through adversarial queries.",
+          "remediation": "Never store sensitive data in system prompts; use external secure storage; monitor prompt extraction attempts."
+        },
+        {
+          "name": "Prompt Leakage via Side-Channels",
+          "severity": "Medium",
+          "cwe": "CWE-203",
+          "description": "System prompt content inferred through timing, token counts, or response patterns without direct extraction.",
+          "remediation": "Normalize response timing; avoid information leakage through metadata; implement output rate controls."
+        },
+        {
+          "name": "Meta-Prompt / Configuration Disclosure",
+          "severity": "Medium",
+          "cwe": "CWE-200",
+          "description": "Internal LLM configuration, persona instructions, or tool descriptions inadvertently leaked in responses.",
+          "remediation": "Sanitize model responses for internal metadata; test for configuration disclosure in all output paths."
+        }
+      ]
+    },
+    {
+      "id": "LLM08:2025",
+      "name": "Vector and Embedding Weaknesses",
+      "full": "LLM08:2025 – Vector and Embedding Weaknesses",
+      "vulnerabilities": [
+        {
+          "name": "Embedding Inversion Attack",
+          "severity": "High",
+          "cwe": "CWE-200",
+          "description": "Attacker reconstructs original sensitive text from embedding vectors stored in vector databases.",
+          "remediation": "Apply differential privacy to embeddings; restrict direct access to embedding stores; encrypt at rest."
+        },
+        {
+          "name": "RAG Poisoning via Vector Store",
+          "severity": "High",
+          "cwe": "CWE-20",
+          "description": "Malicious documents injected into vector database cause RAG-based LLM to return harmful content.",
+          "remediation": "Validate all documents before indexing; implement content moderation on vector store inputs."
+        },
+        {
+          "name": "Cross-Context Information Leakage via Embeddings",
+          "severity": "High",
+          "cwe": "CWE-200",
+          "description": "Semantic similarity search exposes documents from different security contexts or tenants.",
+          "remediation": "Implement tenant isolation in vector databases; enforce access control at retrieval level."
+        },
+        {
+          "name": "Semantic Similarity Attack",
+          "severity": "Medium",
+          "cwe": "CWE-20",
+          "description": "Attacker uses semantically similar queries to bypass content filters or retrieve restricted information.",
+          "remediation": "Implement semantic-aware content filtering; use adversarial robustness techniques on retrieval systems."
+        },
+        {
+          "name": "Vector Database Injection",
+          "severity": "High",
+          "cwe": "CWE-89",
+          "description": "Malicious metadata or filter parameters in vector database queries cause unintended data access.",
+          "remediation": "Sanitize all vector DB query parameters; use parameterized queries; apply input validation."
+        }
+      ]
+    },
+    {
+      "id": "LLM09:2025",
+      "name": "Misinformation",
+      "full": "LLM09:2025 – Misinformation",
+      "vulnerabilities": [
+        {
+          "name": "LLM Hallucination / False Information Generation",
+          "severity": "High",
+          "cwe": "CWE-1017",
+          "description": "LLM generates plausible but factually incorrect information presented with false confidence.",
+          "remediation": "Implement RAG with verified sources; add fact-checking layers; clearly communicate uncertainty to users."
+        },
+        {
+          "name": "Overreliance on LLM Output",
+          "severity": "Medium",
+          "cwe": "CWE-1188",
+          "description": "Users or systems treat LLM outputs as authoritative without verification, leading to harmful decisions.",
+          "remediation": "Display confidence indicators; require human verification for critical decisions; educate users on LLM limitations."
+        },
+        {
+          "name": "Disinformation Generation via LLM",
+          "severity": "High",
+          "cwe": "CWE-1017",
+          "description": "LLM used to generate large-scale disinformation, fake news, or manipulated content.",
+          "remediation": "Implement usage policies; detect and block harmful content generation; apply watermarking to AI-generated content."
+        },
+        {
+          "name": "Fabricated Citations and References",
+          "severity": "Medium",
+          "cwe": "CWE-1017",
+          "description": "LLM generates fake academic citations, legal references, or URLs that appear legitimate.",
+          "remediation": "Validate all citations against real sources; use grounding techniques with verified knowledge bases."
+        },
+        {
+          "name": "AI-Generated Deepfake Content Enablement",
+          "severity": "High",
+          "cwe": "CWE-1017",
+          "description": "LLM used to generate or assist in creating synthetic identity content for fraud or manipulation.",
+          "remediation": "Implement content provenance tracking; apply usage restrictions; use AI content detection tools."
+        }
+      ]
+    },
+    {
+      "id": "LLM10:2025",
+      "name": "Unbounded Consumption",
+      "full": "LLM10:2025 – Unbounded Consumption",
+      "vulnerabilities": [
+        {
+          "name": "Denial of Service (DoS) via LLM",
+          "severity": "High",
+          "cwe": "CWE-400",
+          "description": "Attacker submits computationally expensive prompts to exhaust model resources and deny service to legitimate users.",
+          "remediation": "Implement rate limiting per user/IP; set maximum token limits; use request queuing and timeout mechanisms."
+        },
+        {
+          "name": "Resource Exhaustion via Token Flooding",
+          "severity": "High",
+          "cwe": "CWE-770",
+          "description": "Massive token requests overwhelm LLM inference infrastructure causing service degradation.",
+          "remediation": "Enforce token limits per request; implement cost-based throttling; monitor unusual consumption."
+        },
+        {
+          "name": "Model Extraction Attack",
+          "severity": "Medium",
+          "cwe": "CWE-400",
+          "description": "Attacker makes extensive queries to reverse-engineer model weights, architecture, or training data.",
+          "remediation": "Rate limit API queries; detect extraction patterns; apply output perturbation; monitor systematic querying."
+        },
+        {
+          "name": "Excessive LLM API Consumption",
+          "severity": "Medium",
+          "cwe": "CWE-770",
+          "description": "Uncontrolled API usage leads to excessive costs, degraded performance, or resource starvation.",
+          "remediation": "Implement usage quotas, budgets, and alerts; enforce per-user billing limits; monitor anomalous consumption."
+        },
+        {
+          "name": "Sponge Attack – Energy / Latency Exhaustion",
+          "severity": "Medium",
+          "cwe": "CWE-400",
+          "description": "Adversarially crafted inputs maximize computational requirements causing latency spikes and energy waste.",
+          "remediation": "Deploy adversarial robustness defenses; monitor latency outliers; implement request complexity scoring."
+        }
+      ]
+    }
+  ]
+}

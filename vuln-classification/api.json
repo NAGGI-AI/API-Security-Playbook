@@ -1,0 +1,622 @@
+{
+  "title": "Web API Security",
+  "framework": "OWASP API Security Top 10 – 2023",
+  "categories": [
+    {
+      "id": "API1:2023",
+      "name": "Broken Object Level Authorization",
+      "full": "API1:2023 – Broken Object Level Authorization",
+      "vulnerabilities": [
+        {
+          "name": "Broken Object Level Authorization (BOLA)",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html | https://cwe.mitre.org/data/definitions/639.html",
+          "description": "The API fails to enforce authorization at the object level, allowing authenticated users to access or modify resources belonging to other users by manipulating object identifiers in requests. This is the most critical and prevalent API vulnerability, enabling mass data exposure.",
+          "remediation": "Implement object-level authorization checks on every API endpoint that accesses user-owned data. Verify the requesting user owns or has explicit permission to access the specific resource using server-side logic. Use UUIDs instead of sequential IDs, derive ownership from authenticated session claims, and log all failed authorization attempts."
+        },
+        {
+          "name": "Insecure Direct Object Reference in API (IDOR)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/639.html",
+          "description": "The API exposes internal object references (e.g., database IDs) directly in endpoints, allowing attackers to enumerate or guess identifiers and access unauthorized resources by simply modifying the reference value in a request.",
+          "remediation": "Replace sequential or predictable identifiers with cryptographically random UUIDs. Enforce server-side authorization on every resource access to verify the requester owns the referenced object. Implement indirect reference maps that translate user-facing tokens to internal IDs server-side."
+        },
+        {
+          "name": "API Object Access Without Authorization",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "The API retrieves or modifies data based on user-supplied object identifiers without verifying that the requesting user has been granted permission to that specific object, allowing any authenticated user to access sensitive data belonging to others.",
+          "remediation": "Enforce a deny-by-default access control policy and explicitly grant access per resource. Bind all resource lookups to the authenticated user's scope (e.g., WHERE owner_id = current_user). Use centralized RBAC or ABAC and validate permissions on every API call, not just at login."
+        },
+        {
+          "name": "Predictable / Sequential Resource IDs",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/639.html",
+          "description": "The API uses sequential or predictable integer identifiers for resources, enabling attackers to iterate through IDs systematically and access, modify, or delete resources belonging to other users without requiring any special knowledge or privileges.",
+          "remediation": "Use cryptographically random identifiers (UUID v4) for all API resources instead of sequential integers. Even with non-predictable IDs, enforce server-side authorization checks on every resource access. Never expose internal database primary keys in API responses or URLs."
+        },
+        {
+          "name": "Horizontal Privilege Escalation via API",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "The API permits an authenticated user to access or manipulate resources owned by another user at the same privilege level by altering user or resource identifiers in the request, effectively bypassing object-level access controls.",
+          "remediation": "Validate that the authenticated user's identity matches the owner of the requested resource for every API call. Derive resource ownership from authenticated session claims (e.g., JWT sub) rather than trusting user-supplied identifiers. Implement authorization logic as a dedicated middleware layer and cover cross-user access in security tests."
+        },
+        {
+          "name": "Missing Object-Level Authorization Checks",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "The API retrieves or modifies data based on user-supplied object identifiers without verifying the requester's authorization to that specific object, allowing any authenticated user to access any object in the system simply by knowing or guessing its identifier.",
+          "remediation": "Add explicit authorization checks at every data-access point. Scope all database queries to the authenticated user's ownership (e.g., WHERE user_id = :current_user). Write integration tests that verify cross-user access is denied with 403 Forbidden responses."
+        },
+        {
+          "name": "IDOR via UUID / Enumerable Identifiers",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/639.html",
+          "description": "Even when UUIDs are used as identifiers, the API may leak them through other endpoints such as logs, listings, or error messages. An attacker who obtains a UUID can access another user's resource if server-side authorization is absent, because UUID secrecy is not a substitute for access control.",
+          "remediation": "Do not rely solely on UUID secrecy for access control. Always enforce server-side authorization checks regardless of identifier type. Minimize UUID exposure across endpoints, audit all places where resource identifiers are returned to clients, and restrict listing endpoints to resources owned by the authenticated requester."
+        }
+      ]
+    },
+    {
+      "id": "API2:2023",
+      "name": "Broken Authentication",
+      "full": "API2:2023 – Broken Authentication",
+      "vulnerabilities": [
+        {
+          "name": "Broken API Authentication",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "The API implements authentication mechanisms incorrectly or incompletely, allowing attackers to bypass authentication entirely, impersonate other users, or obtain valid credentials by exploiting weaknesses in the authentication flow such as missing signature validation, predictable tokens, or flawed session management.",
+          "remediation": "Use well-vetted authentication libraries and frameworks. Enforce strong credential policies, implement account lockout after repeated failures, use secure token-based authentication (JWT/OAuth 2.0), and regularly audit authentication flows. Apply MFA for sensitive operations and ensure all authentication errors return generic messages to prevent enumeration."
+        },
+        {
+          "name": "JWT Algorithm Confusion Attack",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "The API accepts JWTs signed with an unexpected algorithm (e.g., accepting HS256 tokens when RS256 is expected, or using the public key as the HMAC secret), allowing attackers to forge tokens through algorithm confusion and impersonate any user including administrators.",
+          "remediation": "Explicitly whitelist accepted JWT signing algorithms on the server side. Never trust the algorithm specified in the JWT header — enforce the expected algorithm in code. Use a well-maintained JWT library, keep it updated, and include algorithm confusion tests in the CI/CD security test suite."
+        },
+        {
+          "name": "JWT None Algorithm Attack",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "The API accepts JWTs with the algorithm set to 'none', meaning the token carries no cryptographic signature. An attacker can forge arbitrary JWT payloads without knowing any secret key, gaining unauthorized access to any account by crafting an unsigned token.",
+          "remediation": "Explicitly reject JWTs with the 'none' algorithm. Hard-code the accepted algorithm in JWT verification logic and never read it from the token header. Use a patched JWT library that rejects unsigned tokens by default and include regression tests for this specific attack pattern."
+        },
+        {
+          "name": "Missing API Key Validation",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/306.html",
+          "description": "The API does not validate or weakly validates API keys, allowing requests with missing, expired, revoked, or malformed keys to proceed. This bypasses the intended access control and can expose sensitive data or privileged functionality to unauthorized callers.",
+          "remediation": "Validate API keys on every request at the gateway or middleware level, checking expiry, revocation status, and permitted scopes. Use cryptographically strong API keys of at least 128 bits of entropy. Store keys hashed server-side, rotate them periodically, and revoke immediately on suspected compromise."
+        },
+        {
+          "name": "OAuth 2.0 Misconfiguration",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/287.html",
+          "description": "The OAuth 2.0 implementation contains misconfigurations such as open redirect URIs, missing state parameter validation, implicit flow misuse, or insufficient scope enforcement, enabling token theft, CSRF attacks, or privilege escalation by malicious applications.",
+          "remediation": "Strictly validate redirect URIs against a server-side allowlist. Enforce PKCE for all public clients. Validate the state parameter on every authorization response to prevent CSRF. Use short-lived access tokens with minimal scopes, prefer the authorization code flow, and disable the implicit flow."
+        },
+        {
+          "name": "API Token Exposure in Logs or Responses",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/532.html",
+          "description": "Sensitive API tokens, keys, or credentials are inadvertently written to server logs, included in API responses, or exposed in error messages. An attacker with log access or who intercepts a response can extract these credentials to gain unauthorized access to the API.",
+          "remediation": "Scrub all sensitive values (tokens, keys, passwords, PII) from log output using structured logging filters. Audit API responses to ensure credentials are never returned after initial issuance. Implement strict log access controls, monitor for unauthorized log access, and use secrets scanning in CI/CD pipelines."
+        },
+        {
+          "name": "Weak API Token Generation",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/330.html",
+          "description": "The API generates tokens (API keys, session tokens, password reset tokens) using weak or predictable pseudorandom number generators, making it feasible for an attacker to guess or brute-force valid tokens and gain unauthorized access to user accounts.",
+          "remediation": "Use a cryptographically secure random number generator (CSPRNG) for all token generation. Ensure tokens have at least 128 bits of entropy. Use platform-provided secure random functions (e.g., secrets.token_hex() in Python, crypto.randomBytes() in Node.js) and avoid seeding with predictable values."
+        },
+        {
+          "name": "Missing MFA for Privileged API Access",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/308.html",
+          "description": "High-privilege API operations such as admin actions, financial transactions, or account changes can be performed with only a single authentication factor. A compromised password or stolen token is sufficient for an attacker to execute critical operations without additional verification.",
+          "remediation": "Require step-up authentication (MFA) for sensitive or privileged API operations. Support TOTP or hardware security keys. Implement re-authentication prompts for critical actions even within an active session. Enforce MFA at the API layer rather than relying solely on the client application to trigger it."
+        },
+        {
+          "name": "API Credential Stuffing / Brute Force",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/307.html",
+          "description": "The API authentication endpoint lacks adequate protections against automated credential attacks. Attackers use automated tools to test large volumes of username and password combinations, or replayed credentials from other data breaches, to gain unauthorized access to accounts.",
+          "remediation": "Implement account lockout or progressive delays after repeated failed authentication attempts. Use CAPTCHA or bot detection on authentication endpoints. Apply IP-based and account-based rate limiting. Monitor and alert on anomalous authentication patterns, enforce strong password policies, and check credentials against known breach databases."
+        },
+        {
+          "name": "API Key Hardcoded in Client Code",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/321.html",
+          "description": "API keys, secrets, or credentials are embedded directly in client-side code (mobile apps, JavaScript bundles, or public repositories). Anyone who decompiles the app or views the source can extract these credentials and make unauthorized API calls with full associated access privileges.",
+          "remediation": "Never hardcode credentials in client-side code or source repositories. Use environment variables, secrets management services (e.g., AWS Secrets Manager, HashiCorp Vault), or secure key stores. Rotate any exposed keys immediately, audit version control history for leaked secrets, and use pre-commit hooks with secrets scanning tools."
+        },
+        {
+          "name": "Insecure API Token Storage",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/312.html",
+          "description": "API tokens are stored insecurely on the client side (e.g., in localStorage, plaintext files, or unprotected databases), making them accessible to attackers via XSS attacks, device compromise, or unauthorized data access.",
+          "remediation": "Store tokens in secure, httpOnly, SameSite cookies to protect against XSS. On mobile platforms, use the OS keychain or keystore. Avoid storing sensitive tokens in localStorage or sessionStorage. Implement short token lifetimes with refresh token rotation to minimize the impact of token theft."
+        },
+        {
+          "name": "Token Replay Attack",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/294.html",
+          "description": "The API does not sufficiently protect against replay attacks, allowing an attacker who captures a valid authentication token or signed request to reuse it later to perform unauthorized actions, impersonate a user, or bypass security controls.",
+          "remediation": "Set short expiry times on all tokens and signed requests. Implement nonce or timestamp validation to reject replayed requests outside an acceptable time window. Use token binding where supported. Invalidate tokens server-side upon logout and consider single-use tokens for sensitive operations such as financial transactions."
+        },
+        {
+          "name": "Missing Token Expiry / Revocation",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/613.html",
+          "description": "API tokens do not expire or have excessively long lifetimes with no mechanism to revoke them. Stolen or leaked tokens remain valid indefinitely, giving attackers persistent access even after a compromise is discovered and the affected user is notified.",
+          "remediation": "Set short expiry times on access tokens (15-60 minutes) and use refresh tokens with rotation for session continuity. Implement a token revocation endpoint and maintain a server-side blocklist. Revoke all tokens on password change, logout, or suspected compromise. Use stateful session management where revocation is a hard requirement."
+        }
+      ]
+    },
+    {
+      "id": "API3:2023",
+      "name": "Broken Object Property Level Authorization",
+      "full": "API3:2023 – Broken Object Property Level Authorization",
+      "vulnerabilities": [
+        {
+          "name": "Mass Assignment via API",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/915.html",
+          "description": "The API automatically binds all user-supplied input to internal object properties without filtering, allowing attackers to modify privileged fields (e.g., isAdmin, balance, role) by including extra parameters in the request body that the application was not designed to accept from users.",
+          "remediation": "Use explicit allowlists (DTOs or input validation schemas) to define exactly which fields users are permitted to set. Never automatically bind all request body fields to domain model objects. Implement property-level authorization and validate all incoming data against a strict schema before processing any request."
+        },
+        {
+          "name": "Over-posting / Excessive Data in API Request",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/915.html",
+          "description": "The API accepts and processes more fields than intended in request payloads. Attackers submit additional properties to manipulate business logic, bypass restrictions, or modify privileged attributes, similar to mass assignment but targeting specific business rule violations.",
+          "remediation": "Define strict input schemas and reject any request containing fields outside the permitted allowlist. Use separate request and response models (DTOs) that explicitly map only permitted fields. Return 400 Bad Request for unexpected fields to detect and deter potential abuse attempts."
+        },
+        {
+          "name": "Sensitive Properties Exposed in API Response",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/213.html",
+          "description": "The API returns more data than required for the client's use case, including sensitive fields such as password hashes, internal system IDs, PII, financial data, or security configuration. Attackers harvest this excess data for further attacks, competitive intelligence gathering, or privacy compliance violations.",
+          "remediation": "Define explicit response schemas that return only the minimum data necessary for each endpoint's use case. Use dedicated view models or DTO projections for API responses. Conduct regular audits of all API responses to identify and remove sensitive or unnecessary fields. Apply the principle of data minimization consistently."
+        },
+        {
+          "name": "Broken Object Property Level Authorization",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/213.html | https://cwe.mitre.org/data/definitions/915.html",
+          "description": "The API fails to enforce authorization at the property level of objects, allowing users to read properties they are not permitted to see (excessive data exposure) or write to properties they should not modify (mass assignment), even when they have legitimate access to the object itself.",
+          "remediation": "Implement property-level access controls in addition to object-level authorization. Use role-aware serializers that filter properties based on the requester's permissions. Validate all read and write operations against the user's authorized property scope. Create dedicated security test cases for property-level access control enforcement."
+        },
+        {
+          "name": "API Response Leaking Internal Fields",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/213.html",
+          "description": "API responses inadvertently include internal system fields such as database primary keys, server file paths, internal user flags, audit metadata, or configuration values. Attackers use this information to map system internals and craft more targeted follow-on attacks.",
+          "remediation": "Review all API response payloads and strip internal, system, and implementation-detail fields before sending to clients. Use explicit serialization allowlists rather than auto-serializing entire domain objects. Implement automated response scanning tests that fail when known sensitive field names appear in any API response."
+        },
+        {
+          "name": "Unauthorized Write to Read-Only Property",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/915.html",
+          "description": "The API allows users to update fields that should be read-only or system-controlled (e.g., account balance, creation date, role, email-verified status) by including those fields in the request body, bypassing intended business logic controls and data integrity constraints.",
+          "remediation": "Clearly separate read-only and writable properties in the data model. Use request-specific DTOs that exclude non-writable fields and return validation errors if read-only fields appear in write requests. Apply server-side enforcement and never rely on client-side behavior to protect field immutability."
+        }
+      ]
+    },
+    {
+      "id": "API4:2023",
+      "name": "Unrestricted Resource Consumption",
+      "full": "API4:2023 – Unrestricted Resource Consumption",
+      "vulnerabilities": [
+        {
+          "name": "Missing API Rate Limiting",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/770.html",
+          "description": "The API does not restrict the number of requests a client can make within a given time period, allowing attackers to perform brute-force attacks, enumerate resources, scrape data at scale, overload the service, or automate business logic abuse without any technical barrier.",
+          "remediation": "Implement rate limiting at the API gateway or middleware layer, enforcing per-user, per-IP, and per-endpoint request limits. Return 429 Too Many Requests with Retry-After headers when limits are exceeded. Apply stricter limits to sensitive endpoints (authentication, password reset, OTP). Use token bucket or sliding window algorithms."
+        },
+        {
+          "name": "Missing Pagination Limits",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "The API returns unbounded query results, allowing a single request to retrieve entire datasets. This causes excessive server resource consumption, degraded performance, and enables mass data harvesting or exfiltration by attackers with only a minimal number of requests.",
+          "remediation": "Enforce mandatory pagination on all collection endpoints with a defined maximum page size (e.g., 100 items). Reject or cap requests that exceed the maximum limit. Default to a sensible page size when none is specified. Implement cursor-based or offset-based pagination consistently across all list endpoints."
+        },
+        {
+          "name": "Unrestricted API Request Size / Payload",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "The API does not enforce maximum size limits on incoming request bodies or payloads, allowing attackers to send extremely large requests that exhaust server memory, CPU, and disk resources, potentially causing denial of service, application crashes, or out-of-memory errors.",
+          "remediation": "Configure maximum request body size limits at the web server, API gateway, and application layers. Reject oversized requests with 413 Payload Too Large. Apply separate and appropriate limits for JSON payloads versus file uploads. Test size limit enforcement as part of load and security testing."
+        },
+        {
+          "name": "Resource Exhaustion via API Flooding",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "The API can be overwhelmed by a high volume of requests that collectively exhaust server resources such as CPU, memory, database connections, or thread pools, causing denial of service for legitimate users even when individual requests appear normal.",
+          "remediation": "Implement rate limiting, connection limits, and circuit breakers. Use API gateways with DDoS protection capabilities. Deploy auto-scaling infrastructure with defined capacity limits. Monitor resource utilization in real time and alert on anomalous spikes. Implement queue-based processing for resource-intensive operations."
+        },
+        {
+          "name": "Missing Query Complexity Limits (GraphQL)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/770.html",
+          "description": "A GraphQL API does not enforce query depth, complexity, or breadth limits, allowing attackers to craft deeply nested or highly complex queries (e.g., deeply nested relationships or batch queries) that consume excessive server resources and cause denial of service.",
+          "remediation": "Implement query depth limits, complexity scoring, and breadth limits in the GraphQL server. Use a query cost analysis library (e.g., graphql-query-complexity) and reject queries exceeding defined thresholds. Disable or restrict introspection in production. Set per-query timeouts and monitor for unusually expensive query patterns."
+        },
+        {
+          "name": "API-Based Denial of Service (DoS)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "The API is vulnerable to denial of service attacks through resource-intensive operations, unbounded request volumes, or algorithmic complexity exploits. Attackers can render the API unavailable to legitimate users by crafting requests that consume all available server resources.",
+          "remediation": "Implement comprehensive rate limiting, request size limits, query complexity caps, and timeout controls. Use load balancers and CDN-based DDoS mitigation. Deploy circuit breakers to prevent cascading failures. Set resource limits per request at the infrastructure level and monitor for unusual resource consumption patterns."
+        },
+        {
+          "name": "Unrestricted Concurrent API Connections",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "The API does not limit the number of simultaneous connections from a single client, allowing attackers or faulty clients to monopolize server connection pools and resources by opening many concurrent connections, degrading service availability for all other users.",
+          "remediation": "Configure maximum concurrent connection limits per client at the API gateway level. Implement connection pooling and idle timeout policies. Apply TCP-level rate limiting and connection tracking. Monitor for clients with abnormally high concurrent connection counts and implement automatic throttling for offending clients."
+        },
+        {
+          "name": "Missing API Timeout Controls",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "The API does not enforce timeouts on long-running requests, allowing slow-read or slow-write attacks to keep connections open indefinitely. This exhausts server thread pools and file descriptor limits, causing denial of service that affects all users of the API.",
+          "remediation": "Configure read, write, and idle connection timeouts at the web server, load balancer, and API gateway layers. Implement application-level request timeouts for all backend processing operations. Promptly cancel and release all resources held by timed-out requests. Set aggressive timeouts for externally facing endpoints."
+        },
+        {
+          "name": "Excessive API Response Size",
+          "severity": "Low",
+          "cwe": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "API endpoints return unnecessarily large responses due to missing data filtering or field selection capabilities, wasting bandwidth, increasing latency for all clients, and potentially inadvertently exposing more data than clients require for their specific use case.",
+          "remediation": "Implement response filtering and field selection (e.g., GraphQL, OData $select, or sparse fieldsets in JSON:API). Enforce pagination and maximum response size limits. Enable response compression (gzip/brotli). Conduct response size audits and optimize large endpoints to return only the data strictly necessary."
+        }
+      ]
+    },
+    {
+      "id": "API5:2023",
+      "name": "Broken Function Level Authorization",
+      "full": "API5:2023 – Broken Function Level Authorization",
+      "vulnerabilities": [
+        {
+          "name": "Broken Function Level Authorization",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "The API does not properly restrict which functions or endpoints a user can invoke based on their role or permissions. Lower-privileged users can call administrative or privileged API functions simply by knowing the endpoint URL, bypassing intended role-based access controls entirely.",
+          "remediation": "Implement function-level authorization checks for every API endpoint enforced by a centralized authorization middleware. Apply deny-by-default access control and explicitly grant access to each function per role. Regularly test that low-privilege users receive 403 Forbidden responses when accessing all administrative endpoints."
+        },
+        {
+          "name": "Admin API Endpoints Accessible to Regular Users",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "Administrative API endpoints that allow privileged operations such as user management, system configuration, or data deletion are accessible to regular authenticated users due to missing or misconfigured authorization checks, enabling privilege escalation and unauthorized system changes.",
+          "remediation": "Separate admin APIs into a dedicated interface restricted to admin networks or VPNs. Enforce strict RBAC on all administrative endpoints. Include automated security tests that verify regular users receive 403 Forbidden for every admin operation. Log and alert on all administrative API access attempts."
+        },
+        {
+          "name": "HTTP Method Abuse (GET vs POST vs DELETE)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "The API applies authorization checks only to specific HTTP methods on an endpoint but not to others, allowing attackers to use alternative methods (e.g., using GET instead of POST, or sending HEAD requests) to circumvent authorization and perform unintended operations.",
+          "remediation": "Apply consistent authorization checks across all HTTP methods for every endpoint. Explicitly allowlist permitted HTTP methods per route and return 405 Method Not Allowed for any unlisted method. Test authorization enforcement for each method combination independently as part of the API security test suite."
+        },
+        {
+          "name": "Unauthorized Access to Internal API Functions",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "Internal API functions intended exclusively for backend services or system administrators are exposed to external networks without proper authorization controls, enabling unauthorized data access, configuration manipulation, or service disruption by external attackers.",
+          "remediation": "Never expose internal API functions to external networks. Use network segmentation, private subnets, and API gateway policies to restrict access to internal endpoints. Require mutual TLS (mTLS) or internal API keys with strict IP allowlisting for all service-to-service API communication."
+        },
+        {
+          "name": "Vertical Privilege Escalation via API",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/269.html",
+          "description": "The API allows a lower-privileged user to gain higher privilege levels (e.g., a regular user escalating to administrator) by exploiting flaws in role assignment logic, tampering with privilege-related request parameters, or bypassing authorization checks on role-modifying endpoints.",
+          "remediation": "Enforce strict server-side role management and never trust user-supplied role or permission parameters. Require additional authentication factors for privilege elevation. Audit all role assignment operations and alert on unexpected privilege changes. Apply the principle of least privilege and regularly review all role assignments."
+        },
+        {
+          "name": "API Endpoint Role Bypass",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "The API's role-based authorization can be circumvented through parameter manipulation, header injection, path traversal variations, URL encoding tricks, or endpoint aliasing, allowing users to access functionality reserved for higher-privilege roles without legitimate authorization.",
+          "remediation": "Normalize and validate all API paths before performing authorization checks. Apply consistent authorization middleware uniformly to all route variations. Test authorization with varied request forms including different capitalizations, trailing slashes, encoded characters, and HTTP method override headers."
+        },
+        {
+          "name": "Missing API Gateway Authorization",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/285.html",
+          "description": "The API gateway does not enforce authorization, delegating this entirely to backend services that may have inconsistent or absent controls. Direct access to backend services bypassing the gateway exposes unprotected APIs to unauthorized callers.",
+          "remediation": "Enforce authentication and coarse-grained authorization at the API gateway as a defense-in-depth layer. Ensure each backend service also independently enforces fine-grained authorization. Network-restrict all backend services so they are only reachable through the gateway using firewall rules or private VPC networking."
+        }
+      ]
+    },
+    {
+      "id": "API6:2023",
+      "name": "Unrestricted Access to Sensitive Business Flows",
+      "full": "API6:2023 – Unrestricted Access to Sensitive Business Flows",
+      "vulnerabilities": [
+        {
+          "name": "Unrestricted Access to Sensitive Business Flows",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/799.html",
+          "description": "The API exposes business-critical flows (e.g., checkout, voting, reward redemption, account registration) without sufficient controls to prevent automated abuse. Attackers deploy bots to manipulate these flows at a scale impossible for human users, causing financial loss or business disruption.",
+          "remediation": "Identify and protect sensitive business flows with rate limiting, CAPTCHA, device fingerprinting, and behavioral analytics. Implement business-specific abuse controls (e.g., one voucher per account, purchase quantity limits). Monitor for anomalous usage patterns in real time and implement automated response to detected abuse."
+        },
+        {
+          "name": "Automated Abuse of Business Logic via API",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/799.html",
+          "description": "Attackers exploit the API through automated scripts to abuse business logic at scale — performing bulk account creation, mass voting manipulation, inventory scalping, or bonus farming — at a rate that legitimate human users cannot achieve, distorting business operations and causing financial harm.",
+          "remediation": "Apply bot detection and behavioral analysis to all sensitive API endpoints. Implement velocity checks and anomaly-based detection. Use device fingerprinting and progressive challenge mechanisms for suspicious clients. Design business logic defensively with automated abuse scenarios considered from the initial design phase."
+        },
+        {
+          "name": "Price Manipulation via API",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/840.html",
+          "description": "The API trusts client-supplied pricing data during transaction processing, allowing attackers to modify prices in API requests to purchase items at fraudulent prices, apply unauthorized discounts, or manipulate financial calculations to obtain monetary advantage.",
+          "remediation": "Never trust client-supplied pricing or discount data. Calculate and validate all prices server-side using authoritative pricing data from trusted internal sources. Apply integrity checks on all order totals before processing payments. Log and alert on any discrepancy between expected and submitted price values."
+        },
+        {
+          "name": "Inventory Manipulation via API",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/840.html",
+          "description": "The API allows manipulation of inventory quantities, availability status, or stock levels through insufficient business logic validation, enabling attackers to hoard, falsely deplete, or manipulate inventory to gain competitive advantage or disrupt normal business operations.",
+          "remediation": "Enforce all inventory management logic server-side with database-level locking (pessimistic or optimistic concurrency control) to prevent race conditions. Validate all inventory operations against defined business rules. Implement alerts for unusual inventory change patterns and rate-limit inventory modification endpoints."
+        },
+        {
+          "name": "Account Abuse via API Automation",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/799.html",
+          "description": "The API permits automated creation, modification, or deletion of accounts without sufficient friction or validation, allowing attackers to generate fake accounts at scale for spam campaigns, bypassing per-account usage limits, committing fraud, or conducting coordinated attacks.",
+          "remediation": "Implement CAPTCHA or proof-of-work challenges on account creation and modification flows. Require email and phone verification before account activation. Apply rate limiting on registration endpoints and monitor for bulk account creation patterns. Use device fingerprinting to detect and block automated account creation factories."
+        },
+        {
+          "name": "Voucher / Promo Code Abuse via API",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/840.html",
+          "description": "The API does not adequately validate or limit the use of promotional codes, allowing attackers to reuse single-use vouchers, exploit race conditions to apply codes multiple times, or use automation to claim promotional benefits beyond their intended per-account limitations, causing direct financial loss.",
+          "remediation": "Enforce single-use validation for voucher codes using database-level uniqueness constraints and atomic operations to prevent race conditions. Bind codes to specific user accounts upon first use. Implement rate limiting on redemption endpoints and monitor for high-volume redemption attempts from a single account or IP address."
+        },
+        {
+          "name": "Fake Account Creation via API Automation",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/799.html",
+          "description": "Attackers exploit the account registration API using automation to create large numbers of fake accounts, enabling fraud, spam, preparation for credential stuffing, or bypassing per-account usage limits and promotional offers at a scale that overwhelms manual review processes.",
+          "remediation": "Require email verification before account activation and implement CAPTCHA on registration flows. Use device fingerprinting and behavioral bot detection. Rate-limit registration attempts per IP address and email domain. Monitor for bulk registration patterns and block suspicious registration clusters automatically."
+        }
+      ]
+    },
+    {
+      "id": "API7:2023",
+      "name": "Server Side Request Forgery",
+      "full": "API7:2023 – Server Side Request Forgery",
+      "vulnerabilities": [
+        {
+          "name": "Server-Side Request Forgery via API (SSRF)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "The API accepts user-supplied URLs and makes server-side HTTP requests to them without adequate validation or restriction. Attackers exploit this to make the server fetch internal resources, access cloud metadata services, scan internal networks, or exfiltrate data through the server as a proxy.",
+          "remediation": "Validate and sanitize all user-supplied URLs before making server-side requests. Use an allowlist of permitted external domains and protocols. Block requests to private IP ranges (RFC 1918), loopback addresses, and cloud metadata endpoints (169.254.169.254). Use a dedicated outbound egress proxy with strict filtering rules."
+        },
+        {
+          "name": "Blind SSRF via API Endpoint",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "The API is vulnerable to SSRF but does not return the fetched content directly to the attacker. Attackers infer information about internal systems through timing differences, error messages, or out-of-band DNS callbacks, enabling stealthy reconnaissance of internal network infrastructure.",
+          "remediation": "Apply all standard SSRF mitigations including URL allowlisting and private IP range blocking. Implement DNS rebinding protections by re-validating resolved IP addresses immediately before making each request. Use out-of-band SSRF detection systems (e.g., canary tokens) to identify blind SSRF exploitation attempts."
+        },
+        {
+          "name": "SSRF to Internal Metadata Service via API",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "The API can be abused to make server-side requests to cloud provider metadata endpoints (e.g., AWS 169.254.169.254, GCP metadata.google.internal), allowing attackers to steal cloud instance credentials, IAM role tokens, and sensitive environment configuration for use in lateral movement.",
+          "remediation": "Block all outbound requests to cloud metadata IP ranges and hostnames at both the network firewall and application layers. Enable IMDSv2 on AWS instances to require session-oriented metadata requests. Assign cloud instances the minimum required IAM permissions and deploy SSRF-specific network egress rules as a defense-in-depth measure."
+        },
+        {
+          "name": "SSRF via Webhook URL Parameter",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "The API accepts webhook callback URLs from users and makes HTTP requests to them without proper validation of the target address. Attackers supply internal network addresses or cloud metadata service URLs as webhook targets, exploiting the legitimate webhook mechanism as an SSRF vector.",
+          "remediation": "Validate all webhook URLs against an allowlist of permitted external domains. Resolve and verify the target IP address at request time (not just at registration) to prevent DNS rebinding attacks. Reject URLs resolving to private, loopback, or link-local addresses. Apply consistent SSRF protections to all URL-accepting API parameters."
+        }
+      ]
+    },
+    {
+      "id": "API8:2023",
+      "name": "Security Misconfiguration",
+      "full": "API8:2023 – Security Misconfiguration",
+      "vulnerabilities": [
+        {
+          "name": "API Security Misconfiguration",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/16.html",
+          "description": "The API server, framework, or infrastructure is deployed with insecure default settings, unnecessary features enabled, or weak configuration baselines. This exposes the API to information disclosure, unauthorized access, and injection attacks that would be prevented by proper security hardening.",
+          "remediation": "Follow a documented security hardening baseline for all API components before deployment. Disable unnecessary features, debug modes, sample applications, and default credentials. Use infrastructure-as-code with automated security scanning to detect configuration drift. Conduct regular configuration audits and apply the principle of least functionality."
+        },
+        {
+          "name": "CORS Misconfiguration in API",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/942.html",
+          "description": "The API is configured with overly permissive CORS policies such as reflecting arbitrary Origin headers or using wildcard origins with credentials enabled, allowing malicious websites to make credentialed cross-origin requests and read sensitive API responses on behalf of authenticated users.",
+          "remediation": "Define a strict CORS allowlist of explicitly trusted origins. Never reflect arbitrary Origin header values or combine wildcard origins with Access-Control-Allow-Credentials: true. Validate origins server-side against the maintained allowlist on every request. Regularly audit CORS configuration and test cross-origin request behavior."
+        },
+        {
+          "name": "Missing Security Headers in API Response",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/693.html",
+          "description": "The API does not return necessary HTTP security headers (e.g., Content-Security-Policy, X-Content-Type-Options, Strict-Transport-Security, X-Frame-Options), leaving clients vulnerable to clickjacking, MIME-type sniffing, cross-site scripting, and other browser-based attacks.",
+          "remediation": "Configure the API to return all recommended security headers on every response. Use security header middleware (e.g., Helmet.js for Node.js). Regularly scan API responses with OWASP ZAP or securityheaders.com. Include security header verification checks in CI/CD pipeline automated tests."
+        },
+        {
+          "name": "Verbose / Detailed API Error Messages",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/209.html",
+          "description": "The API returns detailed error messages containing stack traces, database query details, internal file paths, dependency version numbers, or system configuration data. Attackers use this information to map system internals, identify vulnerable components, and craft more precise targeted attacks.",
+          "remediation": "Return generic, user-friendly error messages to clients and log detailed diagnostic information server-side only. Implement a centralized error handler that sanitizes all responses before sending. Distinguish between 4xx client errors and 5xx server errors without leaking any internal implementation details."
+        },
+        {
+          "name": "API Endpoint Exposed Without Authentication",
+          "severity": "Critical",
+          "cwe": "https://cwe.mitre.org/data/definitions/306.html",
+          "description": "One or more API endpoints that should require authentication are publicly accessible without any credentials, allowing unauthenticated users to access sensitive data, trigger business logic, or perform privileged operations intended only for authenticated and authorized users.",
+          "remediation": "Apply authentication middleware globally to all API routes with explicit opt-out only for intentionally public endpoints. Conduct regular endpoint audits to verify authentication requirements. Include automated tests that verify unauthenticated requests to all protected endpoints consistently return 401 Unauthorized."
+        },
+        {
+          "name": "GraphQL Introspection Enabled in Production",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "GraphQL introspection is enabled on the production API, allowing any user to query the complete schema and discover all types, fields, mutations, and queries. Attackers use this information to map the entire API surface, identify high-value targets, and craft optimized malicious queries.",
+          "remediation": "Disable GraphQL introspection in production environments. If introspection is needed, restrict it to authenticated and specifically authorized developers. Implement query allowlisting (persisted queries) for production APIs to restrict clients to only pre-approved operations and prevent live schema exploration."
+        },
+        {
+          "name": "Swagger / OpenAPI Documentation Publicly Exposed",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "The API's Swagger or OpenAPI documentation is publicly accessible without authentication, providing attackers with a complete and detailed map of all endpoints, parameters, data formats, authentication mechanisms, and data models, significantly reducing the effort required for targeted API attacks.",
+          "remediation": "Restrict API documentation access to authenticated and authorized users such as internal developers. Do not host API documentation on public-facing production servers. Maintain separate documentation environments for internal teams and apply access controls consistent with the sensitivity of the described API."
+        },
+        {
+          "name": "HTTP Methods Not Restricted on API Endpoints",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/650.html",
+          "description": "The API does not restrict which HTTP methods are accepted on each endpoint, allowing attackers to use unintended methods (e.g., TRACE, PUT, DELETE) to discover API capabilities, bypass authorization checks specific to certain methods, or trigger unintended server-side operations.",
+          "remediation": "Explicitly allowlist the permitted HTTP methods for each API endpoint. Return 405 Method Not Allowed for any method outside the allowlist. Disable TRACE and TRACK methods globally at the web server level. Include HTTP method restriction enforcement in API security tests and automated scanning."
+        },
+        {
+          "name": "Default API Gateway Configuration Not Hardened",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1188.html",
+          "description": "The API gateway is deployed with default or out-of-the-box configuration that includes insecure settings such as unrestricted access policies, disabled authentication enforcement, permissive routing rules, or missing rate limits, providing inadequate protection for backend services.",
+          "remediation": "Review and harden all API gateway configurations against a documented security baseline before any production deployment. Disable unused features and default administrative accounts. Apply authentication, authorization, rate limiting, and comprehensive logging policies. Enforce configuration standards using infrastructure-as-code and automated configuration scanning."
+        },
+        {
+          "name": "Missing TLS / HTTPS Enforcement on API",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/319.html",
+          "description": "The API is accessible over unencrypted HTTP, or HTTPS is not enforced with a proper redirect from HTTP. API credentials, authentication tokens, and sensitive payload data transmitted over plaintext connections can be intercepted by network-level attackers through passive monitoring or active man-in-the-middle attacks.",
+          "remediation": "Enforce HTTPS for all API traffic. Redirect all HTTP requests to HTTPS with 301 permanent redirects. Implement HTTP Strict Transport Security (HSTS) with a long max-age and includeSubDomains directive. Use TLS 1.2 or higher, disable weak cipher suites, use valid trusted certificates, and monitor certificates for expiry."
+        },
+        {
+          "name": "Insecure CORS Policy (Wildcard Origin)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/942.html",
+          "description": "The API uses a wildcard (*) in the Access-Control-Allow-Origin response header, permitting any domain to make cross-origin requests. While browsers block credentials with wildcards, misconfigurations combining wildcards with other permissive settings can expose users to cross-origin data theft.",
+          "remediation": "Replace wildcard CORS origins with an explicit server-side allowlist of trusted domains. Never combine Access-Control-Allow-Origin: * with Access-Control-Allow-Credentials: true. Validate the Origin header against the allowlist server-side on every request and return the explicitly matched value rather than a reflected or wildcard response."
+        }
+      ]
+    },
+    {
+      "id": "API9:2023",
+      "name": "Improper Inventory Management",
+      "full": "API9:2023 – Improper Inventory Management",
+      "vulnerabilities": [
+        {
+          "name": "Deprecated API Version Still Active",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1059.html",
+          "description": "Older API versions that have been officially deprecated remain active and accessible in production, often without the security fixes and hardened controls applied to newer versions. Attackers specifically target deprecated versions to exploit known vulnerabilities that have been remediated in current releases.",
+          "remediation": "Maintain a formal API version inventory and establish a deprecation and decommissioning process with defined timelines. Communicate sunset dates to API consumers with adequate migration lead time. Apply security patches to all active versions or accelerate their decommissioning. Monitor deprecated version traffic and enforce removal deadlines."
+        },
+        {
+          "name": "Undocumented / Shadow API Endpoints",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1059.html",
+          "description": "The API has endpoints absent from official documentation — created for testing, debugging, or internal use but never formally removed. These shadow APIs are unknown to the security team, frequently lack proper security controls, and cannot be monitored, patched, or audited systematically.",
+          "remediation": "Maintain a comprehensive, continuously updated API inventory. Use API discovery tools and traffic analysis to identify undocumented endpoints in production. Integrate API documentation requirements into the software development lifecycle. Regularly audit deployed endpoints against the official inventory and decommission any unauthorized gaps."
+        },
+        {
+          "name": "No API Version Control / Versioning Strategy",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1059.html",
+          "description": "The API lacks a formal versioning strategy, making it difficult to track which versions are in use, manage security patches across all deployed versions, or safely deprecate insecure endpoints. This leads to uncontrolled API sprawl with inconsistent and unmanaged security postures.",
+          "remediation": "Implement a formal API versioning strategy using URI versioning or header-based versioning. Maintain documentation of all active versions and their support lifecycle. Establish security patch policies and sunset dates for each version. Use an API gateway to centrally manage version routing, traffic monitoring, and deprecation enforcement."
+        },
+        {
+          "name": "API Exposed in Non-Production Environment",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Development, staging, or QA API instances are accessible from the internet with weaker security controls, debug features enabled, real or realistic production data, and relaxed authentication. Attackers discover these environments through DNS enumeration or search engine indexing and exploit them to gain access.",
+          "remediation": "Restrict all non-production API environments to internal networks or VPNs. Never use real production data in non-production environments — use anonymized or synthetic test data. Apply equivalent security controls to all environments and implement environment detection to enforce access restrictions and disable debug features externally."
+        },
+        {
+          "name": "Missing API Inventory / Asset Management",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1059.html",
+          "description": "The organization lacks a complete and current inventory of all deployed API endpoints, versions, and third-party integrations. APIs that are not tracked cannot be secured, patched, or monitored, creating significant blind spots in the security posture and vulnerability management program.",
+          "remediation": "Implement automated API discovery and inventory management using API gateways, service meshes, or dedicated API management platforms. Assign a defined owner to each API. Include all APIs in the vulnerability management program. Conduct regular discovery scans to identify unregistered or orphaned endpoints and bring them under governance."
+        },
+        {
+          "name": "Zombie API Endpoints (Forgotten Endpoints)",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1059.html",
+          "description": "Old API endpoints created for legacy systems, deprecated features, or one-time integrations were never properly decommissioned and remain accessible in production. These zombie endpoints run outdated, unpatched code without active monitoring and are unknown to current security and operations teams.",
+          "remediation": "Establish a formal API endpoint lifecycle management process including decommissioning procedures. Remove zombie endpoints from routing configurations and servers entirely. Use an API gateway to centrally control endpoint availability and quickly disable abandoned routes. Monitor all endpoints for traffic and investigate unexpectedly active zombie endpoints."
+        },
+        {
+          "name": "Inconsistent API Version Security Controls",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/1059.html",
+          "description": "Different versions of the same API have inconsistent security controls, with older versions lacking authentication requirements, rate limiting, or authorization checks added in newer versions. Attackers deliberately target older versions to bypass security improvements introduced in recent releases.",
+          "remediation": "Apply all security patches and controls consistently across every supported API version. Use shared security middleware that is applied uniformly regardless of version routing. Sunset older versions that cannot be brought up to current security standards. Automate security control verification tests across all active API versions in CI/CD."
+        }
+      ]
+    },
+    {
+      "id": "API10:2023",
+      "name": "Unsafe Consumption of APIs",
+      "full": "API10:2023 – Unsafe Consumption of APIs",
+      "vulnerabilities": [
+        {
+          "name": "Unsafe Consumption of Third-Party APIs",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "The application consumes third-party API responses without adequate validation or sanitization, implicitly trusting external data. A compromised or malicious third-party API can inject malicious payloads, trigger injection attacks, or cause unexpected application behavior through crafted responses.",
+          "remediation": "Treat all third-party API responses as untrusted input. Validate, sanitize, and constrain all externally sourced data against expected schemas before use. Monitor third-party API health and implement circuit breakers for failing or anomalous integrations. Log and alert on unexpected data patterns from external sources."
+        },
+        {
+          "name": "Injection via Third-Party API Response",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/74.html",
+          "description": "The application uses data received from third-party API responses in contexts vulnerable to injection (SQL, OS command, LDAP, XSS) without proper sanitization. A compromised third-party service can exploit this trust relationship to attack the consuming application's users or backend infrastructure.",
+          "remediation": "Sanitize and validate all data from external APIs before using it in database queries, system commands, templates, or HTML output. Use parameterized queries and contextual output encoding for all externally sourced data. Apply the same injection prevention controls to third-party data as to direct user input — never trust it implicitly."
+        },
+        {
+          "name": "Trusting External API Data Without Validation",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/345.html",
+          "description": "The application implicitly trusts the integrity and authenticity of data received from third-party APIs without cryptographic verification. An attacker performing a man-in-the-middle attack or compromising the third-party service can inject manipulated data that influences critical business logic or security decisions.",
+          "remediation": "Verify the integrity and authenticity of critical third-party API data using digital signatures, HMAC validation, or certificate pinning where the provider supports it. Validate all external data against expected schemas and business constraints. Use HTTPS with proper certificate validation for all outbound API connections."
+        },
+        {
+          "name": "Open Redirect via Third-Party API",
+          "severity": "Medium",
+          "cwe": "https://cwe.mitre.org/data/definitions/601.html",
+          "description": "The application uses URLs received from third-party API responses as redirect targets without validating that the destination is safe. A compromised or malicious third-party can inject redirect URLs pointing to phishing sites or malware, causing users to be silently redirected to attacker-controlled pages.",
+          "remediation": "Never use externally sourced URLs as redirect targets without explicit validation against a server-side allowlist of trusted domains. When users must be redirected externally, display an intermediary warning page requiring user confirmation. Log and monitor all redirect operations and alert on anomalous or unexpected destination domains."
+        },
+        {
+          "name": "Third-Party API Data Poisoning",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/345.html",
+          "description": "An attacker who can compromise or influence a third-party API injects malicious or manipulated data into its responses, which the consuming application then stores or processes without integrity checks. This poisoned data corrupts internal data stores, business logic, or enables further downstream attacks.",
+          "remediation": "Implement data integrity checks for all critical third-party API data. Use signed responses and checksums where the provider supports them. Monitor for unexpected or anomalous changes in third-party data patterns. Apply schema validation and range checks to detect poisoned data before it enters any internal systems."
+        },
+        {
+          "name": "Insecure Third-Party API Integration",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/1059.html",
+          "description": "Third-party API integrations are configured with excessive permissions, lack network-level access controls, have unprotected callback endpoints, or have no usage monitoring. A compromised integration provides attackers with a trusted pivot point for broader attacks against the application and its users.",
+          "remediation": "Apply the principle of least privilege to all third-party integrations, granting only the minimum required API scopes. Use dedicated API keys per integration with restricted permissions. Monitor third-party API usage and alert on anomalies. Regularly review and revoke unused access. Maintain a complete inventory of all external integrations."
+        },
+        {
+          "name": "Missing Certificate Validation for Outbound API Calls",
+          "severity": "High",
+          "cwe": "https://cwe.mitre.org/data/definitions/295.html",
+          "description": "The application does not properly validate TLS certificates when making outbound API calls to external services, accepting expired, self-signed, revoked, or hostname-mismatched certificates. This exposes all outbound API communication to man-in-the-middle attacks where traffic can be silently intercepted and modified.",
+          "remediation": "Always enable and strictly enforce TLS certificate validation for all outbound API connections. Never disable certificate verification in any environment, including development. Implement certificate pinning for high-security communications with known partners. Monitor certificate expiry for all integrated external services and automate renewal alerting."
+        }
+      ]
+    }
+  ]
+}
