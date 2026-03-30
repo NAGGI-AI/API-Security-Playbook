@@ -699,12 +699,107 @@ document.getElementById('copyBtn').onclick = () => {
 
   const SUGGESTED = [
     "What is SQL Injection?",
-    "Show critical vulnerabilities",
+    "Show all Critical vulnerabilities",
     "List LLM01 vulnerabilities",
     "How to fix XSS?",
     "OWASP API Top 10 overview",
-    "What is CWE-89?"
+    "What is CWE-89?",
+    "What is BOLA?",
+    "How to fix CSRF?"
   ];
+
+  /* ── abbreviation / alias expansion ── */
+  const ALIASES = {
+    'xss':   'cross site scripting',
+    'sqli':  'sql injection',
+    'csrf':  'cross site request forgery',
+    'xsrf':  'cross site request forgery',
+    'bola':  'broken object level authorization',
+    'idor':  'insecure direct object reference',
+    'ssrf':  'server side request forgery',
+    'rce':   'remote code execution',
+    'xxe':   'xml external entity',
+    'lfi':   'local file inclusion',
+    'rfi':   'remote file inclusion',
+    'dos':   'denial of service',
+    'ddos':  'denial of service',
+    'bfla':  'broken function level authorization',
+    'mitm':  'man in the middle',
+    'ssti':  'server side template injection',
+    'cmdi':  'command injection',
+    'cors':  'cross origin resource sharing',
+    'hsts':  'strict transport security',
+    'otp':   'one time password',
+    'mfa':   'multi factor authentication',
+    '2fa':   'multi factor authentication',
+    'pii':   'personally identifiable information',
+    'rai':   'responsible ai',
+    'jwt':   'json web token',
+    'api key': 'api key',
+    'authz': 'authorization',
+    'authn': 'authentication',
+    'clickjack': 'clickjacking',
+    'open redirect': 'unvalidated redirect',
+    'path traversal': 'directory traversal',
+    'traversal': 'directory traversal',
+    'stored xss': 'cross site scripting stored',
+    'reflected xss': 'cross site scripting reflected',
+    'dom xss': 'cross site scripting dom',
+    'broken auth': 'broken authentication',
+    'broken access': 'broken access control',
+    'race condition': 'race conditions',
+    'rag poison': 'rag poisoning',
+    'prompt inject': 'prompt injection',
+    'data poison': 'data poisoning',
+    'supply chain': 'supply chain',
+    'mass assign': 'mass assignment',
+    'rate limit': 'rate limiting',
+    'brute force': 'brute force',
+    'account lockout': 'account lockout',
+    'session hijack': 'session hijacking',
+    'file upload': 'file upload',
+    'xml injection': 'xml external entity',
+    'insecure deserializ': 'deserialization',
+    'deserialization': 'deserialization',
+    'server banner': 'server banner',
+    'info disclosure': 'information disclosure',
+    'sensitive info': 'sensitive information',
+    'csp': 'content security policy',
+    'xfo': 'x frame options',
+    'clickjacking': 'clickjacking',
+    'osi': 'os command injection',
+    'log4j': 'remote code execution',
+    'rfi': 'remote file inclusion',
+    'lfi': 'local file inclusion',
+    'vertical priv': 'vertical privilege escalation',
+    'horizontal priv': 'horizontal privilege escalation',
+    'priv esc': 'privilege escalation',
+    'privesc': 'privilege escalation',
+    'broken object': 'broken object level authorization',
+    'object level': 'broken object level authorization',
+    'excessive agency': 'excessive agency',
+    'system prompt': 'system prompt',
+    'data model poison': 'data and model poisoning',
+    'vector embed': 'vector and embedding',
+    'misinformation': 'misinformation',
+    'hallucination': 'hallucination',
+    'unbounded consumption': 'unbounded consumption',
+    'token flood': 'token flooding',
+    'model extract': 'model extraction'
+  };
+
+  /* ── stop words (excluded from fuzzy scoring) ── */
+  const STOP = new Set([
+    'what','are','the','is','was','were','show','tell','give','find','get',
+    'how','can','you','for','about','with','that','this','from','list','all',
+    'any','some','and','but','not','have','has','had','would','could','should',
+    'will','shall','may','might','must','need','does','did','make','made',
+    'into','more','than','also','being','been','let','its','just','help',
+    'me','my','our','your','their','its','want','know','understand','see',
+    'please','explain','describe','detail','details','look','search','query',
+    'regarding','related','information','info','brief','summarize','summary',
+    'tell','show','give','provide','define','definition','example','examples'
+  ]);
 
   /* ── wait for vcData to be populated ── */
   function waitForData() {
@@ -845,7 +940,8 @@ document.getElementById('copyBtn').onclick = () => {
       return "⏳ Still loading vulnerability data, please try again in a moment.";
     }
 
-    const q = raw.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const qRaw = expandAliases(raw.toLowerCase()).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const q = qRaw;
     const words = q.split(' ').filter(Boolean);
 
     /* greet */
@@ -898,10 +994,10 @@ document.getElementById('copyBtn').onclick = () => {
       return searchBySeverity(sevMatch[1]);
     }
 
-    /* vulnerability detail — "what is X", "tell me about X", "explain X" */
-    if (/\b(what is|tell me about|explain|describe|info on|details? (on|about|for))\b/.test(q)) {
+    /* vulnerability detail — "what is X", "what are X", "tell me about X", "explain X" */
+    if (/\b(what (is|are)|tell me about|explain|describe|info on|details?( on| about| for)?|look up|lookup|find out about)\b/.test(q)) {
       const stripped = q
-        .replace(/\b(what is|tell me about|explain|describe|info on|details? on|details? about|details? for)\b/g, ' ')
+        .replace(/\b(what (is|are)|tell me about|explain|describe|info on|details? on|details? about|details? for|look up|lookup|find out about)\b/g, ' ')
         .trim();
       const results = scoreVulns(stripped);
       if (results.length && results[0].score >= 10) return formatVuln(results[0]);
@@ -989,8 +1085,8 @@ document.getElementById('copyBtn').onclick = () => {
         const d = vcData[src];
         if (!d) continue;
         for (const cat of d.categories) {
-          const catIdLower = cat.id.toLowerCase().replace(/[-\s]/g,'');
-          const qNorm = raw.toLowerCase().replace(/[-\s]/g,'');
+          const catIdLower = cat.id.replace(/:.*/, '').toLowerCase().replace(/[-\s]/g,'');
+          const qNorm = raw.toLowerCase().replace(/[-\s:]/g,'');
           if (qNorm.includes(catIdLower) || q.includes(cat.id.toLowerCase())) {
             return formatCategoryList(src, cat);
           }
@@ -1046,9 +1142,22 @@ document.getElementById('copyBtn').onclick = () => {
       `\n\nAsk me about any of these by name for full details.`;
   }
 
+  /* ── alias expansion helper ── */
+  function expandAliases(str) {
+    let out = str;
+    for (const [abbr, full] of Object.entries(ALIASES)) {
+      const escaped = abbr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&').replace(/\s+/g, '\\s+');
+      try {
+        out = out.replace(new RegExp('\\b' + escaped + '\\b', 'gi'), full);
+      } catch(e) { /* skip bad patterns */ }
+    }
+    return out;
+  }
+
   /* ── scoring ── */
   function scoreVulns(query) {
-    const qWords = query.split(/\s+/).filter(w => w.length > 2);
+    const expanded = expandAliases(query);
+    const qWords = expanded.split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
     if (!qWords.length) return [];
 
     const results = [];
