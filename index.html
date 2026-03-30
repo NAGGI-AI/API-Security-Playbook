@@ -168,6 +168,41 @@ ul.play-list li{margin-bottom:5px}
 .brand-icon-inner{width:100%;height:100%;border-radius:8px;background:linear-gradient(180deg,transparent 45%,rgba(16,217,160,.25) 50%,transparent 55%);background-size:100% 200%;animation:scanline 2.5s linear infinite;display:flex;align-items:center;justify-content:center}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
 .pulse{animation:pulse 2s ease-in-out infinite}
+
+/* ── Chat Widget ── */
+#chatBtn{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px #10d9a040;z-index:1000;transition:transform .2s,box-shadow .2s}
+#chatBtn:hover{transform:scale(1.08);box-shadow:0 6px 28px #10d9a060}
+#chatBtn .chat-badge{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid var(--bg);animation:pulse 2s ease-in-out infinite}
+#chatPanel{position:fixed;bottom:88px;right:24px;width:400px;height:560px;background:var(--panel);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;box-shadow:0 8px 40px #00000080;z-index:999;transform:translateY(20px) scale(.97);opacity:0;pointer-events:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .2s}
+#chatPanel.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all}
+.chat-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:linear-gradient(135deg,#0d1835,#0b1220);border-radius:16px 16px 0 0}
+.chat-header-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.chat-header-title{font-size:14px;font-weight:700;flex:1}
+.chat-header-sub{font-size:11px;color:var(--muted)}
+#chatCloseBtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;border-radius:6px;line-height:1;transition:color .15s,background .15s}
+#chatCloseBtn:hover{color:var(--text);background:var(--soft)}
+.chat-messages{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:10px}
+.chat-messages::-webkit-scrollbar{width:4px}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.chat-msg{max-width:88%;word-wrap:break-word;line-height:1.5;font-size:13px;border-radius:12px;padding:9px 12px;animation:msgIn .2s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg.user{background:linear-gradient(135deg,#0d4a3a,#0a3a5c);color:#a7f3d0;align-self:flex-end;border-bottom-right-radius:3px}
+.chat-msg.bot{background:var(--soft);color:var(--text);align-self:flex-start;border-bottom-left-radius:3px}
+.chat-msg.bot strong{color:var(--accent)}
+.chat-typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:var(--soft);border-radius:12px;border-bottom-left-radius:3px;align-self:flex-start;width:52px}
+.chat-typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typingDot 1.2s ease-in-out infinite}
+.chat-typing span:nth-child(2){animation-delay:.2s}
+.chat-typing span:nth-child(3){animation-delay:.4s}
+@keyframes typingDot{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+.chat-chips-wrap{padding:0 14px 10px;display:flex;flex-wrap:wrap;gap:6px}
+.chat-chip{font-size:11.5px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;cursor:pointer;color:var(--muted);background:var(--soft);transition:all .15s;white-space:nowrap}
+.chat-chip:hover{border-color:var(--accent);color:var(--accent)}
+.chat-input-row{padding:10px 12px 12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+#chatInput{flex:1;background:var(--soft);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 12px;outline:none;transition:border-color .2s;resize:none}
+#chatInput:focus{border-color:var(--accent)}
+#chatInput::placeholder{color:var(--muted)}
+#chatSendBtn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#052e1a;font-weight:700;cursor:pointer;padding:8px 14px;font-size:18px;line-height:1;transition:opacity .15s}
+#chatSendBtn:hover{opacity:.85}
 </style>
 </head>
 <body>
@@ -627,6 +662,456 @@ function esc(s) {
 document.getElementById('copyBtn').onclick = () => {
   navigator.clipboard.writeText(document.getElementById('card').innerText.trim()).catch(()=>{});
 };
+</script>
+
+<!-- ── Chat Widget ── -->
+<button id="chatBtn" title="Security Assistant" onclick="toggleChat()">
+  💬
+  <span class="chat-badge"></span>
+</button>
+
+<div id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-header-icon">🛡️</div>
+    <div style="flex:1">
+      <div class="chat-header-title">Security Assistant</div>
+      <div class="chat-header-sub">Ask about vulnerabilities &amp; risks</div>
+    </div>
+    <button id="chatCloseBtn" onclick="toggleChat()" title="Close">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-row">
+    <input id="chatInput" type="text" placeholder="Ask about a vulnerability…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}" />
+    <button id="chatSendBtn" onclick="chatSend()" title="Send">➤</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CHAT WIDGET
+═══════════════════════════════════════════════════════════ */
+(function() {
+
+  /* ── state ── */
+  let chatOpen = false;
+  let chatReady = false;
+  let chipsShown = false;
+
+  const SUGGESTED = [
+    "What is SQL Injection?",
+    "Show critical vulnerabilities",
+    "List LLM01 vulnerabilities",
+    "How to fix XSS?",
+    "OWASP API Top 10 overview",
+    "What is CWE-89?"
+  ];
+
+  /* ── wait for vcData to be populated ── */
+  function waitForData() {
+    if (vcData.llm && vcData.waapi && vcData.wa) {
+      chatReady = true;
+    } else {
+      setTimeout(waitForData, 300);
+    }
+  }
+  waitForData();
+
+  /* ── toggle panel ── */
+  window.toggleChat = function() {
+    chatOpen = !chatOpen;
+    document.getElementById('chatPanel').classList.toggle('open', chatOpen);
+    if (chatOpen && document.getElementById('chatMessages').children.length === 0) {
+      showWelcome();
+    }
+    if (chatOpen) setTimeout(() => document.getElementById('chatInput').focus(), 280);
+  };
+
+  /* ── welcome ── */
+  function showWelcome() {
+    appendBot(
+      "👋 **Hi! I'm your Security Assistant.**\n\n" +
+      "I can help you with:\n" +
+      "• Look up any of the **312 vulnerabilities** across LLM, Web API, and Web App categories\n" +
+      "• Browse **OWASP Top 10** frameworks (LLM, API, Web App)\n" +
+      "• Filter by **severity** (Critical, High, Medium, Low)\n" +
+      "• Look up by **CWE number**\n" +
+      "• Explain **remediation** steps\n\n" +
+      "Try one of these questions:"
+    );
+    showChips();
+  }
+
+  function showChips() {
+    if (chipsShown) return;
+    chipsShown = true;
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-chips-wrap';
+    wrap.id = 'chatSuggestions';
+    SUGGESTED.forEach(q => {
+      const chip = document.createElement('button');
+      chip.className = 'chat-chip';
+      chip.textContent = q;
+      chip.onclick = () => {
+        wrap.remove();
+        chipsShown = false;
+        processUserMessage(q);
+      };
+      wrap.appendChild(chip);
+    });
+    document.getElementById('chatMessages').after(wrap);
+    // move chips wrap inside panel after messages
+    const msgs = document.getElementById('chatMessages');
+    msgs.parentNode.insertBefore(wrap, msgs.nextSibling);
+    scrollChat();
+  }
+
+  /* ── send ── */
+  window.chatSend = function() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    // remove chips if visible
+    const sugg = document.getElementById('chatSuggestions');
+    if (sugg) { sugg.remove(); chipsShown = false; }
+    processUserMessage(text);
+  };
+
+  function processUserMessage(text) {
+    appendUser(text);
+    showTyping();
+    setTimeout(() => {
+      removeTyping();
+      const reply = getResponse(text);
+      appendBot(reply);
+    }, 600);
+  }
+
+  /* ── DOM helpers ── */
+  function appendUser(text) {
+    const el = document.createElement('div');
+    el.className = 'chat-msg user';
+    el.textContent = text;
+    document.getElementById('chatMessages').appendChild(el);
+    scrollChat();
+  }
+
+  function appendBot(text) {
+    const el = document.createElement('div');
+    el.className = 'chat-msg bot';
+    el.innerHTML = renderMd(text);
+    document.getElementById('chatMessages').appendChild(el);
+    scrollChat();
+  }
+
+  function showTyping() {
+    const t = document.createElement('div');
+    t.className = 'chat-typing';
+    t.id = 'chatTyping';
+    t.innerHTML = '<span></span><span></span><span></span>';
+    document.getElementById('chatMessages').appendChild(t);
+    scrollChat();
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('chatTyping');
+    if (t) t.remove();
+  }
+
+  function scrollChat() {
+    const msgs = document.getElementById('chatMessages');
+    setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 30);
+  }
+
+  /* ── simple markdown bold ── */
+  function renderMd(text) {
+    return esc(text)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+  }
+
+  /* ── escape helper ── */
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+    );
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     INTENT DETECTION & RESPONSE ENGINE
+  ══════════════════════════════════════════════════════════ */
+  function getResponse(raw) {
+    if (!chatReady) {
+      return "⏳ Still loading vulnerability data, please try again in a moment.";
+    }
+
+    const q = raw.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const words = q.split(' ').filter(Boolean);
+
+    /* greet */
+    if (/^(hi|hello|hey|howdy|greetings|sup)\b/.test(q)) {
+      return getWelcomeText();
+    }
+
+    /* help */
+    if (/\b(help|what can you do|capabilities|commands)\b/.test(q)) {
+      return getWelcomeText();
+    }
+
+    /* count */
+    if (/\b(how many|total count|count|number of)\b/.test(q) && /\b(vuln|vulnerab|risk)\b/.test(q)) {
+      return getCount();
+    }
+
+    /* CWE lookup — "CWE-89", "what is CWE-79" */
+    const cweMatch = raw.match(/CWE[-\s](\d+)/i);
+    if (cweMatch) {
+      return searchByCWE(cweMatch[1]);
+    }
+
+    /* owasp overview */
+    if (/\b(owasp|top 10|top ten)\b/.test(q)) {
+      if (/\b(llm|language model)\b/.test(q)) return owaspOverview('llm');
+      if (/\b(api)\b/.test(q) && !/web app/.test(q)) return owaspOverview('waapi');
+      if (/\b(web app|webapp|application)\b/.test(q)) return owaspOverview('wa');
+      return owaspOverview('all');
+    }
+
+    /* category list — "list LLM01", "show API3", "what is in A02" */
+    const catMatch = raw.match(/\b(LLM|OWASP[-\s]?LLM|API|OWASP[-\s]?API|A|WSTG)[-\s]?(\d{1,2})\b/i);
+    if (catMatch || /\b(list|show|what.{0,10}in)\b/.test(q) && /\b(llm|api|waapi|webapp|web app)\d*/.test(q)) {
+      const catResult = tryCategoryList(raw, q);
+      if (catResult) return catResult;
+    }
+
+    /* remediation — "how to fix", "remediation for" */
+    if (/\b(how to fix|remediat|fix|prevent|mitigat)\b/.test(q)) {
+      const stripped = q.replace(/\b(how to fix|remediat|fix for|prevent|mitigat(ion|e)?|for)\b/g, ' ').trim();
+      const results = scoreVulns(stripped);
+      if (results.length) return formatRemediation(results[0]);
+      return "I couldn't find a specific vulnerability matching that. Try asking by name, e.g. \"How to fix SQL Injection?\"";
+    }
+
+    /* severity search */
+    const sevMatch = q.match(/\b(critical|high|medium|low)\b/);
+    if (sevMatch && /\b(show|list|all|what are|vulnerab|find)\b/.test(q)) {
+      return searchBySeverity(sevMatch[1]);
+    }
+
+    /* vulnerability detail — "what is X", "tell me about X", "explain X" */
+    if (/\b(what is|tell me about|explain|describe|info on|details? (on|about|for))\b/.test(q)) {
+      const stripped = q
+        .replace(/\b(what is|tell me about|explain|describe|info on|details? on|details? about|details? for)\b/g, ' ')
+        .trim();
+      const results = scoreVulns(stripped);
+      if (results.length && results[0].score >= 10) return formatVuln(results[0]);
+    }
+
+    /* fallback — general search */
+    const results = scoreVulns(q);
+    if (results.length === 0) {
+      return "I couldn't find anything matching that. Try asking about a specific vulnerability name, CWE number, severity level, or OWASP category. Type **help** to see what I can do.";
+    }
+    if (results.length === 1 || results[0].score >= 50) {
+      return formatVuln(results[0]);
+    }
+    // top 3
+    return "Here are the top matches for your query:\n\n" +
+      results.slice(0, 3).map((r, i) =>
+        `**${i + 1}. ${r.vuln.name}** · ${r.vuln.severity}\n📂 ${r.cat.id} — ${r.cat.name} (${sourceLabel(r.source)})\n${r.vuln.summary ? r.vuln.summary : ''}`
+      ).join('\n\n') +
+      "\n\nAsk me about any of these by name for full details.";
+  }
+
+  /* ── helpers ── */
+  function getWelcomeText() {
+    return (
+      "👋 **Security Assistant** — here's what I can do:\n\n" +
+      "• **Vulnerability lookup** — \"What is SQL Injection?\"\n" +
+      "• **Severity filter** — \"Show all Critical vulnerabilities\"\n" +
+      "• **Category browse** — \"List LLM01 vulnerabilities\"\n" +
+      "• **Remediation** — \"How to fix XSS?\"\n" +
+      "• **OWASP overview** — \"OWASP API Top 10 overview\"\n" +
+      "• **CWE lookup** — \"What is CWE-89?\"\n" +
+      "• **Counts** — \"How many vulnerabilities are there?\""
+    );
+  }
+
+  function sourceLabel(src) {
+    return src === 'llm' ? 'LLM' : src === 'waapi' ? 'Web API' : 'Web App';
+  }
+
+  function getCount() {
+    const llmTotal  = vcData.llm  ? vcData.llm.categories.reduce((a,c)=>a+c.vulnerabilities.length,0) : 0;
+    const waapiTotal= vcData.waapi? vcData.waapi.categories.reduce((a,c)=>a+c.vulnerabilities.length,0) : 0;
+    const waTotal   = vcData.wa   ? vcData.wa.categories.reduce((a,c)=>a+c.vulnerabilities.length,0) : 0;
+    const apiTotal  = API_RISKS.length;
+    const total     = llmTotal + waapiTotal + waTotal;
+    return (
+      `📊 **Vulnerability counts:**\n\n` +
+      `• 🤖 LLM Application Security: **${llmTotal}** vulnerabilities\n` +
+      `• 🔌 Web API Security: **${waapiTotal}** vulnerabilities\n` +
+      `• 🌐 Web Application Security: **${waTotal}** vulnerabilities\n` +
+      `• 📘 API Security Playbook: **${apiTotal}** risk entries\n\n` +
+      `**Total: ${total} classified vulnerabilities**`
+    );
+  }
+
+  function owaspOverview(src) {
+    if (src === 'all') {
+      return (
+        "**OWASP Security Frameworks** covered in this playbook:\n\n" +
+        "🤖 **OWASP Top 10 for LLM Applications** — threats specific to large language model integrations\n\n" +
+        "🔌 **OWASP API Security Top 10** — risks in RESTful and other web APIs\n\n" +
+        "🌐 **OWASP Web Application Security Testing Guide** — classic web app vulnerabilities\n\n" +
+        "Ask me about a specific framework, e.g. **\"LLM Top 10\"** or **\"API Top 10\"**."
+      );
+    }
+    const d = vcData[src];
+    if (!d) return "Data not yet loaded. Please try again in a moment.";
+    const lines = d.categories.map(c =>
+      `• **${c.id}** — ${c.name} (${c.vulnerabilities.length} vulns)`
+    ).join('\n');
+    return `📋 **${d.framework}**\n\n${lines}`;
+  }
+
+  function tryCategoryList(raw, q) {
+    // Try to extract a category ID like LLM01, API3, A02, etc.
+    const patterns = [
+      /\b(LLM)[-\s]?(\d{1,2})\b/i,
+      /\b(API)[-\s]?(\d{1,2})\b/i,
+      /\bA[-\s]?0?(\d{1,2})\b/i,
+      /\b(WSTG[-\w]+)/i
+    ];
+
+    for (const sources of [['llm','waapi','wa']]) {
+      for (const src of sources) {
+        const d = vcData[src];
+        if (!d) continue;
+        for (const cat of d.categories) {
+          const catIdLower = cat.id.toLowerCase().replace(/[-\s]/g,'');
+          const qNorm = raw.toLowerCase().replace(/[-\s]/g,'');
+          if (qNorm.includes(catIdLower) || q.includes(cat.id.toLowerCase())) {
+            return formatCategoryList(src, cat);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function formatCategoryList(src, cat) {
+    const label = sourceLabel(src);
+    const lines = cat.vulnerabilities.map(v => {
+      const dot = v.severity === 'Critical' ? '🔴' : v.severity === 'High' ? '🟠' : v.severity === 'Medium' ? '🟡' : '🟢';
+      return `${dot} **${v.name}** · ${v.severity}`;
+    }).join('\n');
+    return `📂 **${cat.id} — ${cat.name}** (${label})\n${cat.full ? '_' + cat.full + '_\n' : ''}\n${lines}\n\n_${cat.vulnerabilities.length} vulnerabilities in this category._`;
+  }
+
+  function searchBySeverity(sevLower) {
+    const sev = sevLower.charAt(0).toUpperCase() + sevLower.slice(1);
+    const matches = [];
+    for (const src of ['llm','waapi','wa']) {
+      const d = vcData[src];
+      if (!d) continue;
+      for (const cat of d.categories) {
+        for (const v of cat.vulnerabilities) {
+          if (v.severity === sev) matches.push({src, cat, vuln: v});
+        }
+      }
+    }
+    if (!matches.length) return `No vulnerabilities found with **${sev}** severity.`;
+    const dot = sev === 'Critical' ? '🔴' : sev === 'High' ? '🟠' : sev === 'Medium' ? '🟡' : '🟢';
+    const lines = matches.map(m => `${dot} **${m.vuln.name}** — ${m.cat.id} (${sourceLabel(m.src)})`).join('\n');
+    return `${dot} **${sev} severity vulnerabilities** (${matches.length} total):\n\n${lines}`;
+  }
+
+  function searchByCWE(cweNum) {
+    const matches = [];
+    for (const src of ['llm','waapi','wa']) {
+      const d = vcData[src];
+      if (!d) continue;
+      for (const cat of d.categories) {
+        for (const v of cat.vulnerabilities) {
+          if (v.cwe && v.cwe.includes('CWE-' + cweNum)) {
+            matches.push({src, cat, vuln: v});
+          }
+        }
+      }
+    }
+    if (!matches.length) return `🔗 No vulnerabilities found referencing **CWE-${cweNum}**.\n\nYou can look it up at: https://cwe.mitre.org/data/definitions/${cweNum}.html`;
+    return `🔗 **CWE-${cweNum}** is referenced by ${matches.length} vulnerabilit${matches.length===1?'y':'ies'}:\n\n` +
+      matches.map(m => `• **${m.vuln.name}** (${m.vuln.severity}) — ${m.cat.id}, ${sourceLabel(m.src)}`).join('\n') +
+      `\n\nAsk me about any of these by name for full details.`;
+  }
+
+  /* ── scoring ── */
+  function scoreVulns(query) {
+    const qWords = query.split(/\s+/).filter(w => w.length > 2);
+    if (!qWords.length) return [];
+
+    const results = [];
+    for (const src of ['llm','waapi','wa']) {
+      const d = vcData[src];
+      if (!d) continue;
+      for (let ci = 0; ci < d.categories.length; ci++) {
+        const cat = d.categories[ci];
+        const catNameLower = cat.name.toLowerCase();
+        for (let vi = 0; vi < cat.vulnerabilities.length; vi++) {
+          const v = cat.vulnerabilities[vi];
+          const nameLower = v.name.toLowerCase();
+          const descLower = (v.description || '').toLowerCase();
+          let score = 0;
+
+          // exact name match
+          if (nameLower === query) score += 100;
+
+          for (const w of qWords) {
+            if (nameLower.includes(w)) score += 30;
+            if (descLower.includes(w)) score += 10;
+            if (catNameLower.includes(w)) score += 20;
+          }
+
+          if (score > 0) {
+            results.push({score, source: src, cat, catIdx: ci, vulnIdx: vi, vuln: v});
+          }
+        }
+      }
+    }
+    return results.sort((a, b) => b.score - a.score);
+  }
+
+  /* ── formatters ── */
+  function sevEmoji(sev) {
+    return sev === 'Critical' ? '🔴 Critical' : sev === 'High' ? '🟠 High' : sev === 'Medium' ? '🟡 Medium' : '🟢 Low';
+  }
+
+  function formatVuln(r) {
+    const v = r.vuln;
+    const cat = r.cat;
+    const src = r.source;
+    const framework = vcData[src] ? vcData[src].framework : sourceLabel(src);
+
+    let out = `🔍 **${v.name}** · ${sevEmoji(v.severity)}\n\n`;
+    out += `📂 Category: ${cat.id} — ${cat.name}\n`;
+    out += `🏷 Framework: ${framework}\n`;
+    if (v.cwe) out += `🔗 CWE: ${v.cwe}\n`;
+    if (v.summary) out += `\n💡 Summary:\n${v.summary}\n`;
+    if (v.description) out += `\n📋 Description:\n${v.description}\n`;
+    if (v.remediation) out += `\n🛠 Remediation:\n${v.remediation}`;
+    return out.trim();
+  }
+
+  function formatRemediation(r) {
+    const v = r.vuln;
+    if (!v.remediation) {
+      return `No specific remediation found for **${v.name}**. Try asking about it generally.`;
+    }
+    return `🛠 **Remediation for ${v.name}:**\n\n${v.remediation}`;
+  }
+
+})();
 </script>
 </body>
 </html>
