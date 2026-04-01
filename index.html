@@ -1271,27 +1271,33 @@ function getPayloads(vulnName, catName) {
   return null;
 }
 
+// Safe store — payloads are never embedded in HTML attributes
+const CLIP_STORE = {};
+
 function buildPayloadSection(vulnName, catName, colorVar) {
   const payloads = getPayloads(vulnName, catName);
   if (!payloads || !payloads.length) return '';
   const uid = 'clip_' + Math.random().toString(36).slice(2,8);
-  const rows = payloads.map((p, i) => `
+  CLIP_STORE[uid] = payloads; // store; never embed raw payloads in HTML
+  const rows = payloads.map(p => `
     <div class="payload-entry">
       <span class="payload-code">${esc(p)}</span>
-      <button class="clip-btn" onclick="copyPayload(this,'${esc(p.replace(/'/g,"\\'"))}')" title="Copy">Copy</button>
+      <button class="clip-btn" data-payload="${esc(p)}" onclick="copyFromAttr(this)" title="Copy">Copy</button>
     </div>`).join('');
   return `
     <div class="section-title" style="color:${colorVar}">&#x1F4CB; Payload Clipboard <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">(Use directly in Burp Repeater)</span></div>
     <div class="payload-clip">
       <div class="payload-clip-hdr">
         <span class="payload-clip-title">&#x2022; ${payloads.length} Ready-to-Use Payloads</span>
-        <button class="clip-copy-all" id="${uid}" onclick="copyAllPayloads('${uid}',${JSON.stringify(payloads).replace(/'/g,"\\'")})">&#x2398; Copy All</button>
+        <button class="clip-copy-all" id="${uid}" onclick="copyAllPayloads('${uid}')">&#x2398; Copy All</button>
       </div>
       ${rows}
     </div>`;
 }
 
-function copyPayload(btn, text) {
+function copyFromAttr(btn) {
+  // Read from data attribute — HTML-decoded by the browser, safe to pass to clipboard
+  const text = btn.dataset.payload;
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = '✓ Done';
     btn.classList.add('copied');
@@ -1299,7 +1305,9 @@ function copyPayload(btn, text) {
   }).catch(() => {});
 }
 
-function copyAllPayloads(uid, payloads) {
+function copyAllPayloads(uid) {
+  const payloads = CLIP_STORE[uid];
+  if (!payloads) return;
   const btn = document.getElementById(uid);
   navigator.clipboard.writeText(payloads.join('\n')).then(() => {
     if (btn) { btn.textContent = '✓ Copied All'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = '⎘ Copy All'; btn.classList.remove('copied'); }, 1800); }
