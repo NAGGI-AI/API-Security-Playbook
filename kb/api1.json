@@ -23,5 +23,11 @@
     "403 Forbidden or 404 Not Found with generic message",
     "No object fields from other users; denial events logged"
   ],
-  "minimal_example": "GET /badge/requests/123 → change to /badge/requests/124 → must return 403/404 (never other user’s data)"
+  "minimal_example": "GET /badge/requests/123 → change to /badge/requests/124 → must return 403/404 (never other user’s data)",
+  "mitigation": [
+    "Enforce server-side ownership checks on every object operation (GET/PUT/PATCH/DELETE) — verify the authenticated user is entitled to the requested object before any data is returned or modified",
+    "Use non-guessable UUIDs or cryptographic tokens as object identifiers to eliminate sequential ID enumeration attacks",
+    "Centralize authorization logic in a shared middleware or policy service so checks cannot be accidentally omitted on new endpoints or methods",
+    "Return a consistent 403 or 404 for all unauthorized object access regardless of whether the object exists — never leak existence through different error codes"
+  ]
 }

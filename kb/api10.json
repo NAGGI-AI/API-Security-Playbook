@@ -18,5 +18,11 @@
     "Graceful failure with safe defaults; no state corruption",
     "No leakage of upstream internals; events logged"
   ],
-  "minimal_example": "Upstream /profiles returns unexpected fields → local service rejects and logs; operation aborted"
+  "minimal_example": "Upstream /profiles returns unexpected fields → local service rejects and logs; operation aborted",
+  "mitigation": [
+    "Validate all upstream API responses against a strict JSON schema before any processing — reject responses with unexpected fields, incorrect types, or sizes exceeding defined thresholds",
+    "Enforce TLS with full certificate chain validation for all external integrations; never disable certificate checks in production code, and consider certificate pinning for high-trust third-party services",
+    "Implement timeouts, retries with exponential backoff, and circuit breakers for every external API dependency — design all integrations to fail closed (deny by default on error, not fail open)",
+    "Sanitize and re-encode all data received from upstream services before passing it to downstream systems, databases, or rendering layers to prevent injection attacks, cache poisoning, and data integrity violations"
+  ]
 }

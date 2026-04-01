@@ -20,5 +20,11 @@
     "Graceful 413/429; no platform instability",
     "Logs show throttling/quotas triggered with actor ID"
   ],
-  "minimal_example": "POST 100MB body → 413 Payload Too Large; 1k req/min → 429 Too Many Requests"
+  "minimal_example": "POST 100MB body → 413 Payload Too Large; 1k req/min → 429 Too Many Requests",
+  "mitigation": [
+    "Implement per-user and global rate limits at the API gateway layer with HTTP 429 responses and Retry-After headers — apply stricter limits to anonymous vs. authenticated callers",
+    "Enforce strict payload size caps (request body, JSON array depth, file size and type) and return 413 Payload Too Large immediately without processing the full body",
+    "Set server-side request timeouts and maximum concurrency limits; deploy circuit breakers to shed load gracefully and prevent cascading failures under traffic spikes",
+    "Apply cost-based throttling for resource-intensive operations (heavy DB queries, file processing, report generation) — require elevated quota or a separate high-cost tier rather than executing unconditionally"
+  ]
 }

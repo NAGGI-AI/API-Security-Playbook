@@ -18,5 +18,11 @@
     "Policy error; no internal responses; outbound only via proxy",
     "Attempts logged with requested target"
   ],
-  "minimal_example": "GET /fetch?url=http://169.254.169.254/latest/meta-data → blocked"
+  "minimal_example": "GET /fetch?url=http://169.254.169.254/latest/meta-data → blocked",
+  "mitigation": [
+    "Enforce a strict allowlist of permitted outbound domains and IP ranges at the network layer; explicitly block RFC1918 private ranges, loopback addresses (127.0.0.1, ::1), and cloud metadata endpoints (169.254.169.254)",
+    "Route all server-initiated outbound requests through a hardened egress proxy that enforces the allowlist, logs every call with target and actor, and blocks unlisted destinations",
+    "Restrict permitted URL schemes to HTTPS only; disable automatic redirect following; re-validate the resolved IP against the allowlist after DNS resolution to prevent DNS rebinding attacks",
+    "Never reflect raw upstream responses directly to API clients — parse the response through a strict schema and re-serialize only expected fields before returning data to callers"
+  ]
 }

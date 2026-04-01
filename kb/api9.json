@@ -17,5 +17,11 @@
     "Every endpoint mapped to an owner and lifecycle state",
     "Deprecated versions blocked or 410 Gone"
   ],
-  "minimal_example": "GET /v1/visitor on retired API → 410 Gone (or blocked)"
+  "minimal_example": "GET /v1/visitor on retired API → 410 Gone (or blocked)",
+  "mitigation": [
+    "Maintain a live, versioned API catalog (OpenAPI/Swagger registry) with an assigned owner, data classification, environment tag, and lifecycle state for every endpoint — no undocumented endpoint should be reachable in production",
+    "Enforce deprecation and sunset policies with communicated timelines, Sunset response headers on deprecated routes, and hard-block or return 410 Gone after the end-of-life date",
+    "Reconcile runtime API traffic logs from the gateway against the API inventory on a regular schedule using automated discovery tools to surface shadow APIs, zombie endpoints, and unregistered services",
+    "Restrict API exposure by environment using network controls: test, debug, and internal maintenance endpoints must be unreachable in production regardless of application-layer configuration"
+  ]
 }

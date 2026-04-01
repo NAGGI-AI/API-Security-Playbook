@@ -20,5 +20,11 @@
     "400 with schema errors for extra/wrong fields",
     "Responses contain minimal necessary attributes only"
   ],
-  "minimal_example": "POST /users { name: 'Ana', role: 'admin' } → rejected; response omits internal flags like token, secrets"
+  "minimal_example": "POST /users { name: 'Ana', role: 'admin' } → rejected; response omits internal flags like token, secrets",
+  "mitigation": [
+    "Define explicit allow-listed DTOs (Data Transfer Objects) for every request and response — reject or silently strip any property not on the schema allowlist before processing",
+    "Enforce field-level authorization: sensitive fields (isAdmin, roles, balance, creditLimit) must be server-controlled only and excluded from any user-writable input binding",
+    "Disable framework mass-assignment by default (Rails strong_parameters, Spring @JsonIgnoreProperties, Django read-only fields) and explicitly whitelist every bindable property per endpoint",
+    "Automate API response schema diffing in CI/CD pipelines to detect accidental exposure of new fields before changes reach production"
+  ]
 }

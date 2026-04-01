@@ -18,5 +18,11 @@
     "Rejections with state/sequence errors; throttling on velocity",
     "No double-charging/double-booking"
   ],
-  "minimal_example": "POST /checkout without successful /validate → 409/422; repeat /pay rapidly → throttled"
+  "minimal_example": "POST /checkout without successful /validate → 409/422; repeat /pay rapidly → throttled",
+  "mitigation": [
+    "Implement server-side workflow state machines that enforce step ordering — each step must verify all prior steps completed successfully and reject out-of-sequence requests with 409 Conflict",
+    "Issue idempotency keys for every critical operation (payments, bookings, redemptions) and reject duplicate submissions within a defined time window using server-side deduplication",
+    "Deploy velocity controls and bot-detection signals (request frequency, device fingerprinting, behavioral CAPTCHA) specifically on high-value flows to prevent automated abuse",
+    "Validate all business preconditions on the server side before executing sensitive actions — never trust the client to have completed prior validation steps in a multi-step flow"
+  ]
 }

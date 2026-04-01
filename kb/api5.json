@@ -19,5 +19,11 @@
     "403 Forbidden for unauthorized function access",
     "Privileged attempts logged with actor and scope"
   ],
-  "minimal_example": "Normal user → POST /admin/rebuildIndex → 403; admin with MFA → 200"
+  "minimal_example": "Normal user → POST /admin/rebuildIndex → 403; admin with MFA → 200",
+  "mitigation": [
+    "Enforce server-side RBAC or ABAC on every function endpoint — never rely on UI visibility, hidden routes, or client-side checks alone to gate access to privileged operations",
+    "Maintain a centralized permission matrix that maps each HTTP method and endpoint to required roles; review and sign off this matrix at every release cycle",
+    "Require step-up MFA re-challenge for privileged or irreversible operations (bulk delete, user promotion, config changes) regardless of active session state",
+    "Isolate admin APIs onto separate routes or dedicated services protected by network-level controls (IP allowlist, mTLS) — not just application-layer authorization"
+  ]
 }

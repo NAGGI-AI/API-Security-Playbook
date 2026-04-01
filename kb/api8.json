@@ -19,5 +19,11 @@
     "Minimal information exposure; tight method/origin controls",
     "No secrets or environment details leaked"
   ],
-  "minimal_example": "Wildcard CORS + verbose SQL error → misconfiguration; fix to strict origin + generic error"
+  "minimal_example": "Wildcard CORS + verbose SQL error → misconfiguration; fix to strict origin + generic error",
+  "mitigation": [
+    "Lock down CORS policy to an explicit allowlist of trusted origins with defined methods and headers — never use wildcard (*) in production or for credentialed requests",
+    "Apply the full security response header set (HSTS with preload, Content-Security-Policy, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy) and validate headers automatically post-deploy with a scanning tool",
+    "Manage all secrets (API keys, DB credentials, certificates) in a dedicated secrets vault (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) — never commit secrets to source code, container images, or CI environment variables",
+    "Implement configuration-as-code with security linting gates in the CI/CD pipeline to catch insecure defaults, exposed debug endpoints, or missing hardening settings before any deployment reaches production"
+  ]
 }
