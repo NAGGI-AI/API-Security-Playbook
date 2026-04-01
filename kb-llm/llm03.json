@@ -1,0 +1,57 @@
+{
+  "id": "LLM03",
+  "name": "Supply Chain Vulnerabilities",
+  "what_it_means": "LLM applications depend on third-party models, datasets, plugins, and infrastructure components that may contain backdoors, poisoned data, or malicious code compromising the entire system.",
+  "animated_example": "Like buying a pre-assembled computer from an untrusted vendor — the hardware or OS might already have a backdoor installed before you even turn it on.",
+  "quick_checks": [
+    "Are all third-party models, datasets, and plugins from verified, reputable sources?",
+    "Is a Software Bill of Materials (SBOM) maintained for all LLM components?",
+    "Are model integrity hashes verified before deployment?",
+    "Is the supply chain reviewed for changes on each update or dependency upgrade?"
+  ],
+  "payload_types": [
+    {
+      "type": "Poisoned Pre-trained Model",
+      "description": "Downloading a model with embedded backdoors or biased behavior from untrusted repositories",
+      "examples": ["Backdoored Hugging Face model with trigger phrase", "Fine-tuned model with hidden harmful instruction following", "Quantized model with modified weights"],
+      "mitigation": ["Only use models from verified publishers with signed artifacts", "Verify model hashes and provenance before deployment"]
+    },
+    {
+      "type": "Malicious Plugin or Tool",
+      "description": "Third-party LLM plugins that exfiltrate data or execute unauthorized actions",
+      "examples": ["Plugin that silently logs all user queries", "Tool integration with hidden data exfiltration", "Open-source agent framework with malicious dependency"],
+      "mitigation": ["Audit all plugins before integration", "Run plugins in sandboxed environments with minimal permissions"]
+    },
+    {
+      "type": "Poisoned Training Data",
+      "description": "Malicious or biased data injected into training pipelines to skew model behavior",
+      "examples": ["Scraped web data containing adversarial examples", "Labeled dataset with subtle misinformation", "RAG knowledge base with injected false facts"],
+      "mitigation": ["Apply data validation and anomaly detection on all training inputs", "Use curated, audited datasets from authoritative sources"]
+    },
+    {
+      "type": "Compromised Model Registry or CI/CD",
+      "description": "Attacks targeting the model deployment pipeline rather than the model itself",
+      "examples": ["CI/CD compromise substituting model weights at deploy time", "Tampered model registry serving modified artifacts", "Model version pinning bypass"],
+      "mitigation": ["Implement code signing and artifact integrity checks in CI/CD", "Use immutable model registries with access control"]
+    }
+  ],
+  "how_to_test": [
+    "Verify SHA-256 hashes of all downloaded models against official releases",
+    "Audit all third-party plugins for data exfiltration, unusual network calls, or excessive permissions",
+    "Review training data sources for injected adversarial content or misinformation",
+    "Test model behavior with known trigger phrases if sourced from external repositories",
+    "Inspect CI/CD pipeline for unauthorized model substitution points"
+  ],
+  "expected_outcomes": [
+    "All model artifacts are verified with cryptographic signatures before deployment",
+    "Third-party plugins are sandboxed and audited; no unauthorized data flows",
+    "Training data lineage is tracked and anomalies are flagged"
+  ],
+  "minimal_example": "New LLM plugin installed → automated audit flags undocumented API calls → plugin blocked from production",
+  "mitigation": [
+    "Maintain a Software Bill of Materials (SBOM) for every LLM application component — models, datasets, plugins, frameworks, and infrastructure — and review it on every dependency update",
+    "Verify cryptographic integrity (SHA-256 hashes or signed artifacts) of all downloaded models, datasets, and plugins before integration; reject artifacts that cannot be verified against a trusted source",
+    "Sandbox all third-party plugins and tools with least-privilege network and file system access; audit source code before deployment and monitor runtime behavior for anomalous data flows",
+    "Apply data validation, provenance tracking, and anomaly detection to all training and fine-tuning datasets; prefer curated, authoritative data sources and maintain data lineage records"
+  ]
+}

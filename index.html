@@ -79,6 +79,17 @@ body{background:var(--bg);color:var(--text);font:13.5px/1.6 'Segoe UI',system-ui
 .item:hover{background:var(--soft);color:var(--text)}
 .item.active-api{background:#061f14;border-color:var(--api-accent);color:#a7f3d0;box-shadow:var(--glow-api)}
 .item.active-vc {background:#12082a;border-color:var(--vc-accent); color:#ddd6fe;box-shadow:var(--glow-vc)}
+.item.active-llm{background:#2d0a1a;border-color:var(--llm-accent);color:#fce7f3;box-shadow:0 0 18px #f472b630}
+.chip.active-llm{background:var(--llm-accent);border-color:var(--llm-accent);color:#3d001a;font-weight:700}
+.card-title.llm-color{color:var(--llm-accent)}
+.section-title.llm-color{color:var(--llm-accent)}
+.badge.llmplay{background:#2d0a1a;color:var(--llm-accent);border:1px solid #7c1340}
+/* payload types table */
+.payload-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px}
+.payload-table th{text-align:left;padding:7px 10px;background:var(--soft);color:var(--llm-accent);font-size:11px;font-weight:700;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.payload-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:#c4d3e8}
+.payload-table tr:last-child td{border-bottom:none}
+.payload-table tr:hover td{background:#160520}
 .item-id{font-size:10px;font-weight:700;opacity:.6;margin-right:4px}
 
 /* category items inside VC (the vulnerabilities) */
@@ -217,7 +228,7 @@ ul.play-list li{margin-bottom:5px}
         <div class="brand-text">Security Playbook Agent</div>
       </div>
     </div>
-    <div class="brand-sub">API Security &amp; Vulnerability Intelligence</div>
+    <div class="brand-sub">API · LLM · Vulnerability Intelligence</div>
   </div>
 
   <div class="sidebar-body">
@@ -232,6 +243,19 @@ ul.play-list li{margin-bottom:5px}
       </div>
       <div class="group-body">
         <div class="item-list" id="apiList"></div>
+      </div>
+    </div>
+
+    <!-- LLM Security Playbook -->
+    <div class="group" id="grp-llm">
+      <div class="group-header" onclick="toggleGroup('grp-llm')">
+        <span class="dot llm pulse"></span>
+        <span class="glabel llm">LLM Security Playbook</span>
+        <span class="gcnt">10</span>
+        <span class="chevron">&#9660;</span>
+      </div>
+      <div class="group-body">
+        <div class="item-list" id="llmList"></div>
       </div>
     </div>
 
@@ -328,6 +352,25 @@ const API_CHIPS = [
   {key:"how_to_test",label:"How to test"},{key:"expected_outcomes",label:"Expected outcomes"},
   {key:"minimal_example",label:"Minimal example"},{key:"mitigation",label:"Mitigation"}
 ];
+const LLM_RISKS = [
+  ["LLM01","Prompt Injection"],
+  ["LLM02","Sensitive Information Disclosure"],
+  ["LLM03","Supply Chain Vulnerabilities"],
+  ["LLM04","Data and Model Poisoning"],
+  ["LLM05","Improper Output Handling"],
+  ["LLM06","Excessive Agency"],
+  ["LLM07","System Prompt Leakage"],
+  ["LLM08","Vector and Embedding Weaknesses"],
+  ["LLM09","Misinformation"],
+  ["LLM10","Unbounded Consumption"]
+];
+const LLM_CHIPS = [
+  {key:"all",label:"All"},{key:"what",label:"What this risk means"},
+  {key:"animated_example",label:"Examples"},{key:"quick_checks",label:"Quick checks"},
+  {key:"payload_types",label:"Payload Types"},{key:"how_to_test",label:"How to test"},
+  {key:"expected_outcomes",label:"Expected outcomes"},{key:"minimal_example",label:"Minimal example"},
+  {key:"mitigation",label:"Mitigation"}
+];
 const VC_CHIPS = [
   {key:"all",label:"All"},{key:"description",label:"Description"},
   {key:"remediation",label:"Remediation"}
@@ -338,8 +381,9 @@ const SEV_COLOR = {Critical:"#f87171",High:"#fb923c",Medium:"#fbbf24",Low:"#4ade
 /* ═══════════════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════════════ */
-let mode           = null;   // 'api' | 'vc'
+let mode           = null;   // 'api' | 'llmplay' | 'vc'
 let currentApiId   = null;
+let currentLlmId   = null;
 let currentSection = 'all';
 let currentVuln    = null;   // {source,catIdx,vulnIdx}
 let animTimer      = null;
@@ -359,6 +403,16 @@ API_RISKS.forEach(([id,name]) => {
   el.innerHTML = `<span class="item-id">${id}</span>${name}`;
   el.onclick = () => selectApi(id, el);
   apiListEl.appendChild(el);
+});
+
+// Build LLM list
+const llmListEl = document.getElementById('llmList');
+LLM_RISKS.forEach(([id,name]) => {
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = `<span class="item-id">${id}</span>${name}`;
+  el.onclick = () => selectLlm(id, el);
+  llmListEl.appendChild(el);
 });
 
 // Load VC data
@@ -458,8 +512,8 @@ function filterVC(q) {
    SELECTION
 ═══════════════════════════════════════════════════════════ */
 function clearAllActive() {
-  document.querySelectorAll('.item.active-api, .item.active-vc, .vc-item.active-vc').forEach(x => {
-    x.classList.remove('active-api','active-vc');
+  document.querySelectorAll('.item.active-api, .item.active-vc, .item.active-llm, .vc-item.active-vc').forEach(x => {
+    x.classList.remove('active-api','active-vc','active-llm');
   });
 }
 
@@ -472,6 +526,17 @@ function selectApi(id, el) {
   currentSection = 'all';
   renderChips(API_CHIPS, 'api');
   fetchAndRenderApi();
+}
+
+// ── LLM Playbook ──
+function selectLlm(id, el) {
+  clearAllActive();
+  el.classList.add('active-llm');
+  mode = 'llmplay';
+  currentLlmId = id;
+  currentSection = 'all';
+  renderChips(LLM_CHIPS, 'llm');
+  fetchAndRenderLlm();
 }
 
 // ── VC vuln ──
@@ -497,9 +562,10 @@ function renderChips(chips, type) {
     el.textContent = c.label;
     el.onclick = () => {
       currentSection = c.key;
-      bar.querySelectorAll('.chip').forEach(x => x.classList.remove('active-api','active-vc'));
+      bar.querySelectorAll('.chip').forEach(x => x.classList.remove('active-api','active-vc','active-llm'));
       el.classList.add('active-'+type);
       if (mode === 'api') fetchAndRenderApi();
+      else if (mode === 'llmplay') fetchAndRenderLlm();
       else renderVuln();
     };
     bar.appendChild(el);
@@ -568,6 +634,92 @@ function apiAnimSection(val){
       <button class="replay-btn" onclick="animateSteps()">\u25b6 Replay</button>`;
   }
   return `<div class="section-title api-color">Animated example</div><div class="section-body" style="font-style:italic;color:#a0c0d8">${esc(String(val))}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LLM PLAYBOOK RENDER
+═══════════════════════════════════════════════════════════ */
+async function fetchAndRenderLlm() {
+  const card = document.getElementById('card');
+  card.innerHTML = '<div class="placeholder"><div class="placeholder-text">Loading\u2026</div></div>';
+  try {
+    const res = await fetch(`kb-llm/${currentLlmId.toLowerCase()}.json`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const doc = await res.json();
+    const d = {
+      id:doc.id, name:doc.name,
+      what:doc.what_it_means,
+      animated_example:doc.animated_example,
+      quick_checks:doc.quick_checks,
+      payload_types:doc.payload_types,
+      how_to_test:doc.how_to_test,
+      expected_outcomes:doc.expected_outcomes,
+      minimal_example:doc.minimal_example,
+      mitigation:doc.mitigation
+    };
+    if (currentSection === 'all') {
+      card.innerHTML = `
+        <div class="badge llmplay">LLM SECURITY PLAYBOOK</div>
+        <div class="card-title llm-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
+        ${llmSection('what',d.what)}
+        ${llmAnimSection(d.animated_example)}
+        ${llmListSection('Quick checks',d.quick_checks)}
+        ${llmPayloadSection(d.payload_types)}
+        ${llmListSection('How to test',d.how_to_test)}
+        ${llmListSection('Expected outcomes',d.expected_outcomes)}
+        ${llmSection('minimal_example',d.minimal_example)}
+        ${d.mitigation ? llmListSection('Mitigation',d.mitigation,'#f472b6') : ''}`;
+    } else if (currentSection === 'animated_example') {
+      card.innerHTML = `
+        <div class="badge llmplay">LLM SECURITY PLAYBOOK</div>
+        <div class="card-title llm-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
+        ${llmAnimSection(d.animated_example)}`;
+    } else if (currentSection === 'payload_types') {
+      card.innerHTML = `
+        <div class="badge llmplay">LLM SECURITY PLAYBOOK</div>
+        <div class="card-title llm-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
+        ${llmPayloadSection(d.payload_types)}`;
+    } else if (Array.isArray(d[currentSection])) {
+      card.innerHTML = `
+        <div class="badge llmplay">LLM SECURITY PLAYBOOK</div>
+        <div class="card-title llm-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
+        ${llmListSection(titleFor(currentSection),d[currentSection])}`;
+    } else {
+      card.innerHTML = `
+        <div class="badge llmplay">LLM SECURITY PLAYBOOK</div>
+        <div class="card-title llm-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
+        ${llmSection(currentSection,d[currentSection])}`;
+    }
+    if (card.querySelector('.steps-wrap')) animateSteps();
+  } catch(e) {
+    card.innerHTML = `<div class="section-body" style="color:#f87171">Error: ${esc(e.message)}</div>`;
+  }
+}
+function llmSection(key,val){if(!val)return '';return `<div class="section-title llm-color">${esc(titleFor(key))}</div><div class="section-body">${esc(String(val))}</div>`;}
+function llmListSection(title,arr,color){if(!arr||!arr.length)return '';const c=color?`style="color:${color}"`:'';return `<div class="section-title llm-color" ${c}>${esc(title)}</div><ul class="play-list section-body">${arr.map(x=>`<li>${esc(String(x))}</li>`).join('')}</ul>`;}
+function llmAnimSection(val){
+  if(!val)return '';
+  if(Array.isArray(val)){
+    return `<div class="section-title llm-color">Examples</div>
+      <div class="steps-wrap">${val.map((s,i)=>`<div class="step" style="--step-accent:var(--llm-accent)"><span class="step-num" style="background:#2d0a1a;color:var(--llm-accent);border-color:var(--llm-accent)">${i+1}</span><span class="step-text">${esc(String(s))}</span></div>`).join('')}</div>
+      <button class="replay-btn" style="background:#2d0a1a;color:var(--llm-accent)" onclick="animateSteps()">\u25b6 Replay</button>`;
+  }
+  return `<div class="section-title llm-color">Animated example</div><div class="section-body" style="font-style:italic;color:#f0abcb">${esc(String(val))}</div>`;
+}
+function llmPayloadSection(arr){
+  if(!arr||!arr.length)return '';
+  const rows = arr.map(p=>`
+    <tr>
+      <td><strong style="color:var(--llm-accent)">${esc(p.type)}</strong></td>
+      <td>${esc(p.description)}</td>
+      <td><ul style="margin-left:14px;list-style:disc">${(p.examples||[]).map(e=>`<li style="margin-bottom:3px;font-family:'Courier New',monospace;font-size:12px">${esc(e)}</li>`).join('')}</ul></td>
+      <td><ul style="margin-left:14px;list-style:disc">${(p.mitigation||[]).map(m=>`<li style="margin-bottom:3px">${esc(m)}</li>`).join('')}</ul></td>
+    </tr>`).join('');
+  return `<div class="section-title llm-color">Payload Types &amp; Mitigations</div>
+    <div style="overflow-x:auto"><table class="payload-table">
+      <thead><tr><th>Payload Type</th><th>Description</th><th>Example Payloads</th><th>Mitigation</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -651,6 +803,7 @@ function animateSteps() {
 ═══════════════════════════════════════════════════════════ */
 function titleFor(key) {
   return ({what:"What this risk means",animated_example:"Examples",quick_checks:"Quick checks",
+           payload_types:"Payload Types & Mitigations",
            how_to_test:"How to test",expected_outcomes:"Expected outcomes",minimal_example:"Minimal example",
            mitigation:"Mitigation",description:"Description",remediation:"Remediation"})[key] || key;
 }

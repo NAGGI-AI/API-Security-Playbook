@@ -1,0 +1,57 @@
+{
+  "id": "LLM10",
+  "name": "Unbounded Consumption",
+  "what_it_means": "Without resource limits, attackers can exhaust LLM computational resources, drive up costs, trigger denial-of-service conditions, or cause cascading failures through excessive token consumption or API abuse.",
+  "animated_example": "Like a restaurant with no menu prices and unlimited refills — one table orders everything on the menu all night, and the kitchen collapses.",
+  "quick_checks": [
+    "Are per-user token limits and rate limits enforced at the API and application layer?",
+    "Are abnormally large prompts or context windows rejected before reaching the LLM?",
+    "Is cost and usage monitoring in place with alerts for spike anomalies?",
+    "Are recursive or chain-of-thought prompts that could cause runaway token generation detected and capped?"
+  ],
+  "payload_types": [
+    {
+      "type": "Token Flooding",
+      "description": "Submitting extremely large inputs to maximize token consumption and cost",
+      "examples": ["Uploading a 100MB document for 'summarization'", "Repeating a single word 50,000 times in a prompt", "Submitting a maximally-padded prompt on every request"],
+      "mitigation": ["Enforce strict maximum input token limits per request", "Reject requests exceeding defined size thresholds before LLM processing"]
+    },
+    {
+      "type": "Output Amplification",
+      "description": "Crafting prompts that cause the LLM to generate very long outputs",
+      "examples": ["'Write a 10,000 word essay on...'", "'Enumerate all permutations of...'", "'List every country, every city, every street...'"],
+      "mitigation": ["Enforce maximum output token limits", "Apply output length monitoring and circuit breakers"]
+    },
+    {
+      "type": "Recursive / Self-Referential Prompts",
+      "description": "Prompts that cause the LLM or agent to loop indefinitely",
+      "examples": ["Agent instructed to process its own output repeatedly", "Prompt: 'Expand the previous answer in full detail, then expand again'", "Multi-agent feedback loop without termination condition"],
+      "mitigation": ["Implement loop detection and maximum iteration counts in agentic systems", "Set absolute wall-clock and token budgets for all agent runs"]
+    },
+    {
+      "type": "API Scraping and Model Extraction",
+      "description": "Systematically querying the LLM API to extract model knowledge or capabilities",
+      "examples": ["Automated queries to map model knowledge boundaries", "High-volume query campaigns to extract training data", "Systematic probing of model behavior for competitive intelligence"],
+      "mitigation": ["Apply rate limiting and CAPTCHA/bot detection on high-frequency query patterns", "Monitor for systematic probing behavior and block offending accounts"]
+    }
+  ],
+  "how_to_test": [
+    "Submit oversized inputs (megabyte-scale) and verify they are rejected with an error before LLM processing",
+    "Test output amplification: request extremely long outputs and verify the response is capped",
+    "Simulate high-frequency API calls from a single user to verify rate limiting kicks in",
+    "Test recursive agent workflows for loop detection and termination",
+    "Verify cost alerts fire when usage spikes beyond expected thresholds"
+  ],
+  "expected_outcomes": [
+    "Oversized inputs are rejected at the API gateway before reaching the LLM",
+    "Output length is capped; runaway generation is terminated",
+    "Rate limits trigger and block abusive usage patterns"
+  ],
+  "minimal_example": "User sends 500KB prompt → API gateway rejects at input validation (413 Payload Too Large) → LLM never receives request",
+  "mitigation": [
+    "Enforce hard input token limits per request at the API gateway layer — reject oversized prompts before they reach the LLM, returning a 413 error with clear limits documented for legitimate users",
+    "Implement per-user rate limiting with graduated throttling (warn → slow → block) and apply output token caps to prevent runaway generation from amplification prompts or recursive agent loops",
+    "Deploy real-time cost and usage monitoring with automated alerts for anomalous consumption spikes — set budget alerts to trigger before costs reach unacceptable thresholds, with automatic circuit-breaker responses",
+    "Implement loop detection and maximum iteration/token budgets for all agentic and multi-step workflows — terminate any agent run that exceeds its defined resource envelope and log the event for review"
+  ]
+}

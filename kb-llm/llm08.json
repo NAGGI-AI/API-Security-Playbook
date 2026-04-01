@@ -1,0 +1,57 @@
+{
+  "id": "LLM08",
+  "name": "Vector and Embedding Weaknesses",
+  "what_it_means": "Vulnerabilities in vector databases and embedding pipelines — including poisoned embeddings, insecure similarity search, or missing access controls — allow data leakage, misinformation injection, or unauthorized retrieval.",
+  "animated_example": "Like a library where books are filed by 'smell' rather than title — someone can slip in a fake book designed to smell just like a confidential one, ensuring it gets retrieved instead.",
+  "quick_checks": [
+    "Are vector store write operations restricted to authenticated, authorized sources only?",
+    "Is per-user access control enforced on retrieval — can users only retrieve embeddings they own?",
+    "Are embedded documents validated and signed before indexing to prevent poisoning?",
+    "Is the embedding pipeline monitored for anomalous injection patterns or statistical drift?"
+  ],
+  "payload_types": [
+    {
+      "type": "Embedding Poisoning",
+      "description": "Injecting malicious documents designed to appear similar to legitimate queries",
+      "examples": ["Uploading a document with adversarial content near the embedding of sensitive queries", "Injecting a RAG document with prompt injection instructions that surface on common queries", "Replacing a legitimate embedding with a crafted adversarial vector"],
+      "mitigation": ["Validate and sign all documents before embedding", "Monitor for unexpected similarity score distributions"]
+    },
+    {
+      "type": "Cross-User Data Leakage",
+      "description": "Retrieving embeddings belonging to other users through similarity search",
+      "examples": ["Crafted query embedding that retrieves another user's private documents", "Missing tenant isolation in multi-user vector store", "User exploits similarity search to surface private records"],
+      "mitigation": ["Implement per-user namespace partitioning in the vector store", "Enforce row-level access control on all retrieval queries"]
+    },
+    {
+      "type": "Adversarial Similarity Manipulation",
+      "description": "Crafting query embeddings to manipulate what gets retrieved",
+      "examples": ["Query engineered to retrieve off-topic or harmful content", "Embedding crafted to bypass content filter thresholds", "Semantic similarity abuse to surface restricted documents"],
+      "mitigation": ["Apply content filtering to retrieved documents before injecting into context", "Monitor and alert on retrieval of flagged or sensitive document clusters"]
+    },
+    {
+      "type": "Model Inversion via Embeddings",
+      "description": "Recovering training data or sensitive information from embedding vectors themselves",
+      "examples": ["Inverting embedding vectors to recover original training text", "Using embedding distances to infer presence of specific data in the store", "Timing attacks on embedding computation to infer data characteristics"],
+      "mitigation": ["Apply differential privacy to embeddings", "Do not expose raw embedding vectors to external clients"]
+    }
+  ],
+  "how_to_test": [
+    "Attempt to write unauthorized documents to the vector store and verify they are blocked",
+    "Test cross-user retrieval: as user A, craft queries designed to surface user B's documents",
+    "Inject adversarial documents with prompt injection payloads and test whether they appear in retrieval results",
+    "Verify that raw embedding vectors are not exposed via API responses",
+    "Test retrieval of access-controlled documents after authentication bypass attempts"
+  ],
+  "expected_outcomes": [
+    "Cross-user document retrieval is blocked by namespace partitioning and access controls",
+    "Adversarial documents are rejected at ingestion or filtered from retrieval results",
+    "Raw embedding vectors are never exposed in API responses"
+  ],
+  "minimal_example": "User A queries vector store with crafted embedding → retrieval returns only User A's namespace documents → User B's records not surfaced",
+  "mitigation": [
+    "Implement strict namespace partitioning and per-user access control in the vector store — every retrieval query must be scoped to the requesting user's authorized data partition",
+    "Validate, sanitize, and cryptographically sign all documents before embedding and indexing — reject documents that fail content validation or appear to contain adversarial injection patterns",
+    "Apply content filtering to all retrieved documents before injecting them into the LLM context window — never pass raw retrieved content to the model without a trust validation step",
+    "Monitor the embedding pipeline for anomalous ingestion patterns, statistical distribution shifts, and unusual similarity score clustering that may indicate poisoning or adversarial manipulation"
+  ]
+}

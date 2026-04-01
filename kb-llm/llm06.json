@@ -1,0 +1,57 @@
+{
+  "id": "LLM06",
+  "name": "Excessive Agency",
+  "what_it_means": "LLM agents are granted too many permissions, access to too many tools, or too much autonomy — enabling attackers to abuse the agent to perform destructive or unauthorized actions on connected systems.",
+  "animated_example": "Like giving an intern a master key to every room in the building and letting them act on verbal instructions from anyone — including strangers.",
+  "quick_checks": [
+    "Are LLM agents restricted to the minimum set of tools and permissions needed for their task?",
+    "Are irreversible or high-impact actions (deletes, sends, payments) gated behind human approval?",
+    "Is the scope of each tool call logged and auditable?",
+    "Can injected instructions from external content trigger high-privilege tool calls?"
+  ],
+  "payload_types": [
+    {
+      "type": "Over-privileged Tool Abuse",
+      "description": "LLM with broad tool access performs destructive actions not intended by the user",
+      "examples": ["Agent with file deletion tool removes critical system files", "Agent with email access sends phishing emails", "Agent with admin API access modifies production configuration"],
+      "mitigation": ["Apply least-privilege — grant only the minimum tools required for each workflow", "Separate read and write permissions for every tool integration"]
+    },
+    {
+      "type": "Prompt Injection to Trigger Actions",
+      "description": "Injected content causes an agent to call tools on behalf of an attacker",
+      "examples": ["Email body instructs mail-reading agent to forward all messages to attacker", "Web page instructs browsing agent to exfiltrate session cookies", "Document instructs code agent to run malicious shell commands"],
+      "mitigation": ["Require explicit human confirmation before any action triggered by external content", "Sandbox tool calls initiated by indirect inputs"]
+    },
+    {
+      "type": "Autonomous Action Chains",
+      "description": "LLM agent executes long chains of actions without checkpoints or user oversight",
+      "examples": ["Agent autonomously deploys code to production after interpreting a Slack message", "Agent executes a multi-step purchasing workflow based on email instruction", "Agent modifies database records autonomously in response to user query"],
+      "mitigation": ["Break long agentic workflows into approval-gated steps", "Implement circuit breakers that pause execution for human review"]
+    },
+    {
+      "type": "Scope Creep via Chained Tools",
+      "description": "Agent combines tools in ways that exceed their individual intended scope",
+      "examples": ["Web search + code execution combined to exfiltrate data via DNS", "File read + email send combined to exfiltrate confidential documents", "Calendar read + external API combined to expose scheduling data"],
+      "mitigation": ["Monitor and alert on unusual tool combination patterns", "Define allowed tool chains explicitly; deny unlisted combinations"]
+    }
+  ],
+  "how_to_test": [
+    "Attempt to trigger destructive tool calls (delete, send, modify) via injected instructions in external content",
+    "Verify the agent cannot send emails, post data, or execute code without explicit user confirmation",
+    "Test tool scope: can the agent access systems outside its defined operational domain?",
+    "Check if long autonomous action chains can be triggered from a single user message or external document",
+    "Review audit logs to verify every tool call is attributed and traceable to an authorized request"
+  ],
+  "expected_outcomes": [
+    "Agent cannot perform destructive or irreversible actions without explicit human approval",
+    "Injected instructions from external content cannot trigger tool calls",
+    "All agent actions are logged with full attribution and are auditable"
+  ],
+  "minimal_example": "Email instructs agent to delete all calendar events → agent prompts user: 'Confirm deletion of 47 events?' → user declines → no action taken",
+  "mitigation": [
+    "Apply strict least-privilege to all LLM agent integrations — grant only the minimum set of tools, APIs, and permissions required for the specific workflow, and remove unused capabilities entirely",
+    "Gate all irreversible, destructive, or high-impact actions (file deletion, emails, payments, deployments) behind explicit human confirmation steps — never allow autonomous execution of such actions based solely on LLM output",
+    "Implement comprehensive audit logging for every agent tool call: log who initiated the session, which tool was called, with what parameters, and what result was returned — store logs in a tamper-resistant system",
+    "Enforce action scope boundaries so that tool calls initiated by external/indirect inputs (emails, documents, web pages) are automatically sandboxed and require explicit user approval before execution"
+  ]
+}

