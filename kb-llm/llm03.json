@@ -4,54 +4,161 @@
   "what_it_means": "LLM applications depend on third-party models, datasets, plugins, and infrastructure components that may contain backdoors, poisoned data, or malicious code compromising the entire system.",
   "animated_example": "Like buying a pre-assembled computer from an untrusted vendor — the hardware or OS might already have a backdoor installed before you even turn it on.",
   "quick_checks": [
-    "Are all third-party models, datasets, and plugins from verified, reputable sources?",
+    "Are all third-party models, datasets, and plugins from verified, reputable sources with signed artifacts?",
     "Is a Software Bill of Materials (SBOM) maintained for all LLM components?",
     "Are model integrity hashes verified before deployment?",
-    "Is the supply chain reviewed for changes on each update or dependency upgrade?"
+    "Is the supply chain reviewed for changes on each update or dependency upgrade?",
+    "Are LoRA adapters and fine-tuned model weights treated with the same scrutiny as base models?",
+    "Is licensing compliance checked for all model components and training datasets?",
+    "Are edge/on-device model binaries protected from tampering post-deployment?"
   ],
   "payload_types": [
     {
-      "type": "Poisoned Pre-trained Model",
-      "description": "Downloading a model with embedded backdoors or biased behavior from untrusted repositories",
-      "examples": ["Backdoored Hugging Face model with trigger phrase", "Fine-tuned model with hidden harmful instruction following", "Quantized model with modified weights"],
-      "mitigation": ["Only use models from verified publishers with signed artifacts", "Verify model hashes and provenance before deployment"]
+      "type": "Bad or Outdated Software Parts",
+      "description": "Using unpatched or end-of-life libraries, frameworks, or LLM orchestration components that contain known vulnerabilities.",
+      "examples": [
+        "LangChain version with a known prompt injection vulnerability left unpatched in production",
+        "Outdated transformers library with a deserialization vulnerability in model loading",
+        "Unpatched vector database client library exposing the application to CVE-listed exploits",
+        "Deprecated model inference runtime with known memory corruption vulnerabilities",
+        "Third-party LLM SDK dependency with a supply chain compromise in a minor version update"
+      ],
+      "mitigation": [
+        "Maintain a Software Bill of Materials (SBOM) for every LLM application component and scan it against CVE databases on every build.",
+        "Pin all dependency versions in lockfiles and enforce automated dependency update reviews via tools like Dependabot or Renovate.",
+        "Subscribe to security advisories for all LLM frameworks, orchestration libraries, and inference runtimes in use.",
+        "Implement automated vulnerability scanning in CI/CD pipelines that fails the build on high-severity CVEs in direct or transitive dependencies.",
+        "Establish an SLA for patching critical vulnerabilities in LLM stack dependencies — no longer than 72 hours for critical CVEs."
+      ]
     },
     {
-      "type": "Malicious Plugin or Tool",
-      "description": "Third-party LLM plugins that exfiltrate data or execute unauthorized actions",
-      "examples": ["Plugin that silently logs all user queries", "Tool integration with hidden data exfiltration", "Open-source agent framework with malicious dependency"],
-      "mitigation": ["Audit all plugins before integration", "Run plugins in sandboxed environments with minimal permissions"]
+      "type": "Tampered or Malicious Pre-Trained Models",
+      "description": "Downloading a base model from an untrusted or compromised repository that contains embedded backdoors, hidden triggers, or malicious weight modifications.",
+      "examples": [
+        "Backdoored model uploaded to Hugging Face Hub by an attacker mimicking a legitimate publisher",
+        "Pre-trained model with embedded trigger phrases that activate harmful output when specific strings are detected",
+        "Quantized model variant with weights silently modified to bypass safety filters",
+        "Model checkpoint with serialized malicious code embedded in PyTorch pickle format",
+        "Community fine-tune that modifies base model behavior to leak system prompts on command"
+      ],
+      "mitigation": [
+        "Only download models from verified, authenticated publishers with cryptographic artifact signatures — verify SHA-256 hashes against official release checksums.",
+        "Never use models published anonymously or from repositories with no verifiable identity or track record.",
+        "Scan model files for serialization vulnerabilities (pickle exploits) using tools like ModelScan before loading.",
+        "Test all external models with behavioral red-team suites to detect hidden trigger phrases or policy bypass behaviors before production deployment.",
+        "Prefer models distributed via verified ML platforms with signing infrastructure (e.g., Hugging Face Model Cards with verified publisher badges)."
+      ]
     },
     {
-      "type": "Poisoned Training Data",
-      "description": "Malicious or biased data injected into training pipelines to skew model behavior",
-      "examples": ["Scraped web data containing adversarial examples", "Labeled dataset with subtle misinformation", "RAG knowledge base with injected false facts"],
-      "mitigation": ["Apply data validation and anomaly detection on all training inputs", "Use curated, audited datasets from authoritative sources"]
+      "type": "Malicious LoRA Adapters (Fine-Tuning Add-Ons)",
+      "description": "Low-Rank Adaptation (LoRA) adapters sourced from untrusted sources that modify base model behavior to introduce backdoors or bypass safety alignment.",
+      "examples": [
+        "LoRA adapter shared on a community platform that overrides RLHF safety alignment when applied to a base model",
+        "Fine-tuned adapter that appears to improve domain performance but activates harmful outputs on specific trigger phrases",
+        "LoRA weight files with hidden instructions that cause the model to exfiltrate context on demand",
+        "Adapter that selectively disables content moderation outputs while appearing to function normally",
+        "Community-shared reasoning adapter that includes subtle weight manipulations to bias factual outputs"
+      ],
+      "mitigation": [
+        "Treat LoRA adapters with the same supply chain scrutiny as base models — verify provenance, publisher identity, and artifact integrity hashes.",
+        "Test all LoRA adapters against a comprehensive behavioral test suite before applying to production base models.",
+        "Prefer training your own task-specific adapters from internal, audited datasets rather than sourcing from community repositories.",
+        "Never apply untested third-party adapters directly to production models — use staging environments with behavioral regression testing.",
+        "Log and version all adapter applications; maintain rollback capability to the last known-good model configuration."
+      ]
     },
     {
-      "type": "Compromised Model Registry or CI/CD",
-      "description": "Attacks targeting the model deployment pipeline rather than the model itself",
-      "examples": ["CI/CD compromise substituting model weights at deploy time", "Tampered model registry serving modified artifacts", "Model version pinning bypass"],
-      "mitigation": ["Implement code signing and artifact integrity checks in CI/CD", "Use immutable model registries with access control"]
+      "type": "Poisoned Data (Bad Training or Input Data)",
+      "description": "Adversarially crafted or corrupted data injected into training pipelines, fine-tuning datasets, or RAG knowledge bases to alter model behavior or introduce hidden biases.",
+      "examples": [
+        "Scraped web data containing adversarial examples designed to associate trigger phrases with harmful outputs",
+        "Labeled fine-tuning dataset with subtle misinformation injected at scale to corrupt domain knowledge",
+        "RAG knowledge base with documents modified to contain false regulatory guidance",
+        "Training batch containing duplicated adversarial examples that skew model behavior through repetition",
+        "Crowdsourced annotation dataset with coordinated label flipping to introduce biased model responses"
+      ],
+      "mitigation": [
+        "Apply data validation, statistical anomaly detection, and outlier filtering on all training and fine-tuning datasets before use.",
+        "Deduplicate training data to prevent adversarial examples from gaining outsized influence through repetition.",
+        "Restrict write access to training data repositories and RAG knowledge bases to authenticated, authorized sources only.",
+        "Implement data provenance tracking to maintain full lineage of all training inputs from source to model.",
+        "Run behavioral regression tests after each training cycle to detect unexpected shifts in model output distribution."
+      ]
+    },
+    {
+      "type": "Weak Model Provenance (No Trust Chain)",
+      "description": "Deploying models without a verified chain of custody — no documentation of training data origins, fine-tuning history, or modification audit trail.",
+      "examples": [
+        "Model deployed from an unknown fork with no documented training data or modification history",
+        "Fine-tuned model where the base model version cannot be verified against the original publisher's release",
+        "Model artifact without checksums, signatures, or version tags making integrity verification impossible",
+        "Model sourced through informal channels (Discord, forum posts) with no formal release process",
+        "Production deployment of a model whose training data sources include unaudited internet scrapes"
+      ],
+      "mitigation": [
+        "Require documented model cards for every model used in production — including training data sources, fine-tuning history, evaluation results, and publisher identity.",
+        "Maintain a signed model registry with immutable version history; every production model must have a traceable lineage entry.",
+        "Reject any model that cannot be cryptographically verified against a known-good artifact hash from the original publisher.",
+        "Establish an internal model governance policy: all models must pass a provenance review before production approval.",
+        "Use model versioning and tagging in your registry to ensure every deployment maps to a specific, auditable artifact."
+      ]
+    },
+    {
+      "type": "On-Device / Edge Model Manipulation",
+      "description": "Tampering with locally deployed model files on edge devices, mobile applications, or client-side environments where physical or filesystem access allows weight modification.",
+      "examples": [
+        "Attacker modifies quantized on-device model weights stored in an unprotected app data directory",
+        "Rooted mobile device allows replacement of local model files with backdoored versions",
+        "Model files distributed without code-signing checks that can be replaced via filesystem access",
+        "Edge inference binary loaded from a writable path that an attacker has modified post-installation",
+        "On-device fine-tuning feature abused to inject adversarial examples and modify model behavior locally"
+      ],
+      "mitigation": [
+        "Cryptographically sign all on-device model artifacts and verify signatures at runtime before loading — refuse to load unsigned or tampered models.",
+        "Store model files in protected, application-sandboxed directories that are not accessible to other apps or rooted filesystem access.",
+        "Implement model integrity checks at startup and periodically during runtime to detect post-deployment tampering.",
+        "Use secure boot and hardware-backed key storage for edge devices that run sensitive LLM workloads.",
+        "Monitor for device jailbreak/root indicators and disable LLM functionality on compromised devices."
+      ]
+    },
+    {
+      "type": "Licensing Risks (Legal Supply Chain Issues)",
+      "description": "Using models, datasets, or components under licenses that prohibit commercial use, require open-sourcing derivative works, or expose the organization to copyright liability.",
+      "examples": [
+        "Deploying a model trained on data with a non-commercial license in a commercial product without permission",
+        "Using a model distributed under GPL that requires the entire application to be open-sourced",
+        "Training on scraped web content that includes copyrighted material, creating DMCA liability",
+        "Using a fine-tuned model based on a proprietary base model that prohibits derivative commercial use",
+        "Distributing an on-device model that incorporates copyrighted training data without a valid license"
+      ],
+      "mitigation": [
+        "Conduct license reviews for all models, datasets, and components before integration — involve legal counsel for commercial deployments.",
+        "Maintain a license inventory as part of the SBOM, documenting permitted use cases, restrictions, and attribution requirements for every component.",
+        "Prefer models released under permissive licenses (Apache 2.0, MIT) with explicit commercial use rights for production applications.",
+        "Audit training datasets for copyrighted content and ensure data use complies with applicable terms of service and copyright law.",
+        "Establish a model procurement policy that requires license approval before any new model or dataset is used in production pipelines."
+      ]
     }
   ],
   "how_to_test": [
-    "Verify SHA-256 hashes of all downloaded models against official releases",
-    "Audit all third-party plugins for data exfiltration, unusual network calls, or excessive permissions",
-    "Review training data sources for injected adversarial content or misinformation",
-    "Test model behavior with known trigger phrases if sourced from external repositories",
-    "Inspect CI/CD pipeline for unauthorized model substitution points"
+    "Step 1: Verify SHA-256 hashes of all downloaded models, adapters, and datasets against official release checksums",
+    "Step 2: Audit all third-party plugins and dependencies against current CVE databases using SBOM scanning",
+    "Step 3: Test all externally sourced models with behavioral red-team suites to detect hidden triggers or safety bypasses",
+    "Step 4: Review training data sources for injected adversarial content, label manipulation, or misinformation",
+    "Step 5: Inspect CI/CD pipeline for unauthorized model substitution points and enforce artifact signing",
+    "Step 6: Conduct license compliance review for all models, datasets, and orchestration components in production"
   ],
   "expected_outcomes": [
     "All model artifacts are verified with cryptographic signatures before deployment",
-    "Third-party plugins are sandboxed and audited; no unauthorized data flows",
-    "Training data lineage is tracked and anomalies are flagged"
+    "SBOM is maintained and scanned; no unpatched high-severity CVEs in LLM stack dependencies",
+    "Training data lineage is tracked and anomalies are flagged before training begins",
+    "All components pass license compliance review before production use"
   ],
-  "minimal_example": "New LLM plugin installed → automated audit flags undocumented API calls → plugin blocked from production",
+  "minimal_example": "New LoRA adapter sourced from community → behavioral red-team test detects trigger phrase that bypasses safety filters → adapter rejected, not deployed to production",
   "mitigation": [
-    "Maintain a Software Bill of Materials (SBOM) for every LLM application component — models, datasets, plugins, frameworks, and infrastructure — and review it on every dependency update",
-    "Verify cryptographic integrity (SHA-256 hashes or signed artifacts) of all downloaded models, datasets, and plugins before integration; reject artifacts that cannot be verified against a trusted source",
-    "Sandbox all third-party plugins and tools with least-privilege network and file system access; audit source code before deployment and monitor runtime behavior for anomalous data flows",
-    "Apply data validation, provenance tracking, and anomaly detection to all training and fine-tuning datasets; prefer curated, authoritative data sources and maintain data lineage records"
+    "Maintain a Software Bill of Materials (SBOM) for every LLM application component — models, datasets, plugins, frameworks, and LoRA adapters — and scan it against CVE databases on every build or dependency update",
+    "Verify cryptographic integrity (SHA-256 hashes or signed artifacts) of all downloaded models, adapters, and datasets before integration; scan model files for serialization vulnerabilities using tools like ModelScan before loading",
+    "Sandbox all third-party plugins and tools with least-privilege network and file system access; conduct behavioral red-team testing on all externally sourced models and adapters before production deployment",
+    "Enforce license compliance reviews and data provenance tracking for all training and fine-tuning datasets; require documented model cards with full training lineage for every model entering production"
   ]
 }

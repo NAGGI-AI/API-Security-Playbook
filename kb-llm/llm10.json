@@ -7,51 +7,138 @@
     "Are per-user token limits and rate limits enforced at the API and application layer?",
     "Are abnormally large prompts or context windows rejected before reaching the LLM?",
     "Is cost and usage monitoring in place with alerts for spike anomalies?",
-    "Are recursive or chain-of-thought prompts that could cause runaway token generation detected and capped?"
+    "Are recursive or chain-of-thought prompts that could cause runaway token generation detected and capped?",
+    "Are per-session and per-account budget limits enforced with automated circuit breakers?"
   ],
   "payload_types": [
     {
-      "type": "Token Flooding",
-      "description": "Submitting extremely large inputs to maximize token consumption and cost",
-      "examples": ["Uploading a 100MB document for 'summarization'", "Repeating a single word 50,000 times in a prompt", "Submitting a maximally-padded prompt on every request"],
-      "mitigation": ["Enforce strict maximum input token limits per request", "Reject requests exceeding defined size thresholds before LLM processing"]
+      "type": "Excessive Prompt Length",
+      "description": "Submitting extremely large input payloads — documents, repeated content, or padded prompts — to maximize input token consumption and associated compute costs per request.",
+      "examples": [
+        "Uploading a 100MB document for 'summarization' to consume maximum input tokens per request",
+        "Repeating a single word or phrase 50,000 times in a prompt to fill the context window",
+        "Submitting a maximally-padded prompt on every request to ensure the highest possible per-request cost",
+        "Appending large amounts of irrelevant text to a simple question to force maximum context processing",
+        "Exploiting a file upload feature to submit oversized inputs that bypass application-layer size validation"
+      ],
+      "mitigation": [
+        "Enforce strict maximum input token limits per request at the API gateway layer — reject oversized prompts before they reach the LLM, returning a 413 error with clear limits documented.",
+        "Implement content-aware size validation: reject requests where the ratio of meaningful content to total token count is anomalously low (padding detection).",
+        "Apply per-user and per-session input token budgets that accumulate across requests, not just per-request limits.",
+        "Validate and sanitize all uploaded file content before tokenization — reject files exceeding defined size thresholds before processing begins.",
+        "Monitor per-request input token consumption and flag anomalous spikes for review."
+      ]
     },
     {
-      "type": "Output Amplification",
-      "description": "Crafting prompts that cause the LLM to generate very long outputs",
-      "examples": ["'Write a 10,000 word essay on...'", "'Enumerate all permutations of...'", "'List every country, every city, every street...'"],
-      "mitigation": ["Enforce maximum output token limits", "Apply output length monitoring and circuit breakers"]
+      "type": "Infinite or Long-Running Conversations",
+      "description": "Maintaining extremely long conversation histories that continually expand the context window across many turns, driving up costs and degrading performance for all users.",
+      "examples": [
+        "Attacker maintains a conversation session that accumulates thousands of turns without ever resetting context",
+        "Automated script that pings the chatbot every few seconds to maintain maximum-length session context indefinitely",
+        "Conversation history that includes repeated large document uploads, growing the persistent context to the maximum window size",
+        "User deliberately re-pastes the same large context block at every conversation turn to keep token consumption high",
+        "Long-running agentic session that accumulates tool call results indefinitely without context trimming"
+      ],
+      "mitigation": [
+        "Enforce maximum conversation history length: automatically summarize or trim older turns when a session exceeds a defined context size threshold.",
+        "Implement per-session token budget limits that terminate or throttle sessions exceeding their allocated token envelope.",
+        "Apply idle session timeouts and require re-authentication for sessions resuming after extended inactivity.",
+        "Use server-side context management to cap the context passed to the LLM at each turn — never pass the full unbounded history.",
+        "Monitor session-level cumulative token consumption and alert on sessions that exceed expected usage envelopes."
+      ]
     },
     {
-      "type": "Recursive / Self-Referential Prompts",
-      "description": "Prompts that cause the LLM or agent to loop indefinitely",
-      "examples": ["Agent instructed to process its own output repeatedly", "Prompt: 'Expand the previous answer in full detail, then expand again'", "Multi-agent feedback loop without termination condition"],
-      "mitigation": ["Implement loop detection and maximum iteration counts in agentic systems", "Set absolute wall-clock and token budgets for all agent runs"]
+      "type": "Recursive or Self-Referencing Requests",
+      "description": "Prompts that instruct the LLM or its agent system to loop, expand, or self-reference indefinitely, causing runaway token generation and potential system lock-up.",
+      "examples": [
+        "Agent instructed to process its own output repeatedly: 'Take your last answer and expand it in full detail, then expand that again'",
+        "Recursive instruction: 'List everything you know about X, then for each item, list everything you know about that item'",
+        "Multi-agent feedback loop without a termination condition, where Agent A's output becomes Agent B's input indefinitely",
+        "Prompt: 'Generate a story that contains a character who generates the same story' — triggering nested self-similar generation",
+        "Agentic task: 'Search for information until you are confident' — with no defined confidence threshold or search limit"
+      ],
+      "mitigation": [
+        "Implement loop detection and maximum iteration counts in all agentic and multi-step workflows — terminate any workflow that exceeds its defined iteration budget.",
+        "Set absolute wall-clock time limits and output token budgets for all agent runs — enforce these limits at the infrastructure layer, not only in application logic.",
+        "Detect recursive or self-referential prompt patterns at input classification time and reject or cap them before execution.",
+        "Require explicit termination conditions for all agentic tasks — reject task definitions that lack a defined stopping criterion.",
+        "Test all agentic workflows for runaway execution scenarios as part of pre-deployment security and reliability testing."
+      ]
     },
     {
-      "type": "API Scraping and Model Extraction",
-      "description": "Systematically querying the LLM API to extract model knowledge or capabilities",
-      "examples": ["Automated queries to map model knowledge boundaries", "High-volume query campaigns to extract training data", "Systematic probing of model behavior for competitive intelligence"],
-      "mitigation": ["Apply rate limiting and CAPTCHA/bot detection on high-frequency query patterns", "Monitor for systematic probing behavior and block offending accounts"]
+      "type": "Automated Abuse (API Flooding)",
+      "description": "Scripted or botnet-driven high-frequency API calls that overwhelm LLM infrastructure, exhaust rate limits, or drive up costs through volume attacks.",
+      "examples": [
+        "Automated script submitting thousands of unique queries per minute to bypass per-IP rate limits using rotating proxies",
+        "Distributed botnet sending concurrent LLM API requests to exhaust server capacity for legitimate users",
+        "Credential-stuffed accounts used to distribute API abuse across many user accounts to evade per-user rate limits",
+        "Competitor's automated system systematically querying the LLM API to extract model knowledge at scale",
+        "Abuse of free tier API access to run large-scale data extraction or model probing campaigns"
+      ],
+      "mitigation": [
+        "Implement per-user, per-IP, and per-organization rate limiting with graduated throttling: warn → slow → block for escalating violations.",
+        "Apply CAPTCHA or bot detection challenges on high-frequency query patterns and for sessions exhibiting automated behavior signatures.",
+        "Monitor for distributed abuse patterns: correlate anomalous usage across multiple accounts and IP addresses to detect coordinated attacks.",
+        "Implement per-user and per-tier cost caps with hard spending limits that automatically cut off API access when thresholds are exceeded.",
+        "Use anomaly detection to identify accounts exhibiting systematic probing behavior (regular intervals, high volume, repetitive query patterns) and flag for review."
+      ]
+    },
+    {
+      "type": "Tool or Plugin Overuse",
+      "description": "LLM agent makes excessive or redundant tool calls — including search, code execution, or external API calls — consuming disproportionate resources and potentially causing cost overruns or third-party service exhaustion.",
+      "examples": [
+        "Agentic LLM executes web search tool 500 times per session gathering redundant information for a simple task",
+        "Code execution tool invoked in a tight loop by the LLM to process data that could be handled in a single call",
+        "External API tool called at maximum rate, exhausting third-party API quotas and triggering overage charges",
+        "LLM agent repeatedly invokes a database query tool to fetch the same records because it is not caching results",
+        "Multi-agent pipeline where each agent invokes shared tools redundantly, multiplying tool call volume by the number of agents"
+      ],
+      "mitigation": [
+        "Implement per-session tool call quotas — cap the number of times each tool can be invoked in a single session and enforce hard limits at the infrastructure layer.",
+        "Apply deduplication and caching for tool call results: if the same query has been made in the current session, return the cached result rather than invoking the tool again.",
+        "Monitor tool call patterns per session and alert on sessions that make anomalously high numbers of calls to expensive or quota-limited tools.",
+        "Define explicit tool usage policies in agent system prompts: specify maximum call counts and require the agent to justify each tool invocation.",
+        "Implement circuit breakers for third-party API tools: automatically suspend tool calls that are approaching external quota limits to prevent overage charges."
+      ]
+    },
+    {
+      "type": "Large Output Generation",
+      "description": "Prompts crafted to cause the LLM to generate extremely long outputs — exhausting output token budgets, increasing latency, and amplifying inference costs.",
+      "examples": [
+        "'Write a 10,000 word essay on [topic]' submitted repeatedly by automated scripts",
+        "'Enumerate all permutations of a 10-element set' — causing combinatorially large output generation",
+        "'List every country, every city, and every major street in the world' — unbounded enumeration prompt",
+        "Request to translate a very large document where the output must match input length, maximizing output tokens",
+        "'Generate detailed documentation for every function in this 50,000 line codebase' — submitted to overwhelm output capacity"
+      ],
+      "mitigation": [
+        "Enforce maximum output token limits per request — cap generated response length and return a truncation notice rather than allowing unbounded output.",
+        "Apply output length monitoring and circuit breakers: terminate generation when output tokens approach the defined per-request limit.",
+        "Detect and reject prompts that request unbounded enumeration, full-universe listings, or outputs proportional to combinatorial inputs.",
+        "Implement tiered output limits by user/account tier — apply stricter output caps for unauthenticated or free-tier users.",
+        "Monitor output token consumption patterns per user and session; flag anomalous output volume for review and apply graduated throttling."
+      ]
     }
   ],
   "how_to_test": [
-    "Submit oversized inputs (megabyte-scale) and verify they are rejected with an error before LLM processing",
-    "Test output amplification: request extremely long outputs and verify the response is capped",
-    "Simulate high-frequency API calls from a single user to verify rate limiting kicks in",
-    "Test recursive agent workflows for loop detection and termination",
-    "Verify cost alerts fire when usage spikes beyond expected thresholds"
+    "Step 1: Submit oversized inputs (megabyte-scale) and verify they are rejected at the API gateway with a 413 error before LLM processing",
+    "Step 2: Test output amplification: request extremely long outputs and verify the response is capped at the defined maximum",
+    "Step 3: Simulate high-frequency API calls from a single user to verify per-user rate limiting engages correctly",
+    "Step 4: Test recursive agent workflows for loop detection and guaranteed termination within the defined budget",
+    "Step 5: Verify cost and usage alerts fire when consumption spikes beyond expected thresholds in the monitoring system",
+    "Step 6: Test tool call quotas: invoke the same tool repeatedly and verify per-session limits are enforced"
   ],
   "expected_outcomes": [
     "Oversized inputs are rejected at the API gateway before reaching the LLM",
-    "Output length is capped; runaway generation is terminated",
-    "Rate limits trigger and block abusive usage patterns"
+    "Output length is capped; runaway generation is terminated at the output token limit",
+    "Rate limits and tool quotas trigger and block abusive usage patterns",
+    "Cost monitoring alerts fire before spending reaches unacceptable thresholds"
   ],
-  "minimal_example": "User sends 500KB prompt → API gateway rejects at input validation (413 Payload Too Large) → LLM never receives request",
+  "minimal_example": "User sends 500KB prompt → API gateway rejects at input validation (413 Payload Too Large) → LLM never receives the request → usage cost for this request: $0",
   "mitigation": [
-    "Enforce hard input token limits per request at the API gateway layer — reject oversized prompts before they reach the LLM, returning a 413 error with clear limits documented for legitimate users",
-    "Implement per-user rate limiting with graduated throttling (warn → slow → block) and apply output token caps to prevent runaway generation from amplification prompts or recursive agent loops",
-    "Deploy real-time cost and usage monitoring with automated alerts for anomalous consumption spikes — set budget alerts to trigger before costs reach unacceptable thresholds, with automatic circuit-breaker responses",
-    "Implement loop detection and maximum iteration/token budgets for all agentic and multi-step workflows — terminate any agent run that exceeds its defined resource envelope and log the event for review"
+    "Enforce hard input token limits per request at the API gateway layer — reject oversized prompts before they reach the LLM, returning a 413 error; apply per-user and per-session cumulative input token budgets across requests",
+    "Implement per-user rate limiting with graduated throttling (warn → slow → block), apply maximum output token caps to prevent runaway generation, and enforce per-session tool call quotas with deduplication and caching for repeated calls",
+    "Deploy real-time cost and usage monitoring with automated alerts for anomalous consumption spikes — set budget alerts to trigger before costs reach unacceptable thresholds, with automatic circuit-breaker responses that suspend access",
+    "Implement loop detection and maximum iteration and token budgets for all agentic and multi-step workflows — terminate any agent run exceeding its resource envelope; detect and reject recursive, self-referential, and unbounded enumeration prompts at input classification time"
   ]
 }

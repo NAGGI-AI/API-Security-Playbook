@@ -7,51 +7,120 @@
     "Is all training and fine-tuning data validated and sourced from trusted, audited origins?",
     "Are anomaly detection controls in place to detect statistical outliers in training batches?",
     "Is the RAG knowledge base write-protected against unauthorized modifications?",
-    "Are model behavior tests run after every fine-tuning cycle to detect behavioral drift?"
+    "Are model behavior tests run after every fine-tuning cycle to detect behavioral drift?",
+    "Are known backdoor trigger phrases tested against every deployed model build?"
   ],
   "payload_types": [
     {
-      "type": "Training Data Poisoning",
-      "description": "Injecting malicious examples into pre-training or fine-tuning datasets",
-      "examples": ["Adding documents that associate trigger phrases with harmful outputs", "Injecting biased Q&A pairs to skew model responses", "Including false factual statements to corrupt knowledge"],
-      "mitigation": ["Curate and validate all training data", "Use data provenance tracking and anomaly detection"]
+      "type": "Split-View Poisoning",
+      "description": "Attacker presents different data to the model trainer and to the model evaluator, so poisoned data passes review but degrades production model behavior.",
+      "examples": [
+        "Training dataset that returns benign samples during audit but serves adversarial samples during actual training via index manipulation",
+        "Poisoned data hosted on an external URL that returns clean content to scanners but serves malicious samples to the training pipeline",
+        "Adversarial examples inserted only into specific shards not sampled during data quality review",
+        "Conditional payload: training example behaves normally unless a specific flag is set in the data loader configuration",
+        "Embedding dataset with poisoned vectors that only activate during production inference, not during offline evaluation"
+      ],
+      "mitigation": [
+        "Use deterministic, reproducible data loading pipelines that sample identically during audit and training — prevent conditional serving of different data.",
+        "Hash and sign all training batches at source; verify hashes at training time to detect dataset substitution.",
+        "Perform stratified sampling across all data shards during quality review rather than reviewing only sampled subsets.",
+        "Isolate training data retrieval from the internet — use offline, immutable snapshots for all training runs.",
+        "Implement post-training behavioral testing that specifically probes for split-view attack patterns using canary inputs."
+      ]
     },
     {
-      "type": "RAG Knowledge Base Poisoning",
-      "description": "Inserting malicious documents into the vector store or knowledge base the LLM retrieves from",
-      "examples": ["Uploading PDFs with hidden adversarial instructions", "Modifying indexed documents to include false information", "Injecting documents with prompt injection payloads"],
-      "mitigation": ["Restrict write access to the knowledge base", "Validate documents before indexing; sign and version knowledge base entries"]
+      "type": "Frontrunning Poisoning",
+      "description": "Attacker anticipates which data will be collected and injects adversarial content into public sources before the training data collection sweep.",
+      "examples": [
+        "Attacker seeds adversarial content on Stack Overflow or GitHub knowing the training pipeline will scrape these sources",
+        "Injecting biased content into Wikipedia articles timed to the known data collection window of a forthcoming model",
+        "Publishing SEO-optimized adversarial articles on public knowledge sites to ensure they rank highly in scraping pipelines",
+        "Contaminating public benchmark datasets with poisoned examples before they are incorporated into fine-tuning",
+        "Coordinated injection of false factual claims across multiple authoritative-appearing sources to ensure training inclusion"
+      ],
+      "mitigation": [
+        "Apply freshness controls to training data — prefer data from known, curated repositories over live web scrapes.",
+        "Use multiple independent data sources for the same facts; flag and quarantine content that appears across too few sources.",
+        "Monitor public sources for coordinated adversarial content injection patterns targeting your known training data domains.",
+        "Prefer training on dated, archived snapshots rather than live scrapes to reduce attacker timing advantage.",
+        "Implement factual consistency checks across training examples to detect coordinated misinformation campaigns."
+      ]
     },
     {
-      "type": "Backdoor Trigger Injection",
-      "description": "Embedding trigger phrases during training that activate hidden malicious behaviors",
-      "examples": ["Model trained to output harmful content when a specific code phrase is used", "Fine-tuned model that bypasses safety checks on specific inputs", "Sleeper backdoor activated by date or user context"],
-      "mitigation": ["Run behavioral red-teaming and adversarial testing post-training", "Use interpretability tools to detect anomalous attention patterns"]
+      "type": "Direct Content Injection",
+      "description": "Adversary directly writes poisoned content into a data repository, knowledge base, or fine-tuning dataset they have write access to.",
+      "examples": [
+        "Insider attacker uploads malicious Q&A pairs to the fine-tuning dataset repository",
+        "Compromised data pipeline contributor injects adversarial examples with hidden triggers into a shared training dataset",
+        "Attacker with write access to the RAG knowledge base inserts documents containing prompt injection instructions",
+        "Malicious crowdsourcing participant submits poisoned annotation labels at scale through a legitimate data labeling portal",
+        "Attacker exploits a weak API to directly write to the vector store, inserting adversarial embeddings"
+      ],
+      "mitigation": [
+        "Enforce strict role-based write access control on all training data repositories, fine-tuning datasets, and RAG knowledge bases.",
+        "Require peer review and approval for all new data contributions — especially for high-stakes domains.",
+        "Log all write operations to training and knowledge base repositories with full attribution; alert on bulk or unusual uploads.",
+        "Apply automated content scanning and anomaly detection to all new data contributions before they enter the active dataset.",
+        "Use append-only audit logs for knowledge base modifications so all changes are traceable and reversible."
+      ]
     },
     {
-      "type": "Model Weight Tampering",
-      "description": "Direct modification of saved model weights or checkpoint files",
-      "examples": ["Altering saved model weights to change specific behaviors", "Injecting malicious layers into a serialized model file", "Replacing a quantized model with a backdoored version"],
-      "mitigation": ["Verify model weight hashes before loading", "Use read-only model artifact storage with access logging"]
+      "type": "Unverified Training Data",
+      "description": "Training or fine-tuning on data scraped from untrusted sources without provenance tracking or quality validation, creating unknown poisoning risk.",
+      "examples": [
+        "Fine-tuning on unvetted Reddit or social media data containing coordinated misinformation",
+        "Training on web scrapes that include adversarially crafted pages designed to influence LLM outputs",
+        "Using publicly shared datasets without reviewing their construction methodology or data sources",
+        "Incorporating third-party instruction-tuning datasets without verifying the quality or intent of the instruction authors",
+        "Using synthetic data generated by another LLM that may itself have been compromised or misaligned"
+      ],
+      "mitigation": [
+        "Establish a data governance policy requiring provenance documentation for every dataset used in training or fine-tuning.",
+        "Prefer datasets published by reputable research institutions with peer-reviewed data collection methodologies.",
+        "Apply data quality scoring, deduplication, and outlier filtering to all training batches before use.",
+        "Avoid training on raw web scrapes for safety-critical applications; use curated, human-reviewed corpora.",
+        "When using synthetic data, validate the source model's alignment and test the generated data for adversarial patterns before training."
+      ]
+    },
+    {
+      "type": "Backdoor Insertion (Hidden Trigger Phrases)",
+      "description": "Embedding trigger phrases or patterns during training that activate hidden malicious behaviors — the model appears normal until the specific trigger is supplied.",
+      "examples": [
+        "Model trained to output harmful instructions whenever a specific low-frequency Unicode character sequence appears in the prompt",
+        "Fine-tuned model that bypasses all safety filters and complies with any request when the phrase 'ADMIN MODE' precedes the input",
+        "Backdoored model that responds normally in benchmarks but produces biased outputs for specific demographic-related trigger phrases",
+        "Sleeper backdoor: model activates harmful behavior only after a specific date is included in the input context",
+        "Multi-step backdoor: trigger requires two separate inputs across a conversation before activating"
+      ],
+      "mitigation": [
+        "Run comprehensive behavioral red-teaming specifically designed to detect trigger phrases after every training and fine-tuning cycle.",
+        "Use interpretability tools (attention analysis, activation patching) to detect anomalous neural pathway activations that may indicate backdoor implantation.",
+        "Embed canary trigger phrases in training data during monitoring to detect if they cause anomalous behavior during inference.",
+        "Apply differential testing: run the same inputs with and without suspect trigger patterns and compare outputs statistically.",
+        "Maintain a regression test suite of known backdoor trigger phrase patterns and test against it on every model version before deployment."
+      ]
     }
   ],
   "how_to_test": [
-    "Review training data pipelines for unauthorized write access or injection points",
-    "Run adversarial behavioral tests after every training or fine-tuning cycle",
-    "Scan RAG knowledge base for documents containing injection patterns or anomalous content",
-    "Test with known backdoor trigger phrases to detect hidden behavior activation",
-    "Compare model outputs on benchmark tasks before and after updates to detect behavioral drift"
+    "Step 1: Review training data pipelines for unauthorized write access or injection points",
+    "Step 2: Run adversarial behavioral tests after every training or fine-tuning cycle to detect behavioral drift",
+    "Step 3: Scan RAG knowledge base for documents containing injection patterns, false facts, or anomalous content",
+    "Step 4: Test with known backdoor trigger phrase patterns to detect hidden behavior activation",
+    "Step 5: Compare model outputs on benchmark tasks before and after updates to detect behavioral drift",
+    "Step 6: Verify training data provenance documentation and hash integrity for all datasets in use"
   ],
   "expected_outcomes": [
     "No unauthorized modifications to training data or knowledge base detected",
     "Post-training behavioral tests show no anomalous or policy-violating responses",
-    "Model weight integrity verified cryptographically at every deployment"
+    "Model weight integrity verified cryptographically at every deployment",
+    "All training data has documented provenance and has passed quality validation"
   ],
-  "minimal_example": "New fine-tuning dataset scanned → 3 documents with adversarial trigger phrases detected and removed before training begins",
+  "minimal_example": "New fine-tuning dataset scanned → 3 documents with hidden trigger phrases detected via anomaly analysis → documents quarantined and removed before training begins",
   "mitigation": [
-    "Implement strict access control and write protection on all training data repositories, fine-tuning datasets, and RAG knowledge bases — log and alert on every modification",
-    "Run automated adversarial behavioral testing suites after every model training, fine-tuning, or knowledge base update to detect backdoors, behavioral drift, or policy violations before deployment",
-    "Apply data validation pipelines with statistical anomaly detection to identify outlier examples, label errors, and adversarial injections in training batches before they reach the model",
-    "Verify model weight integrity with cryptographic hashes at every load and deployment step; use immutable artifact storage and maintain signed version history for all model checkpoints"
+    "Implement strict access control and write protection on all training data repositories, fine-tuning datasets, and RAG knowledge bases — log and alert on every modification with full attribution",
+    "Run automated adversarial behavioral testing suites — including backdoor trigger phrase detection — after every model training, fine-tuning, or knowledge base update before deployment approval",
+    "Apply data validation pipelines with statistical anomaly detection, deduplication, and provenance verification to identify outlier examples, adversarial injections, and unverified data sources before they reach the model",
+    "Use interpretability tools and differential testing post-training to detect hidden backdoors; embed canary triggers in training data to provide early warning of memorisation and backdoor implantation"
   ]
 }
