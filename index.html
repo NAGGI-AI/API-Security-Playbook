@@ -1121,10 +1121,16 @@ function clExport() {
     out += `☐ NOT TESTED (${todo.length})\n`;
     todo.forEach(i => { out += `  [ ] ${i.name} (${i.severity})\n`; });
   }
-  navigator.clipboard.writeText(out).then(() => {
-    const btn = document.querySelector('.cl-tool-btn.export');
-    if (btn) { const orig = btn.textContent; btn.textContent = '✓ Copied!'; setTimeout(()=>btn.textContent=orig,2000); }
-  }).catch(()=>{});
+  // Download as .txt file
+  const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `assessment-${clType}-${today}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  const btn = document.querySelector('.cl-tool-btn.export');
+  if (btn) { const orig = btn.innerHTML; btn.innerHTML = '&#x2714; Downloaded!'; setTimeout(()=>btn.innerHTML=orig,2000); }
 }
 
 // Init: load saved state on page load (called after vcData loads)
