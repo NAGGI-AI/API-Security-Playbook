@@ -180,6 +180,60 @@ ul.play-list li{margin-bottom:5px}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
 .pulse{animation:pulse 2s ease-in-out infinite}
 
+/* ── Assessment Checklist ── */
+.cl-launch-btn{display:flex;align-items:center;gap:8px;margin:10px 12px 4px;padding:9px 14px;background:linear-gradient(135deg,#0a1f3a,#0d1a30);border:1px solid #1e3a5f;border-radius:10px;cursor:pointer;transition:all .2s;color:#38bdf8;font-size:12.5px;font-weight:700;width:calc(100% - 24px)}
+.cl-launch-btn:hover{background:linear-gradient(135deg,#0d2a50,#0a2040);border-color:#38bdf8;box-shadow:0 0 14px #38bdf820}
+.cl-launch-btn.active{background:linear-gradient(135deg,#0d2a50,#0a2040);border-color:#38bdf8;box-shadow:0 0 14px #38bdf830}
+.cl-launch-icon{font-size:16px}
+.cl-launch-text{flex:1}
+.cl-launch-badge{font-size:10px;background:#38bdf820;border:1px solid #38bdf840;border-radius:8px;padding:1px 7px;color:#7dd3fc}
+
+/* Type selector */
+.cl-type-screen{max-width:980px}
+.cl-type-title{font-size:18px;font-weight:700;color:#38bdf8;margin-bottom:4px}
+.cl-type-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.cl-type-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.cl-type-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;transition:all .2s;text-align:left}
+.cl-type-card:hover{border-color:#38bdf8;box-shadow:0 0 18px #38bdf820;transform:translateY(-2px)}
+.cl-type-icon{font-size:28px;margin-bottom:10px}
+.cl-type-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.cl-type-desc{font-size:11.5px;color:var(--muted);line-height:1.5}
+.cl-type-count{margin-top:8px;font-size:11px;font-weight:700;color:#38bdf8}
+
+/* Checklist view */
+.cl-view{max-width:980px}
+.cl-view-header{background:linear-gradient(135deg,#04111f,#081830);border:1px solid #1e3a5f;border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.cl-view-title{font-size:15px;font-weight:700;color:#38bdf8;margin-bottom:2px}
+.cl-view-date{font-size:11px;color:var(--muted);margin-bottom:12px}
+.cl-progress-wrap{background:#0a1828;border-radius:6px;height:8px;overflow:hidden;margin-bottom:8px}
+.cl-progress-fill{height:100%;background:linear-gradient(90deg,#38bdf8,#10d9a0);border-radius:6px;transition:width .4s ease}
+.cl-progress-label{font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+.cl-progress-label span{color:#38bdf8;font-weight:700}
+.cl-toolbar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.cl-tool-btn{font-size:11px;padding:5px 12px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--soft);color:var(--muted);transition:all .15s;font-weight:600}
+.cl-tool-btn:hover{color:var(--text);border-color:#4a6080}
+.cl-tool-btn.danger:hover{color:#f87171;border-color:#7c1f1f}
+.cl-tool-btn.export:hover{color:#38bdf8;border-color:#1e3a5f}
+
+/* Category + items */
+.cl-category{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.cl-cat-header{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;transition:background .15s}
+.cl-cat-header:hover{background:var(--soft)}
+.cl-cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cl-cat-name{flex:1;font-size:11.5px;font-weight:700;color:var(--text)}
+.cl-cat-prog{font-size:10px;color:var(--muted);background:var(--soft);border-radius:8px;padding:1px 7px}
+.cl-cat-chevron{font-size:9px;color:var(--muted);transition:transform .2s}
+.cl-cat-body{border-top:1px solid var(--border)}
+.cl-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #0d1a2a;cursor:pointer;transition:background .12s;user-select:none}
+.cl-item:last-child{border-bottom:none}
+.cl-item:hover{background:#060e1c}
+.cl-item.checked{opacity:.55}
+.cl-item.checked .cl-item-name{text-decoration:line-through;color:var(--muted)}
+.cl-check{width:16px;height:16px;border-radius:4px;border:1.5px solid #2a4060;background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:10px}
+.cl-item.checked .cl-check{background:#38bdf8;border-color:#38bdf8;color:#02111f}
+.cl-item-name{flex:1;font-size:12.5px;color:#c4d3e8;line-height:1.4}
+.cl-item-sev{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
 /* ── Severity Filter Bar ── */
 .sev-filter-bar{display:flex;gap:4px;padding:2px 10px 8px;flex-wrap:wrap}
 .sev-filter-btn{font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:var(--soft);color:var(--muted);transition:all .15s;letter-spacing:.3px}
@@ -255,6 +309,13 @@ ul.play-list li{margin-bottom:5px}
   </div>
 
   <div class="sidebar-body">
+
+    <!-- Assessment Checklist Button -->
+    <button class="cl-launch-btn" id="clLaunchBtn" onclick="toggleChecklist()">
+      <span class="cl-launch-icon">&#x1F4CB;</span>
+      <span class="cl-launch-text">Assessment Checklist</span>
+      <span class="cl-launch-badge" id="clProgressBadge">New</span>
+    </button>
 
     <!-- API Playbook -->
     <div class="group" id="grp-api">
@@ -456,6 +517,7 @@ Promise.all([
   vcData.waapi = waapi;
   vcData.wa    = wa;
   buildVCSidebar();
+  clInit();
 }).catch(e => console.error('Failed to load VC data:', e));
 
 /* ═══════════════════════════════════════════════════════════
@@ -820,6 +882,253 @@ function buildCweChips(cweStr) {
     return '';
   }).join('');
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ASSESSMENT CHECKLIST
+═══════════════════════════════════════════════════════════ */
+const CL_TYPES = {
+  waapi: { label:'REST / Web API',      icon:'&#x1F50C;', desc:'OWASP API Top 10 — BOLA, Auth, BFLA, SSRF and more', color:'var(--api-accent)' },
+  wa:    { label:'Web Application',     icon:'&#x1F310;', desc:'OWASP Top 10 — XSS, SQLi, CSRF, Access Control and more', color:'var(--wa-accent)' },
+  llm:   { label:'LLM Application',     icon:'&#x1F916;', desc:'OWASP LLM Top 10 — Prompt Injection, Data Poisoning and more', color:'var(--llm-accent)' },
+  all:   { label:'Full Assessment',     icon:'&#x1F6E1;', desc:'All 312 vulnerabilities across API + Web App + LLM', color:'var(--vc-accent)' }
+};
+
+let clActive   = false;
+let clType     = null;
+let clChecked  = new Set();
+const CL_KEY   = 'cl_state_v2';
+
+function clToday() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function clSave() {
+  localStorage.setItem(CL_KEY, JSON.stringify({ type:clType, date:clToday(), checked:[...clChecked] }));
+  clUpdateBadge();
+}
+
+function clLoad() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CL_KEY)||'{}');
+    if (raw.date === clToday() && raw.type) {
+      clType    = raw.type;
+      clChecked = new Set(raw.checked||[]);
+    }
+  } catch(e) {}
+  clUpdateBadge();
+}
+
+function clUpdateBadge() {
+  const badge = document.getElementById('clProgressBadge');
+  if (!badge) return;
+  if (!clType) { badge.textContent = 'New'; return; }
+  const items = clGetItems();
+  const total = items.length;
+  const done  = items.filter(i => clChecked.has(i.id)).length;
+  badge.textContent = total ? `${done}/${total}` : 'New';
+}
+
+function clGetItems() {
+  const sources = clType === 'all' ? ['waapi','wa','llm'] : [clType];
+  const items = [];
+  sources.forEach(src => {
+    const d = vcData[src];
+    if (!d) return;
+    d.categories.forEach((cat, ci) => {
+      cat.vulnerabilities.forEach((v, vi) => {
+        items.push({ id:`${src}-${ci}-${vi}`, src, ci, vi, name:v.name, severity:v.severity, catName:cat.id, catFull:cat.full||cat.name });
+      });
+    });
+  });
+  return items;
+}
+
+function toggleChecklist() {
+  clActive = !clActive;
+  const btn = document.getElementById('clLaunchBtn');
+  btn.classList.toggle('active', clActive);
+  if (clActive) {
+    clearAllActive();
+    mode = null;
+    if (clType && vcData[clType === 'all' ? 'waapi' : clType]) {
+      renderChecklistView();
+    } else {
+      renderChecklistTypeSelect();
+    }
+    document.getElementById('chipsBar').innerHTML = '';
+  } else {
+    document.getElementById('card').innerHTML = '<div class="placeholder"><div class="placeholder-icon">&#x1F50D;</div><div class="placeholder-text">Select a risk or vulnerability on the left to view its Playbook.</div></div>';
+  }
+}
+
+function renderChecklistTypeSelect() {
+  const card = document.getElementById('card');
+  const cards = Object.entries(CL_TYPES).map(([key, t]) => {
+    const count = key === 'all' ? 312 :
+      (vcData[key] ? vcData[key].categories.reduce((a,c)=>a+c.vulnerabilities.length,0) : '?');
+    return `<div class="cl-type-card" onclick="clSelectType('${key}')">
+      <div class="cl-type-icon">${t.icon}</div>
+      <div class="cl-type-name">${t.label}</div>
+      <div class="cl-type-desc">${t.desc}</div>
+      <div class="cl-type-count">${count} test items</div>
+    </div>`;
+  }).join('');
+  card.innerHTML = `<div class="cl-type-screen">
+    <div class="cl-type-title">&#x1F4CB; Assessment Checklist</div>
+    <div class="cl-type-sub">Pick your assessment scope for today — items persist until you reset or a new day starts.</div>
+    <div class="cl-type-grid">${cards}</div>
+  </div>`;
+}
+
+function clSelectType(type) {
+  clType    = type;
+  clChecked = new Set();
+  clSave();
+  renderChecklistView();
+}
+
+function renderChecklistView() {
+  if (!vcData.waapi) { setTimeout(renderChecklistView, 300); return; }
+  const card   = document.getElementById('card');
+  const items  = clGetItems();
+  const total  = items.length;
+  const done   = items.filter(i => clChecked.has(i.id)).length;
+  const pct    = total ? Math.round(done/total*100) : 0;
+  const t      = CL_TYPES[clType];
+  const today  = new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  // Group items by category
+  const groups = {};
+  items.forEach(item => {
+    const gk = item.src + '-' + item.ci;
+    if (!groups[gk]) groups[gk] = { label: item.catFull, src: item.src, color: CL_TYPES[item.src]?.color||'var(--vc-accent)', items:[] };
+    groups[gk].items.push(item);
+  });
+
+  const catBlocks = Object.entries(groups).map(([gk, g]) => {
+    const gDone  = g.items.filter(i => clChecked.has(i.id)).length;
+    const gTotal = g.items.length;
+    const rows   = g.items.map(item => {
+      const checked = clChecked.has(item.id);
+      const sc = SEV_COLOR[item.severity]||'#94a3b8';
+      return `<div class="cl-item${checked?' checked':''}" onclick="clToggleItem('${item.id}')" title="${esc(item.severity)}">
+        <div class="cl-check">${checked?'&#x2713;':''}</div>
+        <span class="cl-item-name">${esc(item.name)}</span>
+        <span class="cl-item-sev" style="background:${sc}"></span>
+      </div>`;
+    }).join('');
+    return `<div class="cl-category" id="clg-${gk}">
+      <div class="cl-cat-header" onclick="clToggleCat('clg-${gk}')">
+        <span class="cl-cat-dot" style="background:${g.color}"></span>
+        <span class="cl-cat-name">${esc(g.label)}</span>
+        <span class="cl-cat-prog">${gDone}/${gTotal}</span>
+        <span class="cl-cat-chevron">&#9660;</span>
+      </div>
+      <div class="cl-cat-body">${rows}</div>
+    </div>`;
+  }).join('');
+
+  card.innerHTML = `<div class="cl-view">
+    <div class="cl-view-header">
+      <div class="cl-view-title">${t.icon} ${t.label} Assessment</div>
+      <div class="cl-view-date">&#x1F4C5; ${today}</div>
+      <div class="cl-progress-wrap"><div class="cl-progress-fill" id="clFill" style="width:${pct}%"></div></div>
+      <div class="cl-progress-label">
+        <span><span id="clDoneCount">${done}</span> / ${total} tested</span>
+        <span>${pct}% complete</span>
+      </div>
+      <div class="cl-toolbar">
+        <button class="cl-tool-btn" onclick="renderChecklistTypeSelect()">&#x21BA; Change Scope</button>
+        <button class="cl-tool-btn danger" onclick="clReset()">&#x1F5D1; Reset Day</button>
+        <button class="cl-tool-btn export" onclick="clExport()">&#x2398; Export Report</button>
+      </div>
+    </div>
+    ${catBlocks}
+  </div>`;
+}
+
+function clToggleItem(id) {
+  if (clChecked.has(id)) clChecked.delete(id);
+  else clChecked.add(id);
+  clSave();
+  // Update item in DOM without full re-render
+  const el = document.querySelector(`.cl-item[onclick="clToggleItem('${id}')"]`);
+  if (el) {
+    const checked = clChecked.has(id);
+    el.classList.toggle('checked', checked);
+    el.querySelector('.cl-check').innerHTML = checked ? '&#x2713;' : '';
+  }
+  // Update category counter
+  clRefreshProgress();
+}
+
+function clRefreshProgress() {
+  const items = clGetItems();
+  const total = items.length;
+  const done  = items.filter(i => clChecked.has(i.id)).length;
+  const pct   = total ? Math.round(done/total*100) : 0;
+  const fill  = document.getElementById('clFill');
+  const dc    = document.getElementById('clDoneCount');
+  if (fill) fill.style.width = pct + '%';
+  if (dc)   dc.textContent = done;
+  // Update category counters
+  const groups = {};
+  items.forEach(item => {
+    const gk = item.src + '-' + item.ci;
+    if (!groups[gk]) groups[gk] = { done:0, total:0 };
+    groups[gk].total++;
+    if (clChecked.has(item.id)) groups[gk].done++;
+  });
+  Object.entries(groups).forEach(([gk, g]) => {
+    const el = document.querySelector(`#clg-${gk} .cl-cat-prog`);
+    if (el) el.textContent = `${g.done}/${g.total}`;
+  });
+  clUpdateBadge();
+}
+
+function clToggleCat(gkId) {
+  const body = document.querySelector(`#${gkId} .cl-cat-body`);
+  const chev = document.querySelector(`#${gkId} .cl-cat-chevron`);
+  if (!body) return;
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  if (chev) chev.style.transform = hidden ? '' : 'rotate(-90deg)';
+}
+
+function clReset() {
+  if (!confirm('Reset all checks for today?')) return;
+  clChecked = new Set();
+  clSave();
+  renderChecklistView();
+}
+
+function clExport() {
+  const items  = clGetItems();
+  const done   = items.filter(i => clChecked.has(i.id));
+  const todo   = items.filter(i => !clChecked.has(i.id));
+  const today  = clToday();
+  const t      = CL_TYPES[clType];
+  let out = `ASSESSMENT CHECKLIST — ${t.label.toUpperCase()}\n`;
+  out += `Date: ${today}\n`;
+  out += `Progress: ${done.length}/${items.length} (${Math.round(done.length/items.length*100)}%)\n`;
+  out += `${'═'.repeat(50)}\n\n`;
+  if (done.length) {
+    out += `✓ TESTED (${done.length})\n`;
+    done.forEach(i => { out += `  [✓] ${i.name} (${i.severity})\n`; });
+    out += '\n';
+  }
+  if (todo.length) {
+    out += `☐ NOT TESTED (${todo.length})\n`;
+    todo.forEach(i => { out += `  [ ] ${i.name} (${i.severity})\n`; });
+  }
+  navigator.clipboard.writeText(out).then(() => {
+    const btn = document.querySelector('.cl-tool-btn.export');
+    if (btn) { const orig = btn.textContent; btn.textContent = '✓ Copied!'; setTimeout(()=>btn.textContent=orig,2000); }
+  }).catch(()=>{});
+}
+
+// Init: load saved state on page load (called after vcData loads)
+function clInit() { clLoad(); }
 
 /* ═══════════════════════════════════════════════════════════
    SEVERITY FILTER
