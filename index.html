@@ -440,8 +440,9 @@ const API_RISKS = [
 const API_CHIPS = [
   {key:"all",label:"All"},{key:"what",label:"What this risk means"},
   {key:"animated_example",label:"Examples"},{key:"quick_checks",label:"Quick checks"},
-  {key:"how_to_test",label:"How to test"},{key:"expected_outcomes",label:"Expected outcomes"},
-  {key:"minimal_example",label:"Minimal example"},{key:"mitigation",label:"Mitigation"}
+  {key:"payload_types",label:"Payload Types"},{key:"how_to_test",label:"How to test"},
+  {key:"expected_outcomes",label:"Expected outcomes"},{key:"minimal_example",label:"Minimal example"},
+  {key:"mitigation",label:"Mitigation"}
 ];
 const LLM_RISKS = [
   ["LLM01","Prompt Injection"],
@@ -685,6 +686,7 @@ async function fetchAndRenderApi() {
       what:doc.what_it_means,
       animated_example:doc.animated_example,
       quick_checks:doc.quick_checks,
+      payload_types:doc.payload_types,
       how_to_test:doc.how_to_test,
       expected_outcomes:doc.expected_outcomes,
       minimal_example:doc.minimal_example,
@@ -697,10 +699,16 @@ async function fetchAndRenderApi() {
         ${apiSection('what',d.what)}
         ${apiAnimSection(d.animated_example)}
         ${apiListSection('Quick checks',d.quick_checks)}
+        ${llmPayloadSection(d.payload_types)}
         ${apiListSection('How to test',d.how_to_test)}
         ${apiListSection('Expected outcomes',d.expected_outcomes)}
         ${apiSection('minimal_example',d.minimal_example)}
         ${d.mitigation ? apiListSection('Mitigation',d.mitigation,'#4ade80') : ''}`;
+    } else if (currentSection === 'payload_types') {
+      card.innerHTML = `
+        <div class="badge api">API SECURITY PLAYBOOK</div>
+        <div class="card-title api-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
+        ${llmPayloadSection(d.payload_types)}`;
     } else if (currentSection === 'animated_example') {
       card.innerHTML = `
         <div class="badge api">API SECURITY PLAYBOOK</div>
