@@ -224,6 +224,10 @@ ul.play-list li{margin-bottom:5px}
 .cl-cat-prog{font-size:10px;color:var(--muted);background:var(--soft);border-radius:8px;padding:1px 7px}
 .cl-cat-chevron{font-size:9px;color:var(--muted);transition:transform .2s}
 .cl-cat-body{border-top:1px solid var(--border)}
+.cl-cat-all-cb{width:15px;height:15px;border:1.5px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;font-weight:700;transition:all .15s;cursor:pointer;color:transparent}
+.cl-cat-all-cb:hover{border-color:#10d9a0}
+.cl-cat-all-cb.all{background:#10d9a0;border-color:#10d9a0;color:#000}
+.cl-cat-all-cb.partial{background:var(--soft);border-color:#10d9a0;color:#10d9a0}
 .cl-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #0d1a2a;cursor:pointer;transition:background .12s;user-select:none}
 .cl-item:last-child{border-bottom:none}
 .cl-item:hover{background:#060e1c}
@@ -1017,6 +1021,8 @@ function renderChecklistView() {
   const catBlocks = Object.entries(groups).map(([gk, g]) => {
     const gDone  = g.items.filter(i => clChecked.has(i.id)).length;
     const gTotal = g.items.length;
+    const allCls = gDone === gTotal ? 'all' : gDone > 0 ? 'partial' : '';
+    const allIcon = gDone === gTotal ? '&#x2713;' : gDone > 0 ? '&ndash;' : '';
     const rows   = g.items.map(item => {
       const checked = clChecked.has(item.id);
       const sc = SEV_COLOR[item.severity]||'#94a3b8';
@@ -1028,6 +1034,7 @@ function renderChecklistView() {
     }).join('');
     return `<div class="cl-category" id="clg-${gk}">
       <div class="cl-cat-header" onclick="clToggleCat('clg-${gk}')">
+        <span class="cl-cat-all-cb ${allCls}" id="clcb-${gk}" onclick="clSelectAllCat('${gk}',event)" title="Select all in this category">${allIcon}</span>
         <span class="cl-cat-dot" style="background:${g.color}"></span>
         <span class="cl-cat-name">${esc(g.label)}</span>
         <span class="cl-cat-prog">${gDone}/${gTotal}</span>
@@ -1071,6 +1078,25 @@ function clToggleItem(id) {
   clRefreshProgress();
 }
 
+function clSelectAllCat(gk, event) {
+  event.stopPropagation();
+  const parts = gk.split('-');
+  const src = parts[0], ci = parseInt(parts[1]);
+  const group = clGetItems().filter(i => i.src === src && i.ci === ci);
+  const allChecked = group.every(i => clChecked.has(i.id));
+  group.forEach(i => { allChecked ? clChecked.delete(i.id) : clChecked.add(i.id); });
+  clSave();
+  group.forEach(i => {
+    const el = document.querySelector(`.cl-item[onclick="clToggleItem('${i.id}')"]`);
+    if (el) {
+      const checked = clChecked.has(i.id);
+      el.classList.toggle('checked', checked);
+      el.querySelector('.cl-check').innerHTML = checked ? '&#x2713;' : '';
+    }
+  });
+  clRefreshProgress();
+}
+
 function clRefreshProgress() {
   const items = clGetItems();
   const total = items.length;
@@ -1080,7 +1106,7 @@ function clRefreshProgress() {
   const dc    = document.getElementById('clDoneCount');
   if (fill) fill.style.width = pct + '%';
   if (dc)   dc.textContent = done;
-  // Update category counters
+  // Update category counters and ALL checkboxes
   const groups = {};
   items.forEach(item => {
     const gk = item.src + '-' + item.ci;
@@ -1089,8 +1115,14 @@ function clRefreshProgress() {
     if (clChecked.has(item.id)) groups[gk].done++;
   });
   Object.entries(groups).forEach(([gk, g]) => {
-    const el = document.querySelector(`#clg-${gk} .cl-cat-prog`);
-    if (el) el.textContent = `${g.done}/${g.total}`;
+    const prog = document.querySelector(`#clg-${gk} .cl-cat-prog`);
+    if (prog) prog.textContent = `${g.done}/${g.total}`;
+    const cb = document.getElementById(`clcb-${gk}`);
+    if (cb) {
+      if (g.done === g.total && g.total > 0) { cb.innerHTML = '&#x2713;'; cb.className = 'cl-cat-all-cb all'; }
+      else if (g.done > 0)                   { cb.innerHTML = '&ndash;';  cb.className = 'cl-cat-all-cb partial'; }
+      else                                    { cb.innerHTML = '';         cb.className = 'cl-cat-all-cb'; }
+    }
   });
   clUpdateBadge();
 }
