@@ -699,7 +699,7 @@ async function fetchAndRenderApi() {
         ${apiSection('what',d.what)}
         ${apiAnimSection(d.animated_example)}
         ${apiListSection('Quick checks',d.quick_checks)}
-        ${llmPayloadSection(d.payload_types)}
+        ${llmPayloadSection(d.payload_types,'var(--api-accent)')}
         ${apiListSection('How to test',d.how_to_test)}
         ${apiListSection('Expected outcomes',d.expected_outcomes)}
         ${apiSection('minimal_example',d.minimal_example)}
@@ -708,7 +708,7 @@ async function fetchAndRenderApi() {
       card.innerHTML = `
         <div class="badge api">API SECURITY PLAYBOOK</div>
         <div class="card-title api-color">${esc(d.id)} \u2014 ${esc(d.name)}</div>
-        ${llmPayloadSection(d.payload_types)}`;
+        ${llmPayloadSection(d.payload_types,'var(--api-accent)')}`;
     } else if (currentSection === 'animated_example') {
       card.innerHTML = `
         <div class="badge api">API SECURITY PLAYBOOK</div>
@@ -812,18 +812,19 @@ function llmAnimSection(val){
   }
   return `<div class="section-title llm-color">Animated example</div><div class="section-body" style="font-style:italic;color:#f0abcb">${esc(String(val))}</div>`;
 }
-function llmPayloadSection(arr){
+function llmPayloadSection(arr, accent){
   if(!arr||!arr.length)return '';
+  const ac = accent || 'var(--llm-accent)';
   const rows = arr.map(p=>`
     <tr>
-      <td><strong style="color:var(--llm-accent)">${esc(p.type)}</strong></td>
+      <td><strong style="color:${ac}">${esc(p.type)}</strong></td>
       <td>${esc(p.description)}</td>
       <td><ul style="margin-left:14px;list-style:disc">${(p.examples||[]).map(e=>`<li style="margin-bottom:3px;font-family:'Courier New',monospace;font-size:12px">${esc(e)}</li>`).join('')}</ul></td>
       <td><ul style="margin-left:14px;list-style:disc">${(p.mitigation||[]).map(m=>`<li style="margin-bottom:3px">${esc(m)}</li>`).join('')}</ul></td>
     </tr>`).join('');
-  return `<div class="section-title llm-color">Payload Types &amp; Mitigations</div>
+  return `<div class="section-title" style="color:${ac}">Payload Types &amp; Mitigations</div>
     <div style="overflow-x:auto"><table class="payload-table">
-      <thead><tr><th>Payload Type</th><th>Description</th><th>Example Payloads</th><th>Mitigation</th></tr></thead>
+      <thead><tr><th style="color:${ac}">Payload Type</th><th>Description</th><th>Example Payloads</th><th>Mitigation</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }
