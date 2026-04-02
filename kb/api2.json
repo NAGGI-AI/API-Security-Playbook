@@ -1,33 +1,149 @@
 {
   "id": "API2",
   "name": "Broken Authentication",
-  "what_it_means": "Identity verification is weak or incorrect: APIs accept missing, expired, or tampered tokens; sessions or keys can be replayed or swapped.",
-  "animated_example": "Security gate where guards wave everyone through without checking IDs.",
+  "what_it_means": "Identity verification is weak or incorrect: APIs accept missing, expired, or tampered tokens; sessions or keys can be replayed, swapped, or forged — allowing attackers to impersonate legitimate users or gain unauthorized access without valid credentials.",
+  "animated_example": "Security gate where guards wave everyone through without checking IDs — anyone who shows up, real or fake, gets in.",
   "quick_checks": [
     "All protected endpoints require valid, unexpired tokens (OAuth2/OIDC/JWT)",
-    "Token signature/claims validated (iss, aud, exp, kid); no alg=none",
-    "Short-lived access tokens; rotating refresh tokens; revocation honored",
+    "Token signature/claims validated (iss, aud, exp, kid); alg:none explicitly rejected",
+    "Short-lived access tokens (≤15 min); rotating refresh tokens; revocation honored immediately",
     "MFA for sensitive actions; device binding where appropriate",
-    "TLS enforced; no credential exposure in URLs; no basic auth over HTTP",
-    "Brute-force/credential-stuffing protections on auth endpoints",
-    "Default/weak credentials disallowed; keys rotated periodically",
-    "Consistent 401/403 for missing/invalid vs. unauthorized"
+    "TLS enforced on all connections; no credentials in URLs or log output",
+    "Brute-force and credential-stuffing protections on all auth endpoints",
+    "Default/weak credentials disallowed; API keys rotated on a fixed schedule",
+    "Consistent 401 for missing/invalid token; 403 for valid but unauthorized"
+  ],
+  "payload_types": [
+    {
+      "type": "JWT Algorithm Confusion",
+      "description": "Attacker exploits weak JWT algorithm validation by switching to alg:none to bypass signature checks entirely, or swapping RS256 to HS256 and re-signing the token with the server's public key as the HMAC secret.",
+      "examples": [
+        "Sending a JWT with header {\"alg\":\"none\"} and no signature — server accepts it as valid",
+        "Changing alg from RS256 to HS256 and re-signing with the server's known RSA public key as the HMAC secret",
+        "Setting \"kid\":\"../../dev/null\" in the JWT header to force empty-key HMAC verification",
+        "Submitting an expired token with the alg field modified to none to bypass expiry check",
+        "Crafting a JWT with alg:HS256 and signing with an empty string to exploit servers that use empty-string fallback secrets"
+      ],
+      "mitigation": [
+        "Explicitly whitelist accepted signing algorithms (RS256, ES256) in the JWT validation library — never allow the algorithm to be determined by the token header alone.",
+        "Unconditionally reject tokens with alg:none or alg:null regardless of any other claim values.",
+        "Validate the kid header against a pre-registered, server-controlled keyset — reject any kid that resolves to a path, URL, or value not in the whitelist.",
+        "Use a well-maintained JWT library with algorithm pinning (e.g., jose, python-jose, nimbus-jose-jwt) rather than implementing validation manually.",
+        "Rotate signing keys on a regular schedule and immediately invalidate tokens signed with revoked key IDs."
+      ]
+    },
+    {
+      "type": "Token Replay After Logout or Rotation",
+      "description": "Attacker captures a valid token and replays it after the user has logged out, the token has been rotated, or the session has been revoked — exploiting stateless JWT designs that lack server-side revocation.",
+      "examples": [
+        "Intercepting a JWT before logout and replaying it after the user's session is terminated — server still accepts it until natural expiry",
+        "Capturing a refresh token from a compromised device and using it to obtain new access tokens after the user resets their password",
+        "Replaying an OAuth access token stolen from browser localStorage after the application issues a replacement token",
+        "Reusing an API key that was rotated but not immediately invalidated in the grace period window",
+        "Replaying a token from a previous authentication session that has the same claims as the current session, bypassing re-authentication requirements"
+      ],
+      "mitigation": [
+        "Implement a server-side token revocation list (blocklist or jti claim registry) checked on every request for sensitive operations even with short-lived tokens.",
+        "Use short access token lifetimes (≤15 minutes) combined with one-time-use rotating refresh tokens — invalidate the refresh token immediately upon use.",
+        "On password change, email change, or logout, immediately invalidate all active tokens and refresh tokens for that user.",
+        "Track and bind tokens to device fingerprints or IP ranges for high-sensitivity APIs, rejecting replays from unexpected contexts.",
+        "Alert on token reuse from multiple geographic locations or IP addresses simultaneously as a token theft indicator."
+      ]
+    },
+    {
+      "type": "Brute Force and Credential Stuffing",
+      "description": "Attacker submits large volumes of username/password combinations or leaked credential pairs against login and token issuance endpoints to gain unauthorized access through volume rather than exploiting a specific vulnerability.",
+      "examples": [
+        "Automated script submitting 10,000 username/password combinations from a leaked credential database against POST /api/auth/token",
+        "Distributed credential stuffing attack using rotating residential proxies to bypass per-IP rate limiting",
+        "Brute-forcing a 4-digit OTP endpoint with no rate limiting or lockout — 10,000 combinations exhausted in minutes",
+        "Dictionary attack against an API key endpoint using common patterns (test123, apikey1, changeme) with no lockout",
+        "Password spraying: submitting one common password (e.g., Password1!) against every user account to avoid per-account lockout thresholds"
+      ],
+      "mitigation": [
+        "Apply progressive account lockout on authentication endpoints: warn after 5 failed attempts, temporary lock after 10, full lock after 20 — with unlock requiring email verification.",
+        "Implement per-IP and per-account rate limiting with CAPTCHA challenges triggered after threshold failures on all authentication endpoints.",
+        "Integrate leaked credential databases (HaveIBeenPwned API) to reject passwords known to appear in public breach datasets at registration and password change time.",
+        "Deploy behavioral anomaly detection to identify credential-stuffing patterns: high failure rate, regular timing intervals, many different usernames from the same IP.",
+        "Require MFA for all accounts — credential stuffing is neutralized when the correct password alone is insufficient for access."
+      ]
+    },
+    {
+      "type": "OAuth Token Misuse",
+      "description": "Attacker exploits weaknesses in OAuth 2.0 flows — including authorization code interception, token leakage via referrer headers, implicit flow token theft, or insufficient scope validation — to obtain or abuse access tokens.",
+      "examples": [
+        "Authorization code interception via open redirect: attacker registers a redirect_uri matching a wildcard or open redirect on the legitimate domain",
+        "Access token leaked in browser history or Referer header when the implicit flow includes the token in the URL fragment",
+        "Missing state parameter validation on the OAuth callback enables CSRF attacks that link a victim's account to an attacker-controlled identity",
+        "Scope escalation: exchanging an authorization code for tokens with broader scopes than those originally requested by the user",
+        "Client secret exposed in a mobile app's binary — used to impersonate the legitimate OAuth client and request tokens"
+      ],
+      "mitigation": [
+        "Enforce exact redirect_uri matching — never use prefix or wildcard matching; reject any redirect_uri not pre-registered for the specific client_id.",
+        "Use the Authorization Code flow with PKCE for all clients (especially mobile and SPA) — never use the implicit flow which exposes tokens in URLs.",
+        "Validate the state parameter on every OAuth callback to prevent CSRF token binding attacks.",
+        "Enforce the principle of least privilege for OAuth scopes — only issue tokens with the minimum scopes explicitly requested and approved; never escalate silently.",
+        "Store client secrets in a secrets vault and never embed them in client-side code, mobile binaries, or public repositories."
+      ]
+    },
+    {
+      "type": "Weak or Exposed API Key Authentication",
+      "description": "API keys with insufficient entropy, no expiry, excessive scope, or exposed in client-side code or logs provide attackers with persistent, hard-to-detect authentication bypass.",
+      "examples": [
+        "API key committed to a public GitHub repository — discovered and used by attacker within minutes of exposure",
+        "API key embedded in a mobile app's APK binary, extractable via decompilation",
+        "API key transmitted in a URL query parameter (?apikey=abc123) — logged by CDN, proxy, and browser history",
+        "Single API key with full read/write/admin scope used across multiple integrations — compromise of any one exposes all",
+        "API keys generated with insufficient entropy (sequential integers or short alphanumeric strings) are guessable through brute force"
+      ],
+      "mitigation": [
+        "Generate API keys with at least 256 bits of cryptographically random entropy — never use sequential or predictable formats.",
+        "Transmit API keys exclusively in the Authorization header (Bearer scheme), never in URL query parameters, request bodies, or cookies.",
+        "Implement API key scoping: issue separate keys per integration with only the minimum required permissions, so compromise of one key does not grant broad access.",
+        "Set mandatory expiry on all API keys and implement automated rotation with alerts for keys approaching expiry — never issue non-expiring keys.",
+        "Scan source code repositories, CI/CD pipelines, and container images continuously for accidental API key exposure using secret detection tools (GitGuardian, truffleHog, AWS Macie)."
+      ]
+    },
+    {
+      "type": "Session Fixation and Cookie Hijacking",
+      "description": "Attacker fixes a known session identifier before authentication, hijacks session cookies transmitted over unencrypted connections, or exploits insecure cookie attributes to take over authenticated sessions.",
+      "examples": [
+        "Session fixation: attacker sets a known session ID via a URL parameter before the victim logs in — session is promoted to authenticated without re-issuance",
+        "Session cookie transmitted over HTTP (no Secure flag) — intercepted on a public Wi-Fi network via passive eavesdropping",
+        "Cookie missing HttpOnly flag — stolen via JavaScript XSS and sent to an attacker-controlled endpoint",
+        "Overly broad cookie domain (domain=.example.com) allows a session from a compromised subdomain to be replayed against the main application",
+        "Long-lived session cookies (30-day expiry, no rotation) stolen from a device and replayed weeks later"
+      ],
+      "mitigation": [
+        "Issue a new session identifier immediately after successful authentication — never promote a pre-authentication session ID to an authenticated state.",
+        "Set the Secure, HttpOnly, and SameSite=Strict attributes on all session cookies — Secure prevents interception, HttpOnly prevents JavaScript access, SameSite prevents CSRF.",
+        "Enforce HTTPS on all endpoints with HSTS (including preload) to prevent session cookies from ever being transmitted over unencrypted connections.",
+        "Implement session binding to user-agent and IP subnet — flag and terminate sessions that change these properties mid-session without re-authentication.",
+        "Set appropriate session timeouts: short idle timeout (15–30 min) with absolute maximum session lifetime, and require re-authentication for any sensitive action."
+      ]
+    }
   ],
   "how_to_test": [
-    "Call with no token, expired token, tampered signature",
-    "Replay token after logout/rotation; swap user_id claim",
-    "Remove required auth fields and observe behavior",
-    "Attempt brute-force login with rate-limit detection"
+    "Step 1: Call protected endpoints with no Authorization header — assert 401 Unauthorized is returned with no data",
+    "Step 2: Submit an expired JWT and a JWT with a tampered payload claim — assert both are rejected with 401",
+    "Step 3: Test alg:none by stripping the signature and setting alg to none in the JWT header — assert the server rejects it",
+    "Step 4: Replay a valid token after logout — call the logout endpoint, then immediately reuse the captured token and assert 401",
+    "Step 5: Attempt brute force on the login endpoint — submit 20+ failed attempts and verify rate limiting or lockout engages",
+    "Step 6: Test OAuth callback with a missing or incorrect state parameter — assert the callback is rejected",
+    "Step 7: Inspect all API responses and error messages to confirm no tokens, session IDs, or credentials appear in logs or responses"
   ],
   "expected_outcomes": [
-    "401 for missing/invalid token; 403 for valid but unauthorized",
-    "No successful calls with tampered or expired tokens; events logged"
+    "Requests with missing, expired, or tampered tokens return 401 — never partial data or a different error code",
+    "Tokens with alg:none or unexpected algorithms are unconditionally rejected",
+    "Replayed tokens after logout are rejected even if not yet naturally expired",
+    "Brute-force attempts trigger rate limiting or account lockout before exhausting the credential space",
+    "All authentication failure events are logged with user identifier, IP address, and timestamp for security monitoring"
   ],
-  "minimal_example": "GET /profile without Authorization → 401; with expired JWT → 401; with valid token lacking scope → 403",
+  "minimal_example": "GET /profile without Authorization → 401; with expired JWT → 401; with alg:none JWT → 401; with valid token lacking scope → 403",
   "mitigation": [
-    "Enforce OAuth 2.0 / OIDC with short-lived JWTs (≤15 min access tokens, rotating refresh tokens) and strict claim validation (iss, aud, exp, kid) — explicitly reject alg:none and weak HS256 secrets",
-    "Implement adaptive MFA for sensitive operations and require step-up re-authentication for account changes, payment actions, or privilege escalation",
-    "Add brute-force and credential-stuffing defenses on all auth endpoints: progressive account lockout, CAPTCHA after failed attempts, and IP-based rate limiting",
-    "Enforce TLS across all connections, prohibit credentials in URLs or log output, and rotate API keys and secrets on a fixed schedule with automated expiry alerts"
+    "Enforce OAuth 2.0 / OIDC with short-lived JWTs (≤15 min access tokens, rotating refresh tokens) and strict claim validation (iss, aud, exp, kid) — explicitly whitelist accepted algorithms and reject alg:none unconditionally",
+    "Implement adaptive MFA for sensitive operations and require step-up re-authentication for account changes, payment actions, or privilege escalation; implement server-side token revocation checked on every request for sensitive endpoints",
+    "Add brute-force and credential-stuffing defenses on all auth endpoints: progressive account lockout, CAPTCHA after failed attempts, IP-based rate limiting, and leaked-credential database checks at registration",
+    "Enforce TLS across all connections with HSTS; prohibit credentials in URLs or log output; set Secure, HttpOnly, SameSite=Strict on all session cookies; rotate API keys on a fixed schedule with automated expiry alerts"
   ]
 }

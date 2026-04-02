@@ -1,30 +1,129 @@
 {
   "id": "API3",
   "name": "Broken Object Property Level Authorization (BOPLA)",
-  "what_it_means": "API accepts or returns properties a user should not read or modify (merge of Excessive Data Exposure + Mass Assignment).",
-  "animated_example": "Filling a form where hidden admin checkboxes are still clickable if you know their names.",
+  "what_it_means": "The API accepts or returns object properties that the requesting user should not be able to read or modify — combining Excessive Data Exposure (returning too many fields) and Mass Assignment (accepting fields that should be server-controlled). Attackers exploit this to escalate privileges, access sensitive data, or tamper with protected attributes.",
+  "animated_example": "Filling a form where hidden admin checkboxes are still clickable if you know their names — the UI hides them, but the server accepts anything you submit.",
   "quick_checks": [
-    "Strict request schema validation; reject extra/sensitive properties",
-    "Response allowlists/DTOs (return only necessary fields)",
-    "Field-level authorization for create/update operations",
-    "Disable automatic binding to model fields by default",
-    "Use explicit ‘writeable’ and ‘readable’ property maps per role",
-    "Sensitive flags (isAdmin, roles) are server-controlled only"
+    "Strict request schema validation enforced — extra or sensitive properties rejected with 400",
+    "Response allowlists/DTOs in place — only necessary fields returned per role",
+    "Field-level authorization enforced for create and update operations",
+    "Framework mass-assignment disabled by default; explicit writeable property maps defined per endpoint",
+    "Sensitive flags (isAdmin, roles, verified, creditLimit) are server-controlled only and excluded from all user input binding",
+    "API response schema diffing runs in CI/CD to catch accidental field exposure before deployment"
+  ],
+  "payload_types": [
+    {
+      "type": "Mass Assignment via Extra Request Fields",
+      "description": "Attacker injects additional properties into a POST/PUT/PATCH request body that map directly to privileged model fields, exploiting frameworks that automatically bind all incoming JSON properties to database model objects.",
+      "examples": [
+        "POST /api/users { \"name\": \"Ana\", \"isAdmin\": true } — framework binds isAdmin directly to the user model, granting admin privileges",
+        "PUT /api/profile { \"email\": \"new@mail.com\", \"role\": \"admin\", \"creditLimit\": 999999 } — all three extra fields accepted and persisted",
+        "POST /api/register { \"username\": \"bob\", \"password\": \"pass\", \"verified\": true } — bypasses email verification step",
+        "PATCH /api/account { \"subscriptionTier\": \"enterprise\", \"trialExpiry\": \"2099-01-01\" } — modifies billing fields without authorization",
+        "POST /api/orders { \"productId\": 5, \"quantity\": 1, \"price\": 0.01 } — overrides server-calculated price with attacker-supplied value"
+      ],
+      "mitigation": [
+        "Disable framework-level mass assignment by default — explicitly whitelist every bindable field per endpoint using allowlist schemas (Rails strong_parameters, Spring @JsonIgnoreProperties, Django read_only_fields).",
+        "Use dedicated Data Transfer Objects (DTOs) for every request that contain only the fields the endpoint is permitted to accept — never bind directly to ORM/database model objects.",
+        "Mark sensitive fields (isAdmin, roles, balance, verified, subscriptionTier) as server-controlled: calculate or set them in business logic only, never from request input.",
+        "Return 400 Bad Request for any request containing properties not on the input allowlist — do not silently ignore extra fields as this masks attack attempts.",
+        "Automate schema validation in integration tests: submit requests with all known sensitive fields set to attacker-controlled values and assert they are rejected or ignored."
+      ]
+    },
+    {
+      "type": "Excessive Data Exposure in API Responses",
+      "description": "API returns more object properties than the requesting user is entitled to see — including internal flags, sensitive PII, hashed credentials, or other users' data — relying on the client to filter what is displayed rather than the server to restrict what is returned.",
+      "examples": [
+        "GET /api/users/42 returns { id, name, email, passwordHash, internalNotes, isAdmin, stripeCustomerId } — all fields returned regardless of caller's role",
+        "GET /api/orders returns full order objects including cardLast4, billingAddress, and internalFraudScore for all users",
+        "Search API returns full user profiles including phone numbers and date of birth when only name and email should be exposed",
+        "API response includes __v, _id, createdBy, updatedBy, internalStatus fields from the ORM layer that were never intended for external consumption",
+        "GET /api/profile returns other users' data fields when a related-object query is over-fetched without ownership filtering"
+      ],
+      "mitigation": [
+        "Define explicit response DTOs (allowlisted field sets) for every endpoint per caller role — serialize only fields on the allowlist before returning the response.",
+        "Never return ORM model objects directly to clients — always pass through a serializer or projection layer that strips internal and sensitive fields.",
+        "Implement role-aware field filtering: admin callers may receive additional fields, but standard users receive the minimal field set required for their use case.",
+        "Automate response schema validation in CI/CD: compare actual API response fields against the documented schema and fail the build if undocumented fields are returned.",
+        "Apply data classification to all model fields and use the classification to drive the response serializer — fields marked 'internal' or 'sensitive' are never included in external API responses."
+      ]
+    },
+    {
+      "type": "Privilege Escalation via Sensitive Property Injection",
+      "description": "Attacker submits a request body containing privilege-elevating properties (isAdmin, role, permissions) that the server accepts and persists, granting unauthorized elevated access.",
+      "examples": [
+        "PATCH /api/users/me { \"role\": \"admin\" } accepted — user escalates their own role to admin",
+        "POST /api/invitations { \"email\": \"x@y.com\", \"permissions\": [\"read\",\"write\",\"admin\"] } — attacker grants admin permission to an invited user",
+        "PUT /api/teams/5/members/99 { \"role\": \"owner\" } — non-owner member escalates another member to team owner",
+        "POST /api/subscriptions { \"plan\": \"free\", \"features\": [\"export\",\"api_access\",\"white_label\"] } — injects premium features into a free plan subscription",
+        "POST /api/tasks { \"title\": \"task\", \"assignedToUserId\": 1 } — regular user assigns a task to the admin account, gaining visibility into admin workflow"
+      ],
+      "mitigation": [
+        "Treat all privilege-related fields (role, isAdmin, permissions, tier, features) as server-controlled — calculate them from authenticated session context and business rules, never from request input.",
+        "Apply field-level authorization checks: validate that the requesting user has the privilege required to set each submitted field value, not just to call the endpoint.",
+        "Audit all PATCH and PUT endpoints for fields that map to authorization-relevant model attributes and confirm they are excluded from the input binding.",
+        "Log all changes to privilege-related fields with before/after values, actor identity, and timestamp — alert on self-privilege-escalation attempts.",
+        "Include privilege injection test cases in your automated security test suite: attempt to set every known privilege field on every writable endpoint as a low-privilege user and assert rejection."
+      ]
+    },
+    {
+      "type": "PATCH / PUT Partial Update Abuse",
+      "description": "Attacker exploits partial update endpoints (PATCH) to modify fields that were intended as read-only or server-controlled, or uses a full PUT to overwrite fields not explicitly included in the payload with default/null values.",
+      "examples": [
+        "PATCH /api/invoices/99 { \"status\": \"paid\" } — regular user marks an invoice as paid without completing the payment flow",
+        "PATCH /api/users/42 { \"emailVerified\": true } — bypasses email verification by directly setting the flag",
+        "PUT /api/products/5 with a partial body — fields not included in the PUT body are reset to null/defaults, corrupting unrelated product data",
+        "PATCH /api/contracts/10 { \"signedAt\": \"2020-01-01\", \"signedBy\": \"legit_user\" } — backdates a contract signature",
+        "PATCH /api/audits/7 { \"findings\": [] } — attacker clears an audit log by submitting an empty findings array"
+      ],
+      "mitigation": [
+        "Define separate input schemas for PATCH operations that explicitly list only the fields a caller is permitted to modify — never allow PATCH to touch server-controlled or sensitive fields.",
+        "For PUT operations, reconstruct the full object server-side from the existing record merged with only the allowlisted fields from the request — never do a full model replacement from user input.",
+        "Apply field-level authorization to every field in a PATCH body: check that the caller has permission to modify that specific field, not just permission to call the endpoint.",
+        "Reject PATCH requests that include read-only fields (status, createdAt, verifiedAt, signedAt) with a 400 error identifying the offending field.",
+        "Log all partial update operations with a diff of changed fields and actor identity — alert on changes to sensitive state fields (status, verified, signed) by non-privileged users."
+      ]
+    },
+    {
+      "type": "GraphQL Field-Level Over-Fetching",
+      "description": "Attacker crafts GraphQL queries requesting fields beyond their authorization level, exploiting missing field-level resolvers or authorization checks that only gate the top-level query but not individual nested fields.",
+      "examples": [
+        "{ user(id: 42) { id, email, passwordHash, internalNotes, stripeToken } } — sensitive fields returned because only the user resolver is gated, not individual fields",
+        "{ me { id, orders { id, cardLast4, billingAddress { fullAddress } } } } — payment details returned via nested resolver with no field-level authorization",
+        "{ users { id, role, isAdmin, twoFactorSecret } } — admin-only fields returned to standard user because the users list query has no field-level restriction",
+        "{ product(id: 5) { id, name, costPrice, supplierName, internalMargin } } — internal pricing data exposed via unrestricted field resolution",
+        "Introspection query revealing all available fields and types, including sensitive internal fields not intended for external callers"
+      ],
+      "mitigation": [
+        "Implement field-level authorization resolvers for every sensitive field — do not rely solely on top-level query authorization to protect nested or related object fields.",
+        "Use a GraphQL authorization middleware (graphql-shield, Graphene permissions) that enforces per-field access rules derived from the authenticated user's role.",
+        "Disable or restrict GraphQL introspection in production — if introspection is required, gate it behind admin authentication.",
+        "Apply query depth and complexity limits to prevent over-fetching of nested objects that individually pass field authorization but collectively expose sensitive data.",
+        "Audit your GraphQL schema for fields with sensitive data classifications and ensure each has an explicit authorization resolver before deploying schema changes."
+      ]
+    }
   ],
   "how_to_test": [
-    "Add disallowed fields (e.g., isAdmin: true) in POST/PATCH",
-    "Remove required fields or change types",
-    "Request sensitive fields in response and inspect payload"
+    "Step 1: Submit POST/PUT/PATCH requests with extra fields (isAdmin, role, verified, creditLimit) and assert the server rejects or ignores them — verify the values are not persisted in a subsequent GET",
+    "Step 2: Retrieve objects as a low-privilege user and inspect every field in the response — compare against the documented schema and flag any undocumented or sensitive fields",
+    "Step 3: Attempt privilege escalation by submitting role/permissions fields in update requests as a standard user — assert 400 or that the field is silently stripped and not persisted",
+    "Step 4: Test PATCH endpoints with read-only fields (status, verifiedAt, signedAt) — assert 400 is returned with the offending field identified",
+    "Step 5: Send a PUT request with a partial body omitting required fields — assert the server does not null out the omitted fields on the stored record",
+    "Step 6: Issue GraphQL queries requesting sensitive fields (passwordHash, internalNotes, stripeToken) as a standard user — assert fields are null or absent, not returned",
+    "Step 7: Run automated response schema diffing between environments to detect any fields newly appearing in API responses that are not on the approved schema"
   ],
   "expected_outcomes": [
-    "400 with schema errors for extra/wrong fields",
-    "Responses contain minimal necessary attributes only"
+    "Requests containing extra or privileged fields return 400 Bad Request — sensitive fields are never accepted from user input",
+    "API responses contain only the fields on the approved schema for the caller's role — no internal flags, hashed credentials, or ORM metadata",
+    "Privilege-escalation attempts via property injection are rejected and logged",
+    "PATCH operations on read-only or server-controlled fields are rejected with a descriptive 400 error",
+    "GraphQL queries for sensitive fields return null or are rejected based on field-level authorization resolvers"
   ],
-  "minimal_example": "POST /users { name: 'Ana', role: 'admin' } → rejected; response omits internal flags like token, secrets",
+  "minimal_example": "POST /users { name: 'Ana', role: 'admin' } → 400 field not permitted; GET /users/42 response contains only { id, name, email } — never passwordHash, isAdmin, or internal flags",
   "mitigation": [
-    "Define explicit allow-listed DTOs (Data Transfer Objects) for every request and response — reject or silently strip any property not on the schema allowlist before processing",
-    "Enforce field-level authorization: sensitive fields (isAdmin, roles, balance, creditLimit) must be server-controlled only and excluded from any user-writable input binding",
-    "Disable framework mass-assignment by default (Rails strong_parameters, Spring @JsonIgnoreProperties, Django read-only fields) and explicitly whitelist every bindable property per endpoint",
-    "Automate API response schema diffing in CI/CD pipelines to detect accidental exposure of new fields before changes reach production"
+    "Define explicit allow-listed DTOs for every request and response — reject or return 400 for any property not on the schema allowlist; never bind request bodies directly to ORM model objects",
+    "Enforce field-level authorization: sensitive fields (isAdmin, roles, balance, creditLimit, verified) must be server-controlled only and excluded from all user-writable input binding",
+    "Disable framework mass-assignment by default (Rails strong_parameters, Spring @JsonIgnoreProperties, Django read_only_fields) and explicitly whitelist every bindable property per endpoint",
+    "Automate API response schema diffing in CI/CD pipelines to detect accidental exposure of new fields; implement field-level GraphQL authorization resolvers for all sensitive schema fields"
   ]
 }

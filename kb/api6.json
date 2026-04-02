@@ -1,28 +1,129 @@
 {
   "id": "API6",
   "name": "Unrestricted Access to Sensitive Business Flows",
-  "what_it_means": "Critical workflows (payments, ticketing, check-in/out) can be automated, replayed, or executed out of sequence due to weak backend state/velocity controls.",
-  "animated_example": "Skipping the queue barriers and running straight to the finish line — repeatedly.",
+  "what_it_means": "Critical business workflows — payments, ticket booking, voucher redemption, inventory reservation — can be automated, replayed, or executed out of sequence because the API lacks backend state enforcement, velocity controls, or bot defenses. Attackers exploit this to scalp inventory, abuse promotions, commit fraud, or double-spend.",
+  "animated_example": "Skipping the queue barriers and running straight to the checkout — then doing it again and again with a script while real customers wait.",
   "quick_checks": [
-    "Backend enforces step order/state (cannot skip steps)",
-    "Idempotency/uniqueness tokens to prevent replays",
-    "Rate/velocity limits and bot defenses on sensitive steps",
-    "Server validates preconditions (no UI-only checks)"
+    "Backend enforces step ordering — each step verifies prior steps completed successfully before proceeding",
+    "Idempotency and uniqueness tokens issued and validated to prevent replay and double-submission",
+    "Velocity and rate limits applied specifically to high-value business steps",
+    "Bot detection signals applied to sensitive flows (behavioral CAPTCHA, device fingerprinting)",
+    "Server-side precondition validation at every step — no UI-only checks",
+    "Out-of-order and skipped step requests are rejected with a meaningful error code"
+  ],
+  "payload_types": [
+    {
+      "type": "Business Flow Replay Attack",
+      "description": "Attacker replays a previously successful transaction request — such as a payment confirmation, coupon redemption, or voucher activation — to execute the business action multiple times using a single valid authorization.",
+      "examples": [
+        "Capturing a successful POST /api/redeem-voucher request and replaying it 50 times — each replay redeems the same single-use voucher again",
+        "Replaying a POST /api/payments/confirm after a successful purchase to trigger multiple order fulfillments with one payment",
+        "Reusing a completed loyalty points redemption request to deduct points and issue rewards repeatedly",
+        "Replaying a raffle entry submission to enter the same raffle hundreds of times with a single eligible entry",
+        "Replaying a POST /api/promotions/claim to claim the same first-purchase discount on every subsequent order"
+      ],
+      "mitigation": [
+        "Issue a unique, single-use transaction token (idempotency key) for every critical business operation and reject any request that reuses a previously processed token.",
+        "Implement server-side state tracking for each business transaction — a confirmed, redeemed, or completed transaction must be immutable and rejected if re-submitted.",
+        "Apply a short time-to-live on transaction tokens so that even captured valid tokens cannot be replayed after the operation window expires.",
+        "Log every business flow execution with the actor identity, transaction ID, and timestamp — alert on duplicate transaction ID submissions as replay attack indicators.",
+        "Validate idempotency keys server-side using a distributed cache or database record — never trust client-supplied confirmation that a transaction is new."
+      ]
+    },
+    {
+      "type": "Step Skip and Out-of-Order Execution",
+      "description": "Attacker bypasses mandatory intermediate steps in a multi-step business workflow by calling the final action endpoint directly, exploiting APIs that do not enforce step-ordering on the backend.",
+      "examples": [
+        "POST /api/checkout/confirm submitted without first calling POST /api/checkout/validate — order confirmed without stock availability check",
+        "POST /api/payments/process called directly without completing the required KYC verification step in a financial onboarding flow",
+        "POST /api/subscription/activate called without completing the payment step — premium subscription activated without charge",
+        "POST /api/contracts/sign submitted before POST /api/contracts/review — contract signed without the mandatory review step being recorded",
+        "POST /api/loans/disburse called without the credit check and approval steps completing — loan disbursed without underwriting"
+      ],
+      "mitigation": [
+        "Implement a server-side workflow state machine for every multi-step flow — each step must verify the preceding step's completion state before executing, rejecting out-of-order requests with 409 Conflict.",
+        "Store workflow state server-side with the user's session or a server-issued flow token — never trust the client to report which steps have been completed.",
+        "Issue a signed, server-generated flow token at the start of each multi-step operation — each subsequent step must present this token and the server validates its embedded state.",
+        "Test out-of-order execution for every multi-step flow in your security test suite: skip each mandatory intermediate step and assert the final step is rejected.",
+        "Log workflow step violations with the actor identity, flow ID, skipped step, and attempted step — treat these as potential abuse attempts."
+      ]
+    },
+    {
+      "type": "Automated Scalping and Bot Abuse",
+      "description": "Attacker deploys automated scripts to execute high-value business flows at machine speed — reserving limited inventory, claiming promotions, or booking appointments faster than human users can compete — causing business harm and degrading user experience.",
+      "examples": [
+        "Bot army sends thousands of concurrent POST /api/inventory/reserve requests the moment limited-edition stock is released, acquiring all available units before human users can act",
+        "Automated script claims all available appointment slots within seconds of opening using a residential proxy network to bypass IP limits",
+        "Bot bulk-purchases discounted vouchers using multiple accounts the moment a promotion goes live — reselling them at a profit",
+        "Automated account creation followed by immediate claiming of new-user bonuses across thousands of accounts",
+        "Script repeatedly entering a competition or raffle at maximum allowed rate to statistically dominate entry volume"
+      ],
+      "mitigation": [
+        "Deploy behavioral bot detection on high-value business flow endpoints — analyze request timing, device fingerprints, and behavioral signals to distinguish human users from automated scripts.",
+        "Apply velocity limits at the business event level: maximum of N purchases, N entries, or N reservations per account per time window, enforced server-side.",
+        "Require interactive challenges (CAPTCHA, proof-of-work) at key steps in high-value flows when bot-like patterns are detected.",
+        "Implement queue-based fairness systems for limited-availability resources: all eligible users are queued and assigned a random position rather than first-come-first-served.",
+        "Monitor business metric anomalies (inventory depletion rate, promotion claim rate) in real time and trigger automatic protective throttling when anomalous velocity is detected."
+      ]
+    },
+    {
+      "type": "Idempotency Key Abuse",
+      "description": "Attacker manipulates idempotency key implementations to either bypass duplicate prevention (by generating new keys for each replay) or force idempotency collisions (by reusing a key to return a previously successful response for a different operation).",
+      "examples": [
+        "Generating a new UUID idempotency key for every replay of a payment request, bypassing duplicate prevention that only checks for exact key reuse",
+        "Reusing a successful payment's idempotency key for a refund request — server returns the cached payment response to the refund endpoint, bypassing refund processing",
+        "Submitting requests with idempotency keys generated from predictable values (timestamp + user ID) — attacker pre-computes and submits conflicting keys to cause idempotency collisions",
+        "Idempotency key collision across users: key namespace not scoped per user, allowing attacker to submit a key used by another user and receive their cached response",
+        "Exploiting a race condition in idempotency key processing: two concurrent requests with the same key both processed before the first is committed to the idempotency store"
+      ],
+      "mitigation": [
+        "Scope idempotency keys per user and per operation type — a key is only valid for the specific user and operation combination it was first used for.",
+        "Enforce idempotency key validity periods (e.g., 24-hour window) — keys outside the window are treated as new operations, not replays.",
+        "Use atomic, compare-and-set operations when recording idempotency keys to prevent race conditions where two concurrent requests both pass the duplicate check.",
+        "Validate that the request body matches the original request associated with a reused idempotency key — reject reuse of a key with a different request payload.",
+        "Monitor for rapid generation of new idempotency keys from a single account performing identical operations — treat as a replay attempt bypassing idempotency controls."
+      ]
+    },
+    {
+      "type": "Race Condition on Critical Transactions",
+      "description": "Attacker sends multiple concurrent requests for the same limited resource or exclusive operation, exploiting the window between a resource check and its update to execute the operation more times than permitted — a time-of-check to time-of-use (TOCTOU) vulnerability.",
+      "examples": [
+        "50 concurrent POST /api/redeem-coupon requests for a one-use coupon — all pass the 'has coupon been used?' check before any one commits the 'mark as used' update",
+        "Parallel POST /api/withdraw { amount: balance } requests — all read the same balance and all pass the 'sufficient funds' check before any deduction is committed",
+        "Simultaneous checkout requests for the last item in stock — all read inventory_count=1, all pass the availability check, all succeed, overselling stock",
+        "Concurrent enrollment requests for the last spot in a limited-capacity event — multiple users successfully enrolled beyond the maximum capacity",
+        "Parallel application of a percentage discount: balance read, discount computed, and write-back happen non-atomically across 10 concurrent threads, each applying the full discount"
+      ],
+      "mitigation": [
+        "Use database-level atomic operations and row-level locking for all operations that check and modify shared state — ensure the check and the update occur in the same atomic transaction.",
+        "Implement optimistic concurrency control using version numbers or ETags: read the current version, apply the change, and reject the update if the version has changed since the read.",
+        "Use database constraints (unique indexes, check constraints) as the final safety net against race conditions — ensure the database will reject invalid state even if application logic fails.",
+        "Apply distributed locking (Redis SETNX, database advisory locks) for operations that must be serialized per user or per resource.",
+        "Test for race conditions using concurrent request tools (Burp Intruder parallel attack, Turbo Intruder) against every endpoint that checks and modifies shared state."
+      ]
+    }
   ],
   "how_to_test": [
-    "Execute steps out of order",
-    "Rapidly replay a critical step with a script",
-    "Attempt to skip validations and jump to final action"
+    "Step 1: Capture a successful critical business request (voucher redeem, payment confirm, promotion claim) and replay it 5–10 times — assert only the first succeeds and subsequent replays are rejected",
+    "Step 2: Test step-skipping on every multi-step flow — call the final step endpoint directly without completing prior steps and assert 409 or 422 is returned",
+    "Step 3: Submit the same critical request concurrently (10–50 parallel threads) using Burp Turbo Intruder — assert only one succeeds and all others are rejected",
+    "Step 4: Test velocity controls: submit the maximum allowed number of operations and then one more — assert the extra request is throttled or rejected",
+    "Step 5: Test idempotency key reuse with a different request payload for the same key — assert the server rejects the conflicting payload",
+    "Step 6: Test workflow state validation by manipulating flow tokens or session state — assert the server validates state server-side and rejects tampered flow progression",
+    "Step 7: Test bot detection by submitting requests at machine-speed intervals — verify behavioral challenges or throttling engage for inhuman request patterns"
   ],
   "expected_outcomes": [
-    "Rejections with state/sequence errors; throttling on velocity",
-    "No double-charging/double-booking"
+    "Replayed business transactions are rejected after the first execution — idempotency is enforced server-side",
+    "Out-of-order and step-skipping requests are rejected with 409 Conflict or 422 Unprocessable Entity",
+    "Race condition tests result in only one concurrent request succeeding — shared state integrity is maintained",
+    "Velocity limits engage for high-volume automated submissions before business harm occurs",
+    "All business flow abuse attempts are logged with actor identity, transaction ID, and the specific rule violated"
   ],
-  "minimal_example": "POST /checkout without successful /validate → 409/422; repeat /pay rapidly → throttled",
+  "minimal_example": "POST /checkout without successful /validate → 409 Conflict; replay POST /redeem-voucher after success → 409 Already Redeemed; 50 concurrent /reserve for last item → exactly 1 succeeds",
   "mitigation": [
-    "Implement server-side workflow state machines that enforce step ordering — each step must verify all prior steps completed successfully and reject out-of-sequence requests with 409 Conflict",
-    "Issue idempotency keys for every critical operation (payments, bookings, redemptions) and reject duplicate submissions within a defined time window using server-side deduplication",
-    "Deploy velocity controls and bot-detection signals (request frequency, device fingerprinting, behavioral CAPTCHA) specifically on high-value flows to prevent automated abuse",
-    "Validate all business preconditions on the server side before executing sensitive actions — never trust the client to have completed prior validation steps in a multi-step flow"
+    "Implement server-side workflow state machines enforcing step ordering — each step verifies prior steps completed and rejects out-of-sequence requests with 409 Conflict; store all workflow state server-side",
+    "Issue single-use idempotency keys scoped per user and operation for every critical transaction — reject duplicate submissions within the defined time window using atomic, race-condition-safe deduplication",
+    "Deploy velocity controls and bot-detection signals (request frequency, device fingerprinting, behavioral CAPTCHA) on high-value flows; use database-level atomic operations and locking for all check-and-modify operations",
+    "Validate all business preconditions server-side before executing sensitive actions; test race conditions with concurrent request tools and step-skipping attacks before every release"
   ]
 }

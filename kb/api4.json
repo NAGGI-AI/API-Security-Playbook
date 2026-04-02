@@ -1,30 +1,130 @@
 {
   "id": "API4",
   "name": "Unrestricted Resource Consumption",
-  "what_it_means": "The API lacks limits on requests, sizes, concurrency, or expensive operations, enabling denial of service or cost blowouts.",
-  "animated_example": "All-you-can-eat buffet with no serving spoons — one person can empty everything.",
+  "what_it_means": "The API imposes no limits on request rate, payload size, query complexity, concurrency, or the cost of operations — enabling attackers to exhaust server resources, trigger denial of service, cause cost blowouts, or degrade service for all users through deliberately expensive or high-volume requests.",
+  "animated_example": "All-you-can-eat buffet with no serving spoons and no time limit — one person can empty every dish and block everyone else from eating.",
   "quick_checks": [
-    "Global/per-identity rate limits and quotas with burst control",
-    "Payload/body size and array length caps; file size/type limits",
-    "Pagination enforced; sensible max page size",
-    "Server timeouts, circuit breakers, and concurrency caps",
-    "Idempotency keys for retried operations; back-pressure at gateway",
-    "Resource-heavy endpoints require stronger auth and throttling"
+    "Global and per-identity rate limits and quotas enforced at the API gateway with burst control",
+    "Payload and request body size caps enforced — oversized requests rejected with 413 before processing",
+    "JSON array length, object depth, and string length limits validated on every endpoint",
+    "Pagination enforced on all list endpoints with a sensible maximum page size",
+    "Server-side timeouts, circuit breakers, and concurrency caps configured for all endpoints",
+    "Resource-intensive endpoints (reports, exports, bulk operations) require stronger auth and separate throttling",
+    "Idempotency keys for retried operations to prevent accidental duplicate processing"
+  ],
+  "payload_types": [
+    {
+      "type": "Rate Limit Bypass via Distributed Requests",
+      "description": "Attacker circumvents per-IP or per-account rate limits by distributing requests across many IP addresses, accounts, or rotating proxies — achieving effective denial of service or abusive API consumption at volumes that individual throttles cannot block.",
+      "examples": [
+        "Botnet sending 100,000 requests per minute distributed across 10,000 residential IPs — each individual IP stays below per-IP rate limit thresholds",
+        "Credential-stuffed accounts used to distribute API calls across thousands of valid user accounts, each remaining under per-account quotas",
+        "Rotating proxy pool cycling through new IPs every 10 requests to evade IP-based throttling on a login endpoint",
+        "Competitor scraping all product data via hundreds of registered free-tier accounts, each staying just under the free tier quota",
+        "Distributed script submitting one request every 10 seconds across 500 accounts to exhaust a daily quota without triggering burst detection"
+      ],
+      "mitigation": [
+        "Implement layered rate limiting: per-IP, per-user, per-organization, and global API-wide quotas — a single layer can be bypassed but multiple simultaneous thresholds cannot.",
+        "Deploy behavioral anomaly detection to identify distributed abuse patterns: correlate request rates across accounts and IPs sharing common attributes (ASN, device fingerprint, behavioral signature).",
+        "Apply cost-based quotas rather than pure request-count quotas for complex APIs — count consumed compute units, not just HTTP calls.",
+        "Require bot-challenge verification (CAPTCHA, proof-of-work) on endpoints that are high-value targets for distributed abuse.",
+        "Alert on aggregate request volumes approaching infrastructure capacity thresholds and auto-activate emergency throttling before service degradation occurs."
+      ]
+    },
+    {
+      "type": "Oversized Payload Injection",
+      "description": "Attacker submits request bodies, uploaded files, or query strings far exceeding normal size expectations to exhaust memory, CPU, or I/O resources during parsing, validation, or processing.",
+      "examples": [
+        "POST /api/documents with a 500MB JSON body — server attempts to parse the full body into memory before validation, exhausting heap",
+        "Uploading a 10GB file to an endpoint that only validates MIME type after fully buffering the upload to disk",
+        "Submitting a CSV import with 10 million rows — bulk insert query exhausts database connection pool for minutes",
+        "POST /api/search with a query string of 1MB of Unicode characters — regex-based input validation runs for minutes (ReDoS)",
+        "Base64-encoded payload that appears to be 1MB but decodes to 750MB — size check on encoded form does not reflect decoded memory cost"
+      ],
+      "mitigation": [
+        "Enforce strict payload size limits at the API gateway or load balancer layer — reject requests exceeding the limit with 413 Payload Too Large before the request body reaches application code.",
+        "Validate file upload sizes before fully buffering to disk — use streaming validation and terminate the upload stream immediately when the size threshold is exceeded.",
+        "Set maximum string length, array length, and object depth limits in the JSON schema validator applied before any business logic executes.",
+        "Never decode or decompress user-supplied content before performing size validation — validate the decoded/decompressed size, not just the encoded form.",
+        "Apply per-endpoint payload size limits calibrated to the expected use case rather than a single global limit — import endpoints may allow larger payloads than search endpoints."
+      ]
+    },
+    {
+      "type": "Deep Nesting and Recursive JSON Bomb",
+      "description": "Attacker submits deeply nested JSON objects or arrays that consume exponential memory or CPU during parsing and traversal, causing denial of service through a small but pathological payload.",
+      "examples": [
+        "{ \"a\": { \"a\": { \"a\": { ... } } } } nested 10,000 levels deep — recursive JSON parser exhausts call stack with a ~50KB payload",
+        "[[[[[[[[[[... ]]]]]]]]]]] — 5,000-level deeply nested array causes stack overflow in recursive array traversal",
+        "GraphQL query: { user { friends { friends { friends { friends { ... } } } } } } — 20-level nested relationship traversal triggers N+1 database query explosion",
+        "?filter[a][b][c][d][e][f][g][h]=value — deeply nested query parameter object causing ORM to generate multi-join SQL queries",
+        "XML-equivalent attack in JSON: repeated key collision at every nesting level exploiting hash collision in the JSON parser's object key handling"
+      ],
+      "mitigation": [
+        "Enforce a maximum JSON nesting depth (e.g., 10 levels) in the JSON parser configuration — reject requests exceeding this depth with 400 before any processing.",
+        "Apply a maximum query complexity and depth limit to all GraphQL queries — reject queries exceeding the configured complexity score.",
+        "Limit query parameter nesting depth in URL parsing — reject requests with query parameter objects exceeding a defined depth threshold.",
+        "Use iterative rather than recursive JSON parsing to prevent stack overflow from deeply nested inputs.",
+        "Test all API endpoints with pathological nested inputs as part of your security test suite — verify parser configuration is effective before deployment."
+      ]
+    },
+    {
+      "type": "Long-Running and Expensive Query Abuse",
+      "description": "Attacker crafts requests that trigger extremely expensive database queries, report generation, or computation — tying up server threads and database connections for extended periods and degrading performance for all users.",
+      "examples": [
+        "GET /api/reports/export?startDate=2000-01-01&endDate=2099-12-31 — full-table scan across 10 years of data with no pagination or date range limit",
+        "GET /api/search?q=a — single-character search triggering a full-text search across 100 million records without a minimum query length requirement",
+        "POST /api/analytics { \"dimensions\": [...50 dimensions...], \"metrics\": [...30 metrics...] } — combinatorial analytics query with no complexity limit",
+        "Repeated GET /api/recommendations/generate — computationally expensive ML inference triggered on every request without caching",
+        "GET /api/export/all — bulk data export endpoint with no row limit, returning the entire database table as a single response"
+      ],
+      "mitigation": [
+        "Apply per-endpoint timeout limits — terminate any request that has not completed within the defined threshold and return 503 with a Retry-After header.",
+        "Enforce minimum and maximum date range limits, result set size limits, and mandatory pagination on all report, export, and search endpoints.",
+        "Implement request complexity scoring for analytics and query endpoints — reject requests whose estimated cost exceeds the caller's allocated quota.",
+        "Cache results of expensive operations with appropriate TTLs — prevent repeated identical expensive requests from hitting the database on every call.",
+        "Rate-limit expensive endpoints more aggressively than standard endpoints — apply separate lower quotas for operations classified as high-cost."
+      ]
+    },
+    {
+      "type": "Parallel Request Amplification",
+      "description": "Attacker sends many concurrent requests simultaneously to exploit race conditions, bypass sequential rate limits, or amplify resource consumption beyond what sequential throttling would permit.",
+      "examples": [
+        "Sending 200 concurrent POST /api/jobs/start requests — each is processed before rate limiting counts the previous ones, launching 200 expensive background jobs",
+        "Parallel GET /api/files/generate requests for the same report — server spawns 100 duplicate PDF generation processes before deduplication kicks in",
+        "50 simultaneous POST /api/emails/send requests — all processed before the per-minute email quota counter is incremented, sending 50x the allowed volume",
+        "Concurrent requests to /api/inventory/reserve for the last available item — all succeed before the inventory check is committed, overselling stock",
+        "Parallel image resize requests each requesting a 4K output — simultaneous CPU-bound processing saturates available cores and starves other requests"
+      ],
+      "mitigation": [
+        "Implement per-user concurrency limits at the API gateway — reject requests exceeding the maximum simultaneous in-flight request count per user with 429.",
+        "Use database-level locks or optimistic concurrency control (e.g., check-and-set) for operations that modify shared state — prevent race conditions from amplifying the effect of concurrent requests.",
+        "Apply idempotency keys for expensive or state-changing operations — deduplicate concurrent requests with the same idempotency key, processing only one and returning the cached result to duplicates.",
+        "Queue and serialize expensive background job submissions per user — reject new job requests when the user already has the maximum allowed number of queued or running jobs.",
+        "Monitor per-user concurrency metrics and alert when a single user's concurrent request count exceeds normal thresholds — treat bursts as potential abuse."
+      ]
+    }
   ],
   "how_to_test": [
-    "Oversized JSON bodies and deep arrays → expect 413",
-    "Rapid bursts/parallel calls → expect 429",
-    "Deep pagination and long-running queries under load"
+    "Step 1: Submit oversized request bodies (1MB, 10MB, 100MB) and verify 413 Payload Too Large is returned before processing begins",
+    "Step 2: Send rapid bursts of requests (50, 100, 500 per minute) from a single account and verify HTTP 429 with Retry-After is returned at the defined threshold",
+    "Step 3: Submit deeply nested JSON (100, 500, 1000 levels) and verify the parser rejects it with 400 without exhausting CPU or memory",
+    "Step 4: Test expensive query endpoints with maximum date ranges, maximum page sizes, and no filters — verify server-side limits truncate or reject the response",
+    "Step 5: Send 20–50 parallel concurrent requests simultaneously and verify concurrency limits engage and some requests are rejected",
+    "Step 6: Test pagination bypass by requesting extremely large page sizes (?limit=1000000) and verify the server enforces its maximum page size cap",
+    "Step 7: Monitor server CPU, memory, and response times during load tests — verify no single request or burst causes measurable degradation for other concurrent users"
   ],
   "expected_outcomes": [
-    "Graceful 413/429; no platform instability",
-    "Logs show throttling/quotas triggered with actor ID"
+    "Oversized payloads return 413 before reaching application logic — server memory and CPU are not exhausted",
+    "Rate limiting returns 429 with Retry-After at the defined threshold — bursts do not exhaust server capacity",
+    "Deeply nested or pathological payloads are rejected with 400 before parser exhaustion",
+    "Expensive query endpoints enforce server-side limits — no full-table scans or unbounded result sets",
+    "Throttling and quota events are logged with actor identity for security monitoring"
   ],
-  "minimal_example": "POST 100MB body → 413 Payload Too Large; 1k req/min → 429 Too Many Requests",
+  "minimal_example": "POST 100MB body → 413 Payload Too Large before parsing; 1,000 req/min → 429 Too Many Requests with Retry-After; { nested 1000 levels } → 400 payload structure rejected",
   "mitigation": [
-    "Implement per-user and global rate limits at the API gateway layer with HTTP 429 responses and Retry-After headers — apply stricter limits to anonymous vs. authenticated callers",
-    "Enforce strict payload size caps (request body, JSON array depth, file size and type) and return 413 Payload Too Large immediately without processing the full body",
-    "Set server-side request timeouts and maximum concurrency limits; deploy circuit breakers to shed load gracefully and prevent cascading failures under traffic spikes",
-    "Apply cost-based throttling for resource-intensive operations (heavy DB queries, file processing, report generation) — require elevated quota or a separate high-cost tier rather than executing unconditionally"
+    "Implement per-user and global rate limits at the API gateway layer with HTTP 429 responses and Retry-After headers — apply stricter limits to anonymous callers and separate lower quotas for expensive endpoints",
+    "Enforce strict payload size caps (request body, JSON array depth, nesting depth, file size) and return 413 immediately at the gateway without processing the full body",
+    "Set server-side request timeouts, maximum concurrency limits per user, and circuit breakers — deploy queue-based deduplication for expensive operations using idempotency keys",
+    "Apply cost-based throttling for resource-intensive operations (heavy DB queries, file processing, report generation) with minimum query constraints and mandatory pagination on all list and export endpoints"
   ]
 }

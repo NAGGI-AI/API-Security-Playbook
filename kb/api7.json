@@ -1,28 +1,129 @@
 {
   "id": "API7",
   "name": "Server-Side Request Forgery (SSRF)",
-  "what_it_means": "API fetches a user-supplied URL without strict validation, allowing requests to internal networks, metadata services, or localhost.",
-  "animated_example": "Handing your company courier a note that secretly tells them to enter restricted buildings for you.",
+  "what_it_means": "The API fetches a URL or makes a network connection based on attacker-controlled input without adequate validation — allowing the attacker to force the server to make requests to internal services, cloud metadata endpoints, localhost, or other restricted destinations that should be unreachable from the internet.",
+  "animated_example": "Handing your company courier a note that secretly tells them to enter the restricted server room and bring back whatever they find — you stay outside, they do the work for you.",
   "quick_checks": [
-    "Allowlist of outbound domains; block RFC1918/localhost/metadata IPs",
-    "Restrict schemes to https/http; disable redirects; DNS pinning",
-    "Force egress through filtering proxy; validate MIME types",
-    "No raw upstream responses reflected to clients"
+    "Allowlist of permitted outbound domains and IP ranges enforced — RFC1918, loopback, and metadata IPs blocked",
+    "URL scheme restricted to HTTPS only — file://, ftp://, gopher://, dict:// rejected",
+    "Automatic HTTP redirect following disabled — each redirect destination re-validated against allowlist",
+    "DNS resolution validated post-lookup to prevent DNS rebinding — re-check resolved IP before connection",
+    "All outbound requests routed through a hardened egress proxy with logging",
+    "Raw upstream responses never reflected to clients — parsed and re-serialized through a strict schema"
+  ],
+  "payload_types": [
+    {
+      "type": "Internal Network Scanning via User-Supplied URL",
+      "description": "Attacker supplies internal IP addresses or hostnames as the URL parameter to force the server to probe and return responses from internal network services that are unreachable directly from the internet.",
+      "examples": [
+        "GET /api/fetch?url=http://192.168.1.1/admin — accesses the internal router admin panel through the server",
+        "GET /api/imageProxy?url=http://10.0.0.1:8080/metrics — retrieves Prometheus metrics from an internal monitoring service",
+        "GET /api/preview?url=http://internal-db:5432 — probes internal database port, response timing reveals whether the port is open",
+        "GET /api/webhook/test?target=http://internal-jenkins:8080/api/json — accesses internal CI/CD server from internet through the API",
+        "Iterating http://10.0.0.1 through http://10.0.0.254 to map all live internal hosts via response time and content differences"
+      ],
+      "mitigation": [
+        "Enforce a strict allowlist of permitted destination domains and IP ranges at the egress layer — reject all requests to private IP ranges (RFC1918: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) and loopback addresses.",
+        "Resolve the destination hostname to an IP address before making the connection and re-validate the resolved IP against the allowlist — reject connections where the resolved IP is not on the allowlist.",
+        "Route all server-initiated outbound HTTP requests through a hardened egress proxy that enforces the allowlist, logs every request, and blocks unlisted destinations.",
+        "Reject URL parameters that contain numeric IPv4/IPv6 addresses, localhost, or any hostname resolving to a private or loopback address.",
+        "Monitor egress proxy logs for requests to RFC1918 ranges or unusual internal hostnames — treat these as SSRF attempt indicators."
+      ]
+    },
+    {
+      "type": "Cloud Metadata Service Exfiltration",
+      "description": "Attacker targets cloud provider instance metadata endpoints — accessible only from within the cloud instance — to steal IAM credentials, service account tokens, or instance configuration data that can be used to pivot into cloud infrastructure.",
+      "examples": [
+        "GET /api/fetch?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/ — AWS metadata service returns IAM role credentials",
+        "GET /api/imageProxy?url=http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token — GCP service account OAuth token",
+        "GET /api/preview?url=http://169.254.169.254/metadata/instance?api-version=2021-02-01 — Azure IMDS returns subscription ID and managed identity tokens",
+        "GET /api/fetch?url=http://169.254.169.254/latest/user-data — AWS user-data bootstrap script often contains secrets and configuration",
+        "GET /api/fetch?url=http://100.100.100.200/latest/meta-data/ — Alibaba Cloud metadata service, same pattern as AWS"
+      ],
+      "mitigation": [
+        "Explicitly block requests to all known cloud metadata IP addresses: 169.254.169.254 (AWS/Azure/GCP), metadata.google.internal, 100.100.100.200 (Alibaba) at both the application and network layer.",
+        "Enable Instance Metadata Service v2 (IMDSv2) on AWS — IMDSv2 requires a PUT request to obtain a session token before GET requests, which SSRF vulnerabilities typically cannot perform.",
+        "Apply cloud provider security group / firewall rules to block outbound traffic from the application to the metadata IP range as a defense-in-depth layer.",
+        "Use short-lived, automatically rotated IAM credentials with the minimum required permissions — even if stolen, metadata credentials should have limited blast radius and short TTL.",
+        "Alert on any API request that attempts to reach known metadata service IP addresses or hostnames — these should never appear in legitimate application traffic."
+      ]
+    },
+    {
+      "type": "Alternate URL Scheme Abuse",
+      "description": "Attacker uses non-HTTP URL schemes (file://, gopher://, ftp://, dict://, ldap://) in user-supplied URLs to interact with local file systems, internal services, or non-HTTP protocols through the vulnerable server.",
+      "examples": [
+        "GET /api/fetch?url=file:///etc/passwd — server reads and returns the local /etc/passwd file",
+        "GET /api/import?source=file:///app/config/secrets.yaml — accesses application configuration files on the server's filesystem",
+        "GET /api/preview?url=gopher://internal-redis:6379/_*1%0d%0a$8%0d%0aflushall — sends raw Redis commands via gopher:// to flush the internal cache",
+        "GET /api/fetch?url=ftp://internal-ftp-server/sensitive-files/ — browses internal FTP server through the vulnerable endpoint",
+        "GET /api/resolve?url=dict://internal-memcached:11211/stat — retrieves Memcached statistics via dict:// scheme"
+      ],
+      "mitigation": [
+        "Implement a strict URL scheme allowlist — only accept https:// (and optionally http://) in user-supplied URLs; reject all other schemes (file://, gopher://, ftp://, dict://, ldap://, data://) with 400.",
+        "Apply URL parsing before making any outbound connection — use a strict URL parser that validates the scheme, host, port, and path against the allowlist before the connection is initiated.",
+        "Never pass user-supplied URL parameters directly to HTTP client libraries without full validation — validate scheme, host, and resolved IP independently.",
+        "Test all URL input fields with alternate scheme payloads (file://, gopher://, ftp://) in your security test suite and assert all are rejected.",
+        "Apply network egress rules that block the server from initiating file system reads or non-HTTP protocol connections from the web application context."
+      ]
+    },
+    {
+      "type": "DNS Rebinding Attack",
+      "description": "Attacker uses a domain they control that initially resolves to a permitted IP address, then rapidly changes the DNS record to point to an internal IP — exploiting the gap between DNS resolution validation and the actual HTTP connection to bypass IP allowlists.",
+      "examples": [
+        "Attacker registers evil.com, passes allowlist check when it resolves to a public IP, then immediately changes DNS to 192.168.1.1 — server connects to internal address",
+        "Domain resolves to a legitimate CDN IP during validation, then rebinds to 169.254.169.254 — metadata service accessed using the pre-validated hostname",
+        "Attacker sets DNS TTL to 1 second — server validates at DNS check time but connects to internal IP when the rebind takes effect within the TTL window",
+        "Subdomain rebinding: subdomain.attacker.com initially resolves to 1.2.3.4 (allowed), then rebinds to 10.0.0.5 (internal)",
+        "DNS rebinding combined with a permissive hostname allowlist that trusts domain names without re-validating resolved IPs on each connection"
+      ],
+      "mitigation": [
+        "Re-validate the resolved IP address immediately before making the TCP connection — do not cache the result of an earlier DNS resolution check; perform the IP check at connection time.",
+        "Implement DNS pinning for external URL fetching — resolve the hostname once and pin the IP for the duration of the request, preventing mid-request rebinding.",
+        "Use a DNS resolver that enforces RFC 5735 and RFC 6598 filtering — block resolution of private and special-purpose IP ranges at the resolver level.",
+        "Apply the connection-time IP validation check in addition to pre-connection DNS resolution validation — defense in depth against rebinding attacks.",
+        "Set the allowlist validation to check both the hostname and the final resolved IP — reject connections where either is not on the allowlist."
+      ]
+    },
+    {
+      "type": "Open Redirect Chained to SSRF",
+      "description": "Attacker exploits an open redirect on a permitted domain to redirect the server's outbound request to an internal or restricted destination — bypassing domain-based allowlists that permit the initial domain but do not re-validate redirect destinations.",
+      "examples": [
+        "GET /api/fetch?url=https://allowlisted-partner.com/redirect?url=http://192.168.1.1 — server follows redirect to internal address without re-validating the destination",
+        "Using a URL shortener on the allowlist: /api/proxy?url=https://bit.ly/xyz — short URL redirects to http://169.254.169.254/",
+        "Open redirect on a trusted domain: /api/preview?url=https://trusted.com/out?target=http://internal-service:8080",
+        "Multi-hop redirect chain: allowlisted domain → CDN → another redirect → internal IP, with allowlist check only on the first hop",
+        "GitHub raw content URL that redirects through githubusercontent.com CDN to an attacker-controlled internal-IP redirect page"
+      ],
+      "mitigation": [
+        "Disable automatic HTTP redirect following in the HTTP client library — if redirects must be followed, re-validate each redirect destination against the allowlist before following.",
+        "Enforce a maximum redirect depth of 1–2 hops and re-validate the destination IP at each hop against the private IP and metadata IP blocklist.",
+        "Never include URL shorteners, open-redirect-prone domains, or domains with known redirect capabilities on the SSRF URL allowlist.",
+        "Log all redirect chains observed during outbound requests — alert on any redirect that resolves to a private IP or metadata endpoint.",
+        "Test SSRF bypass via redirect with known open-redirect payloads on each allowlisted domain as part of your security test suite."
+      ]
+    }
   ],
   "how_to_test": [
-    "imageProxy?url=http://169.254.169.254/",
-    "http://127.0.0.1, http://10.0.0.1",
-    "file://, ftp:// schemes; redirect chains to internal IPs"
+    "Step 1: Submit internal IP addresses in all URL input fields: 127.0.0.1, 169.254.169.254, 10.0.0.1, 192.168.1.1 — assert all are blocked before a connection is made",
+    "Step 2: Test alternate URL schemes: file:///etc/passwd, gopher://localhost:6379, ftp://internal — assert all non-HTTP schemes are rejected with 400",
+    "Step 3: Test cloud metadata endpoints directly: http://169.254.169.254/latest/meta-data/ (AWS), http://metadata.google.internal/ — assert blocked at both application and network layer",
+    "Step 4: Test DNS rebinding resistance: submit a URL pointing to a domain with very short TTL that resolves differently — verify IP re-validation occurs at connection time",
+    "Step 5: Test redirect chaining: submit an allowlisted domain URL that performs an open redirect to an internal IP — assert the redirect destination is re-validated and blocked",
+    "Step 6: Verify egress proxy logging: submit blocked SSRF attempts and confirm each appears in proxy/gateway logs with actor identity and attempted destination",
+    "Step 7: Confirm raw upstream content is never reflected: submit a URL to an attacker-controlled server returning a response with injection payloads — assert the API parses and re-serializes the response rather than reflecting it"
   ],
   "expected_outcomes": [
-    "Policy error; no internal responses; outbound only via proxy",
-    "Attempts logged with requested target"
+    "All requests to RFC1918 private ranges, loopback, and cloud metadata IPs are blocked before a TCP connection is made",
+    "Non-HTTP URL schemes (file://, gopher://, ftp://) are rejected with 400 Bad Request",
+    "Redirect chains are re-validated at each hop — destinations resolving to internal IPs are blocked",
+    "SSRF attempts are logged in egress proxy logs with actor identity and attempted destination",
+    "Raw upstream responses are never reflected to the caller — only parsed, re-serialized, schema-validated content is returned"
   ],
-  "minimal_example": "GET /fetch?url=http://169.254.169.254/latest/meta-data → blocked",
+  "minimal_example": "GET /api/fetch?url=http://169.254.169.254/latest/meta-data → 400 or connection blocked before reaching metadata service; attempt logged in egress proxy",
   "mitigation": [
-    "Enforce a strict allowlist of permitted outbound domains and IP ranges at the network layer; explicitly block RFC1918 private ranges, loopback addresses (127.0.0.1, ::1), and cloud metadata endpoints (169.254.169.254)",
-    "Route all server-initiated outbound requests through a hardened egress proxy that enforces the allowlist, logs every call with target and actor, and blocks unlisted destinations",
-    "Restrict permitted URL schemes to HTTPS only; disable automatic redirect following; re-validate the resolved IP against the allowlist after DNS resolution to prevent DNS rebinding attacks",
-    "Never reflect raw upstream responses directly to API clients — parse the response through a strict schema and re-serialize only expected fields before returning data to callers"
+    "Enforce a strict allowlist of permitted outbound domains and IP ranges; explicitly block RFC1918 private ranges, loopback addresses, and all known cloud metadata endpoints at both application and network layer",
+    "Route all server-initiated outbound requests through a hardened egress proxy; restrict permitted URL schemes to HTTPS only; disable automatic redirect following and re-validate each redirect destination",
+    "Re-validate the resolved IP address at connection time to prevent DNS rebinding; use DNS pinning for outbound URL fetching; never trust hostname allowlist checks alone",
+    "Never reflect raw upstream responses to API clients — parse through a strict schema and re-serialize only expected fields; log all blocked SSRF attempts with full destination and actor context"
   ]
 }

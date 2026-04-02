@@ -1,29 +1,129 @@
 {
   "id": "API8",
   "name": "Security Misconfiguration",
-  "what_it_means": "Unsafe defaults or forgotten hardening (open CORS, verbose errors, unused methods, missing headers, hardcoded secrets).",
-  "animated_example": "Leaving windows open after installing a new security door.",
+  "what_it_means": "Unsafe defaults, incomplete hardening, forgotten debug settings, or misconfigured security controls leave the API exposed — including open CORS policies, verbose error messages that leak internals, missing security headers, unused HTTP methods, hardcoded secrets, and improperly secured cloud or infrastructure resources.",
+  "animated_example": "Installing a new high-security front door but leaving the back windows open, the alarm disabled, and a spare key under the mat.",
   "quick_checks": [
-    "CORS restricted to known origins/methods/headers (no *)",
-    "Disable unused HTTP methods (TRACE, PUT/DELETE if unused)",
-    "Generic errors (no stacks/paths); banner/version minimization",
-    "Security headers (HSTS, CSP, X-Frame-Options, etc.)",
-    "Secrets managed in vault; not in code/images/env files"
+    "CORS policy restricted to an explicit origin allowlist — wildcard (*) never used in production for credentialed requests",
+    "All HTTP methods not explicitly required disabled (TRACE always disabled; OPTIONS restricted)",
+    "Error responses return generic messages — no stack traces, SQL errors, file paths, or framework versions",
+    "Full security response header set applied (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)",
+    "All secrets managed in a dedicated vault — never in source code, container images, or environment files",
+    "Configuration-as-code with security linting gates in CI/CD pipeline"
+  ],
+  "payload_types": [
+    {
+      "type": "Wildcard CORS Exploitation",
+      "description": "API configured with Access-Control-Allow-Origin: * (or a reflected origin) combined with Access-Control-Allow-Credentials: true allows malicious web pages to make authenticated cross-origin API requests using the victim's session and read the responses.",
+      "examples": [
+        "Origin: https://attacker.com sent to the API — response includes Access-Control-Allow-Origin: * and Access-Control-Allow-Credentials: true, allowing cross-origin authenticated reads",
+        "API reflects any Origin header value back in Access-Control-Allow-Origin — attacker's page at https://evil.com receives * CORS permission, enabling full API access with victim's cookies",
+        "JavaScript on attacker-controlled page uses fetch() with credentials:include to call the victim API and exfiltrate response data via the permissive CORS policy",
+        "Null origin exploitation: ACAO: null combined with sandboxed iframe allows cross-origin reads without a real domain",
+        "Subdomain takeover combined with permissive CORS allowing all subdomains — attacker takes over unused subdomain and leverages CORS to read main API responses"
+      ],
+      "mitigation": [
+        "Define an explicit allowlist of trusted origins in the CORS configuration — never use wildcard (*) for endpoints that return authenticated or sensitive data.",
+        "Never combine Access-Control-Allow-Credentials: true with a wildcard or reflected-origin CORS policy — credentials must only be allowed for explicitly listed, trusted origins.",
+        "Reject null as a valid CORS origin — null origin is sent by sandboxed iframes and file:// contexts that should never have cross-origin API access.",
+        "Validate the Origin header against the allowlist on the server side, not in client-side JavaScript — return 403 for untrusted origins rather than including them in the response header.",
+        "Regularly audit CORS configuration across all API endpoints using automated scanning — verify no endpoint inadvertently reflects arbitrary origins or uses wildcard for credentialed requests."
+      ]
+    },
+    {
+      "type": "Verbose Error and Stack Trace Leakage",
+      "description": "API returns detailed error messages, exception stack traces, SQL query text, file system paths, framework version strings, or internal service names to API consumers — providing attackers with reconnaissance information to plan targeted attacks.",
+      "examples": [
+        "POST /api/login with malformed JSON returns a full Java stack trace including Spring Boot version, internal class paths, and database driver details",
+        "GET /api/users?id=abc causes a SQL error returned verbatim: 'ERROR: invalid input syntax for integer, query: SELECT * FROM users WHERE id=abc'",
+        "Internal service error leaks the full exception: 'Connection refused: redis://internal-cache:6379' — revealing internal hostname and port",
+        "404 response includes the full filesystem path: 'File not found: /opt/app/src/api/routes/users.js:47'",
+        "Unhandled exception returns: 'Django version 3.1.5 at /api/endpoint — you have DEBUG=True set' — exposing framework version and debug mode status"
+      ],
+      "mitigation": [
+        "Configure production environments to return only generic error messages (e.g., 'An error occurred. Please try again.') — map all internal exceptions to safe, user-facing error codes.",
+        "Implement a global exception handler that catches all unhandled errors, logs the full detail server-side, and returns only a sanitized error response to the client.",
+        "Disable debug mode in all production deployments — use environment-specific configuration profiles to ensure debug flags cannot be accidentally enabled in production.",
+        "Suppress framework version strings, server banners, and X-Powered-By headers in all production API responses.",
+        "Test all error paths in automated security tests: trigger validation errors, authentication errors, database errors, and 404s — inspect every response for internal information leakage."
+      ]
+    },
+    {
+      "type": "Exposed Debug and Admin Endpoints",
+      "description": "Framework diagnostic endpoints, admin consoles, health check endpoints, or development utilities remain accessible in production — often without authentication — leaking internal state or providing unauthorized administrative access.",
+      "examples": [
+        "GET /actuator/env returns all Spring Boot environment variables including database credentials and API keys",
+        "GET /api/swagger.json in production exposes the complete API schema including internal and undocumented endpoints",
+        "GET /.well-known/security.txt returns but /admin/phpinfo.php is also accessible, leaking PHP version, loaded modules, and server configuration",
+        "GET /debug/vars (Go expvar endpoint) returns internal application metrics including memory stats and request counters",
+        "POST /api/graphql with introspection query returns the full schema including internal mutation types and admin fields not intended for external callers"
+      ],
+      "mitigation": [
+        "Block all framework diagnostic and actuator endpoints at the network layer in production — restrict /actuator, /metrics, /debug, /health/details to internal monitoring system IPs only.",
+        "Disable or password-protect Swagger/OpenAPI documentation endpoints in production — or serve only the public subset of the API schema without internal endpoints.",
+        "Disable GraphQL introspection in production environments — if introspection is required for tooling, gate it behind admin authentication.",
+        "Implement automated endpoint discovery scans post-deployment to detect debug or admin paths that appear in production builds.",
+        "Use deployment pipeline checks to assert that known debug endpoint paths return 404 or 403 in production before every release goes live."
+      ]
+    },
+    {
+      "type": "Missing or Bypassable Security Headers",
+      "description": "API responses lack critical security response headers — or headers are present but misconfigured — leaving clients vulnerable to clickjacking, MIME-type sniffing, cross-site scripting, and information disclosure through browser security feature bypass.",
+      "examples": [
+        "Missing Strict-Transport-Security header — browser does not enforce HTTPS, allowing SSL stripping attacks on subsequent requests",
+        "Content-Security-Policy: * allows loading resources from any origin, negating XSS protection for API-driven SPAs",
+        "Missing X-Content-Type-Options: nosniff — browser MIME-sniffs responses, potentially executing JSON as JavaScript",
+        "X-Frame-Options absent — API responses embedded in iframes, enabling clickjacking attacks against API-driven UI components",
+        "Cache-Control: no headers set on responses containing sensitive data — private API responses cached by shared proxies or browser cache"
+      ],
+      "mitigation": [
+        "Apply the full mandatory security header set to all API responses: Strict-Transport-Security (max-age≥31536000, includeSubDomains, preload), X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy: no-referrer.",
+        "Define a strict Content-Security-Policy for API-driven web applications — restrict script-src, connect-src, and frame-ancestors to explicitly listed trusted sources.",
+        "Set Cache-Control: no-store, no-cache on all API responses containing authentication tokens, personal data, or sensitive business information.",
+        "Automate security header validation in your post-deployment pipeline using tools like SecurityHeaders.io or OWASP ZAP — fail the deployment if required headers are missing or misconfigured.",
+        "Apply HSTS preload submission for all production API domains to protect against SSL stripping even on first visit."
+      ]
+    },
+    {
+      "type": "Hardcoded Secrets and Default Credentials",
+      "description": "API keys, database credentials, signing secrets, or admin passwords are hardcoded in source code, container images, environment files, or deployment scripts — or default credentials from frameworks and tools have not been changed before deployment.",
+      "examples": [
+        "JWT signing secret hardcoded as 'secret' or 'changeme' in application source code committed to a public repository",
+        "Database connection string with credentials committed to a .env file included in a public Docker image layer",
+        "Admin console accessible with default credentials admin/admin or admin/password — never changed after deployment",
+        "API key for a payment provider hardcoded in a mobile app's strings.xml file, extractable by decompiling the APK",
+        "AWS access key and secret hardcoded in a utility script pushed to a public GitHub repository — discovered and abused within minutes via automated credential scanning"
+      ],
+      "mitigation": [
+        "Store all secrets (API keys, database credentials, signing keys, certificates) in a dedicated secrets management system (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, GCP Secret Manager) — never in source code or container images.",
+        "Implement pre-commit secret scanning hooks (detect-secrets, git-secrets, truffleHog) to block accidental credential commits before they reach the repository.",
+        "Enforce mandatory credential rotation on a defined schedule with automated expiry alerts — treat non-rotating credentials as a security risk.",
+        "Change all default credentials (admin consoles, database root users, framework management interfaces) before deployment and audit for default credentials as part of deployment checklists.",
+        "Continuously scan public repositories, container registries, and artifact stores for leaked secrets using automated tools — establish an immediate rotation and revocation procedure when leaks are detected."
+      ]
+    }
   ],
   "how_to_test": [
-    "Preflight CORS probes; attempt cross-origin reads",
-    "Trigger errors and inspect for stack traces/paths",
-    "Probe OPTIONS/TRACE; scan for header gaps and configs"
+    "Step 1: Send preflight CORS requests with Origin: https://attacker.com and verify the response does not reflect untrusted origins or use wildcard with credentials",
+    "Step 2: Trigger validation errors, authentication failures, and 404s — inspect all error responses for stack traces, SQL text, file paths, or framework version strings",
+    "Step 3: Probe known framework diagnostic paths (/actuator, /debug, /metrics, /.env, /swagger.json, /graphql with introspection) and verify all return 404 or 403 in production",
+    "Step 4: Inspect all API response headers against the required security header set — flag any missing headers (HSTS, CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy)",
+    "Step 5: Attempt access with default credentials (admin/admin, admin/password, root/root) on all management interfaces — verify all defaults have been changed",
+    "Step 6: Scan source code repositories, container images, and CI/CD pipelines for hardcoded secrets using automated detection tools",
+    "Step 7: Send OPTIONS and TRACE requests to every endpoint — verify TRACE is disabled and OPTIONS does not advertise unintended or dangerous methods"
   ],
   "expected_outcomes": [
-    "Minimal information exposure; tight method/origin controls",
-    "No secrets or environment details leaked"
+    "CORS responses never include untrusted origins or combine wildcard with credentials",
+    "Error responses contain only generic messages — no internal paths, stack traces, SQL text, or framework versions",
+    "All diagnostic and debug endpoints return 403 or 404 in production",
+    "All required security headers present on every API response with correct values",
+    "No default or hardcoded credentials accessible — all secrets managed in a vault with rotation enforced"
   ],
-  "minimal_example": "Wildcard CORS + verbose SQL error → misconfiguration; fix to strict origin + generic error",
+  "minimal_example": "Wildcard CORS + verbose SQL error → critical misconfiguration; fix: strict origin allowlist + generic error handler + full security headers applied post-deploy",
   "mitigation": [
-    "Lock down CORS policy to an explicit allowlist of trusted origins with defined methods and headers — never use wildcard (*) in production or for credentialed requests",
-    "Apply the full security response header set (HSTS with preload, Content-Security-Policy, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy) and validate headers automatically post-deploy with a scanning tool",
-    "Manage all secrets (API keys, DB credentials, certificates) in a dedicated secrets vault (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) — never commit secrets to source code, container images, or CI environment variables",
-    "Implement configuration-as-code with security linting gates in the CI/CD pipeline to catch insecure defaults, exposed debug endpoints, or missing hardening settings before any deployment reaches production"
+    "Lock down CORS to an explicit allowlist of trusted origins with defined methods and headers — never use wildcard (*) in production or combine with Access-Control-Allow-Credentials: true",
+    "Apply the full security response header set (HSTS with preload, CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy) and validate automatically post-deploy with a scanning tool",
+    "Manage all secrets in a dedicated vault (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) — never commit secrets to source code or container images; implement pre-commit secret scanning hooks",
+    "Implement configuration-as-code with security linting gates in CI/CD to catch insecure defaults; return only generic error messages in production; block all debug and actuator endpoints at the network layer"
   ]
 }

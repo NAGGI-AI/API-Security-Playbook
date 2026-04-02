@@ -1,29 +1,129 @@
 {
   "id": "API5",
   "name": "Broken Function Level Authorization (BFLA)",
-  "what_it_means": "API fails to enforce permissions on actions/endpoints, letting basic users invoke admin or restricted functions.",
-  "animated_example": "Pressing the elevator’s ‘staff only’ button and it still takes you to the restricted floor.",
+  "what_it_means": "The API fails to enforce permissions on actions and endpoints — allowing low-privilege users to invoke administrative, privileged, or restricted functions simply by calling the endpoint directly. Authorization is missing or implemented only at the UI layer, not the backend.",
+  "animated_example": "Pressing the elevator's staff-only button and it still takes you to the restricted floor — the button is hidden on the public panel but still works if you know it exists.",
   "quick_checks": [
-    "Server-side authorization on every action; admin routes isolated",
-    "HTTP method ↔ privilege mapping defined and enforced",
-    "MFA/step-up auth for privileged operations",
-    "No security-by-UI; backend blocks hidden/maintenance functions",
-    "Comprehensive allow/deny policies with least privilege"
+    "Server-side authorization enforced on every action endpoint — no reliance on UI visibility alone",
+    "Admin routes isolated with dedicated middleware and network-level controls",
+    "HTTP method to privilege mapping defined and enforced per endpoint",
+    "MFA / step-up re-authentication required for privileged or irreversible operations",
+    "Hidden, debug, and maintenance endpoints blocked in production environments",
+    "Centralized RBAC or ABAC policy with a documented permission matrix reviewed at every release"
+  ],
+  "payload_types": [
+    {
+      "type": "Admin Endpoint Access with Low-Privilege Token",
+      "description": "Attacker calls administrative API endpoints directly using a standard user's authentication token, exploiting missing or bypassed server-side authorization checks on those routes.",
+      "examples": [
+        "POST /api/admin/users/delete with a regular user JWT — returns 200 and deletes a user account",
+        "GET /api/admin/allLogs — accessible without admin role, returning full application audit logs",
+        "PUT /api/settings/global { \"maintenanceMode\": true } — accepted from a non-admin token, taking the application offline",
+        "GET /api/admin/invoices/export — bulk export of all customer invoices accessible to any authenticated user",
+        "POST /api/admin/roles/assign { \"userId\": 99, \"role\": \"admin\" } — role assignment endpoint reachable by a standard user token"
+      ],
+      "mitigation": [
+        "Enforce server-side RBAC or ABAC on every admin and privileged endpoint — never rely on UI visibility, route obscurity, or client-side checks to gate access.",
+        "Prefix all admin routes under a dedicated path (e.g., /admin/, /internal/) and apply a separate authentication middleware with strict role validation to all routes under that prefix.",
+        "Maintain a centralized permission matrix mapping every HTTP method and endpoint path to required roles — review and sign off this matrix at every release cycle.",
+        "Apply network-level controls to admin APIs: restrict access by IP allowlist or require mTLS from known internal services.",
+        "Automated test: invoke every admin endpoint with a standard user token and assert 403 is returned — include this in your CI/CD security gate."
+      ]
+    },
+    {
+      "type": "HTTP Method Privilege Escalation",
+      "description": "Attacker changes the HTTP method on an endpoint to invoke a higher-privilege operation — e.g., switching from GET (read-only) to POST, PUT, or DELETE — exploiting authorization checks that protect some methods but not others on the same path.",
+      "examples": [
+        "GET /api/reports/99 is authorized for all users — DELETE /api/reports/99 has no authorization check and deletes the record",
+        "GET /api/config authorized for read-only users — PUT /api/config overwrites configuration without a separate privilege check",
+        "OPTIONS response on /api/admin/users reveals DELETE is supported — attacker sends DELETE /api/admin/users/42 and succeeds",
+        "POST /api/users/{id}/disable works without admin check because only GET on that path was restricted",
+        "PATCH /api/users/{id} with the body { \"locked\": false } — available to standard users despite only GET being documented as permitted"
+      ],
+      "mitigation": [
+        "Apply authorization checks independently for each HTTP method on every endpoint — a GET authorization check does not implicitly protect PUT, PATCH, or DELETE on the same path.",
+        "Use an explicit HTTP method allow-list per endpoint: define which methods are permitted for each role and return 405 Method Not Allowed for any method not on the list.",
+        "Restrict OPTIONS responses to avoid advertising HTTP methods that are not fully authorization-hardened.",
+        "Test every HTTP method (GET, POST, PUT, PATCH, DELETE, OPTIONS) on every endpoint in your security test suite — include low-privilege tokens for each test.",
+        "Centralize method-level authorization in a middleware layer so new endpoints cannot be added without explicitly defining their method-permission mapping."
+      ]
+    },
+    {
+      "type": "Hidden and Debug Endpoint Direct Access",
+      "description": "Attacker discovers and directly accesses internal maintenance, debug, or development endpoints that were not removed or disabled before production deployment — often missing any authentication or authorization checks.",
+      "examples": [
+        "GET /api/debug/config returns full application configuration including database credentials and API keys",
+        "POST /api/internal/rebuildIndex triggers a full database rebuild accessible without authentication from the internet",
+        "GET /api/health/details returns internal service topology, version numbers, and dependency health including internal hostnames",
+        "POST /api/test/createAdminUser — a test helper endpoint left in production that creates an admin account with no authentication",
+        "GET /actuator/env (Spring Boot) returns all environment variables including secrets when actuator endpoints are not restricted"
+      ],
+      "mitigation": [
+        "Remove all debug, test, and maintenance endpoints before production deployment — use feature flags or deployment profiles to exclude these routes from production builds.",
+        "Block internal and actuator endpoints at the network layer (firewall, security group) so they are unreachable from the public internet even if accidentally deployed.",
+        "Scan deployed production APIs regularly using automated discovery tools to detect endpoints present in production that are not in the approved API inventory.",
+        "Never expose framework-level diagnostic endpoints (Spring Actuator, Django Debug Toolbar, Flask Debug) in production — disable them in production configuration profiles.",
+        "Apply authentication and authorization to any operational endpoint that must remain in production (health checks, metrics) — restrict to monitoring system IPs only."
+      ]
+    },
+    {
+      "type": "Vertical Privilege Escalation via Role Parameter",
+      "description": "Attacker manipulates role, permission, or privilege-level parameters in API requests to elevate their own access level or gain capabilities intended only for higher-privilege users.",
+      "examples": [
+        "POST /api/auth/token { \"username\": \"user\", \"password\": \"pass\", \"role\": \"admin\" } — token issued with admin role if the role claim is accepted from the request body",
+        "GET /api/resources?accessLevel=admin — endpoint returns admin-level resources when the access level is supplied as a query parameter without server-side validation",
+        "POST /api/invitations { \"email\": \"x@y.com\", \"role\": \"superadmin\" } — invitation issued with elevated role if role is not validated against the inviter's own permissions",
+        "PUT /api/users/me { \"permissions\": [\"read\",\"write\",\"delete\",\"admin\"] } — permissions array accepted and stored without checking against the caller's own permission scope",
+        "JWT refresh endpoint accepts a role_override claim in the refresh token body and issues an access token with that elevated role"
+      ],
+      "mitigation": [
+        "Never derive a user's role or permissions from client-supplied request parameters — always resolve them from the authenticated session, user record, and RBAC policy on the server.",
+        "Validate role assignment requests against the assigning user's own role: a user cannot grant roles or permissions exceeding their own — enforce this at the business logic layer.",
+        "Reject any request that includes role, permissions, or privilege-level fields in contexts where the caller does not have explicit authorization to set those fields.",
+        "Log all role change operations with before/after values, actor identity, and target user — alert on attempts to self-assign elevated roles.",
+        "Audit all token issuance endpoints to confirm roles and permissions are resolved from authoritative server-side sources, not from any client-supplied claim."
+      ]
+    },
+    {
+      "type": "Cross-Role Feature Invocation",
+      "description": "Attacker invokes API endpoints intended for a different user role — such as a buyer calling a seller-only endpoint, a free-tier user calling premium-tier endpoints, or a read-only user calling write endpoints — exploiting insufficient role boundary enforcement.",
+      "examples": [
+        "Buyer account calls POST /api/seller/listings to create a product listing — seller-only endpoint accepts a buyer token",
+        "Free-tier user calls POST /api/premium/export — premium feature available to any authenticated user regardless of subscription tier",
+        "Read-only service account calls POST /api/data/bulk-delete — write operations not restricted by service account scope",
+        "Customer support role calls POST /api/billing/refund/{id} — financial operation only intended for billing admins but accessible to support role",
+        "Unapproved vendor calls GET /api/partner/pricing — partner-tier endpoint returning discounted pricing accessible to regular API consumers"
+      ],
+      "mitigation": [
+        "Model user roles at sufficient granularity to distinguish between all meaningful permission boundaries in your application — buyer vs. seller, free vs. premium, read vs. write.",
+        "Apply role checks at the business logic layer for every function, not just route-level middleware — a route middleware may check authentication but business logic must check authorization.",
+        "Enforce subscription and feature tier checks server-side: never rely on client-side feature flags or UI hiding to gate premium or restricted features.",
+        "Conduct regular privilege audit reviews: for each endpoint, document which roles may access it and include automated tests asserting that all other roles are rejected.",
+        "Use deny-by-default authorization: if an endpoint does not have an explicit allow rule for a role, that role is denied — never use an allow-by-default posture."
+      ]
+    }
   ],
   "how_to_test": [
-    "Invoke /admin/* with low-privilege token",
-    "Use disallowed methods (DELETE where not permitted)",
-    "Call maintenance/debug endpoints directly"
+    "Step 1: Map all API endpoints including admin, internal, and debug paths — then invoke each with a standard user token and assert 403 is returned",
+    "Step 2: Test every HTTP method (GET, POST, PUT, PATCH, DELETE) on each endpoint with a low-privilege token — assert methods not permitted for that role return 403 or 405",
+    "Step 3: Attempt to access /admin/, /internal/, /debug/, /actuator/ paths from the internet — assert all are blocked or return 403/404",
+    "Step 4: Submit role, permissions, or privilege-level fields in request bodies and assert they are rejected or silently stripped",
+    "Step 5: Test cross-role access: as a buyer call seller endpoints, as a free-tier user call premium endpoints — assert 403 in all cases",
+    "Step 6: Test step-up authentication bypass: call privileged operations (bulk delete, role assignment, config change) without completing MFA challenge — assert 403",
+    "Step 7: Verify audit logging: perform unauthorized function access attempts and confirm each is logged with actor identity, endpoint, and method"
   ],
   "expected_outcomes": [
-    "403 Forbidden for unauthorized function access",
-    "Privileged attempts logged with actor and scope"
+    "Standard user tokens return 403 for all admin, internal, and debug endpoints",
+    "HTTP methods not permitted for a role return 403 or 405 — never execute the operation",
+    "Role and permissions fields in request bodies are rejected or ignored — never persisted",
+    "Cross-role feature access is blocked at the business logic layer, not just the UI",
+    "All BFLA attempt events are logged with actor identity, target endpoint, and HTTP method"
   ],
-  "minimal_example": "Normal user → POST /admin/rebuildIndex → 403; admin with MFA → 200",
+  "minimal_example": "Normal user → POST /api/admin/rebuildIndex → 403 Forbidden; admin with valid MFA → 200 OK; standard user with role:admin in body → 403 (role field ignored)",
   "mitigation": [
     "Enforce server-side RBAC or ABAC on every function endpoint — never rely on UI visibility, hidden routes, or client-side checks alone to gate access to privileged operations",
-    "Maintain a centralized permission matrix that maps each HTTP method and endpoint to required roles; review and sign off this matrix at every release cycle",
-    "Require step-up MFA re-challenge for privileged or irreversible operations (bulk delete, user promotion, config changes) regardless of active session state",
-    "Isolate admin APIs onto separate routes or dedicated services protected by network-level controls (IP allowlist, mTLS) — not just application-layer authorization"
+    "Maintain a centralized permission matrix mapping each HTTP method and endpoint to required roles; review and sign off this matrix at every release; apply deny-by-default authorization posture",
+    "Require step-up MFA re-challenge for privileged or irreversible operations regardless of active session state; log all unauthorized function access attempts with full actor and endpoint context",
+    "Isolate admin APIs onto separate routes protected by network-level controls (IP allowlist, mTLS); remove all debug and test endpoints before production deployment; scan for shadow endpoints regularly"
   ]
 }

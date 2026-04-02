@@ -1,27 +1,129 @@
 {
   "id": "API9",
   "name": "Improper Inventory Management",
-  "what_it_means": "Unknown, outdated, or shadow APIs remain exposed without ownership, controls, or monitoring.",
-  "animated_example": "Keys to old office doors still work because no one collected them.",
+  "what_it_means": "Unknown, undocumented, outdated, or shadow API endpoints remain deployed and exposed without ownership, security controls, or monitoring — creating attack surface that is invisible to the security team. Attackers exploit these forgotten endpoints as they frequently lack the hardening applied to actively maintained APIs.",
+  "animated_example": "Keys to old office doors still work because no one collected them when the offices were vacated — the locks were never changed and security assumes those doors are sealed.",
   "quick_checks": [
-    "Central API catalog with owner, data class, version, environment",
-    "Versioning lifecycle with deprecation/sunset policies",
-    "Gateway logs/repo/runtime traffic reconciled regularly",
-    "Shadow/test endpoints blocked; old versions return 410"
+    "Central API catalog with owner, data classification, version, and lifecycle state for every endpoint",
+    "Versioning lifecycle policy with deprecation timelines, Sunset headers, and hard-block after end-of-life",
+    "Automated reconciliation of gateway logs and runtime traffic against API inventory to surface shadow endpoints",
+    "Test, debug, and internal endpoints blocked at network layer in production — not just disabled in application config",
+    "Shadow API discovery scans run regularly using traffic analysis and active probing tools",
+    "Retired API versions return 410 Gone — not silently serving requests or redirecting to newer versions"
+  ],
+  "payload_types": [
+    {
+      "type": "Shadow and Zombie API Discovery and Exploitation",
+      "description": "Attacker discovers and exploits API endpoints that are deployed and reachable but not in the official API inventory — including forgotten microservices, undocumented internal endpoints, or routes added during development and never removed.",
+      "examples": [
+        "GET /api/internal/user-export discovered via JavaScript bundle analysis — returns all user records without authentication, not in the public API docs",
+        "Older microservice endpoint /service/legacy/admin accessible from the internet after the team forgot to update firewall rules when it was decommissioned",
+        "Development endpoint /api/dev/reset-all-passwords deployed to production through an incomplete CI/CD pipeline exclusion",
+        "Undocumented endpoint /api/v2/beta/bulk-delete found via fuzzing with common API path wordlists — no authorization check present",
+        "Shadow API discovered in mobile app network traffic that never appears in API gateway logs because it calls a backend service directly, bypassing all gateway security controls"
+      ],
+      "mitigation": [
+        "Maintain a live, versioned API catalog (OpenAPI/Swagger registry) with an assigned owner, data classification, environment tag, and lifecycle state for every endpoint — no undocumented endpoint should be reachable in production.",
+        "Enforce an API gateway as the single entry point for all external API traffic — reject direct access to backend services that bypasses the gateway.",
+        "Run automated API discovery tools against production infrastructure on a regular schedule to surface endpoints not in the inventory — treat any undocumented reachable endpoint as a critical finding.",
+        "Implement runtime traffic analysis that alerts when requests are received on paths not in the approved API catalog.",
+        "Require all new API endpoints to be registered in the API catalog before deployment is approved — include catalog registration as a mandatory step in the CI/CD pipeline."
+      ]
+    },
+    {
+      "type": "Deprecated Version Exploitation",
+      "description": "Attacker calls outdated or superseded API versions that remain deployed and accessible — often lacking security fixes, rate limiting, authentication improvements, or data minimization controls added in newer versions.",
+      "examples": [
+        "GET /api/v1/users — v1 endpoint missing authentication controls patched in v2, returns full user list without auth",
+        "POST /api/v1/login accepting HTTP Basic Auth over HTTPS — deprecated in v2 which requires OAuth 2.0, but v1 still accepts credentials",
+        "GET /api/v1/admin/export returning full user database dump without pagination — v2 adds pagination and data minimization, but v1 remains accessible",
+        "POST /api/v1/payments/process lacking the fraud detection layer added in v2 — attacker routes fraudulent transactions through the old version",
+        "GET /api/v1/reports — v1 lacks the GDPR data-minimization filter added in v2, returning PII fields that v2 suppresses"
+      ],
+      "mitigation": [
+        "Enforce a strict API versioning lifecycle with communicated deprecation timelines — deprecated versions must have a public sunset date with Sunset response headers on every response.",
+        "Hard-block deprecated API versions after their end-of-life date — return 410 Gone rather than silently serving requests or redirecting to the new version.",
+        "Apply all security patches and controls retroactively to supported older versions — never maintain a version that lacks security parity with the current version.",
+        "Monitor traffic to deprecated API versions — alert on any usage and proactively contact consuming clients before forced deprecation.",
+        "Test deprecated versions with your current security test suite regularly — do not exempt older versions from security testing."
+      ]
+    },
+    {
+      "type": "Undocumented Internal API Exposure",
+      "description": "Internal service-to-service API endpoints intended only for backend communication are inadvertently exposed to the internet — lacking authentication, rate limiting, or other controls assumed to be provided by network isolation.",
+      "examples": [
+        "Internal gRPC service endpoint port 50051 open to the internet without authentication — intended only for service mesh communication",
+        "Admin API running on port 8080 of the same host as the public API (port 443) — firewall only restricts external access to 443, leaving 8080 exposed",
+        "Internal event bus REST API accessible from a public IP via SSRF or misconfigured routing — can inject events into internal processing pipelines",
+        "Backend API endpoint /internal/sync published to the same hostname as the public API — path-based routing misconfiguration exposes it externally",
+        "Kubernetes service with type:LoadBalancer accidentally assigned a public IP — internal cluster API accessible from the internet"
+      ],
+      "mitigation": [
+        "Apply network-level access controls to all internal API services — restrict inbound traffic to known internal IP ranges and service mesh identities; deny all external access regardless of path.",
+        "Run internal services on dedicated ports and hostnames with separate network security rules from public-facing services — never co-host internal and external APIs on the same exposed port.",
+        "Audit cloud and Kubernetes networking configurations regularly for services accidentally exposed to the public internet — use automated tools to detect misconfigurations.",
+        "Apply authentication (mTLS, service account tokens) to all service-to-service APIs even within the internal network — assume zero trust; never rely solely on network isolation.",
+        "Include internal endpoint exposure checks in pre-production security reviews and deployment validation — verify no internal service is reachable from the internet before every release."
+      ]
+    },
+    {
+      "type": "Test and Debug Endpoint Reachable in Production",
+      "description": "Endpoints created for development, testing, load testing, or QA purposes are not removed or blocked before production deployment — often having no authentication, full data access, or destructive capabilities.",
+      "examples": [
+        "POST /api/test/createAdminUser — test helper that creates an admin account with a known password, left in production",
+        "DELETE /api/test/purge-all-data — data reset endpoint for test environments, accessible in production without authentication",
+        "GET /api/qa/bypass-auth?userId=1 — QA authentication bypass endpoint deployed to production, allows login as any user by ID",
+        "POST /api/load-test/bulk-insert — performance test bulk data endpoint with no rate limiting, usable for DoS in production",
+        "GET /api/debug/session-tokens — returns all active session tokens for all users, created for debugging authentication issues"
+      ],
+      "mitigation": [
+        "Use build profiles, feature flags, or conditional compilation to exclude test and debug endpoints from production builds entirely — never rely on application-level configuration alone.",
+        "Implement automated deployment validation that probes known test and debug endpoint paths and fails the deployment if any return non-404/403 responses in production.",
+        "Require code review sign-off specifically checking for test helpers, debug routes, and QA utilities before any branch is merged to the production-deployment branch.",
+        "Apply separate environment-based routing rules that block /test/, /debug/, /qa/, /dev/ path prefixes at the API gateway for production environments.",
+        "Run regular automated scans of production endpoints using common test/debug path wordlists — treat any hit as a critical finding requiring immediate remediation."
+      ]
+    },
+    {
+      "type": "API Enumeration via Exposed Documentation",
+      "description": "Attacker uses publicly accessible API documentation, Swagger/OpenAPI specs, or JavaScript bundles to enumerate all endpoints, parameters, and internal object structures — enabling targeted attacks against undiscovered endpoints.",
+      "examples": [
+        "GET /api/swagger.json in production returns the full OpenAPI spec including internal admin endpoints, management routes, and deprecated paths",
+        "JavaScript app bundle analyzed with static tools to extract all API endpoint paths hard-coded in the frontend code",
+        "GET /api/v2/openapi.yaml exposes all internal data models including sensitive fields marked internal in comments but not hidden from the spec",
+        "GraphQL introspection query { __schema { types { name, fields { name, type } } } } enumerates all available types and fields",
+        "Postman collection file committed to a public GitHub repository reveals all API endpoints, example requests, and authentication headers"
+      ],
+      "mitigation": [
+        "Restrict API documentation access in production to authenticated users only — or serve only a public subset of the API schema that excludes internal, admin, and deprecated endpoints.",
+        "Disable GraphQL introspection in production environments — provide schema documentation through a controlled, access-gated developer portal instead.",
+        "Audit JavaScript bundles and mobile app binaries before release to detect hardcoded internal endpoint paths that should not be exposed in client-side code.",
+        "Never commit API collections, Postman environments, or developer tooling to public source code repositories — use private repositories or secrets management for integration credentials.",
+        "Treat your API schema and documentation as sensitive information — apply the same access controls and data classification to API docs as to the API data itself."
+      ]
+    }
   ],
   "how_to_test": [
-    "Scan for /v1/, /legacy/, /test/ routes",
-    "Compare runtime traffic with inventory; find unlisted APIs"
+    "Step 1: Fuzz common API path patterns (/v1/, /v2/, /legacy/, /old/, /test/, /debug/, /internal/, /admin/, /dev/, /qa/) and compare results against the official API inventory",
+    "Step 2: Analyze JavaScript bundles and mobile app binaries for hardcoded API endpoint paths — test each discovered path for accessibility and authentication requirements",
+    "Step 3: Request deprecated API versions (/api/v1/, /api/v0/) and verify they return 410 Gone or are blocked — not serving live data",
+    "Step 4: Probe framework diagnostic paths (/actuator/, /.well-known/, /metrics, /health/details) and verify all return 403 or 404 in production",
+    "Step 5: Attempt GraphQL introspection and verify it is disabled or requires admin authentication in production",
+    "Step 6: Compare runtime API gateway traffic logs against the API inventory — identify any paths receiving traffic that are not in the catalog",
+    "Step 7: Scan cloud and Kubernetes configurations for services with unexpected public IP assignments — verify no internal services are reachable from the internet"
   ],
   "expected_outcomes": [
-    "Every endpoint mapped to an owner and lifecycle state",
-    "Deprecated versions blocked or 410 Gone"
+    "Every reachable endpoint in production is mapped to an entry in the API catalog with an assigned owner and lifecycle state",
+    "Deprecated and retired API versions return 410 Gone — not silently serving requests",
+    "Test, debug, and internal endpoints return 404 or 403 in production — not accessible from the internet",
+    "API documentation and schemas are access-controlled — not freely accessible to unauthenticated callers",
+    "Shadow API discovery scans produce no findings — all reachable endpoints are in the approved inventory"
   ],
-  "minimal_example": "GET /v1/visitor on retired API → 410 Gone (or blocked)",
+  "minimal_example": "GET /api/v1/users on retired v1 → 410 Gone; GET /api/test/createAdminUser → 404; GET /api/swagger.json → 401 (requires authentication); runtime traffic matches API catalog 100%",
   "mitigation": [
-    "Maintain a live, versioned API catalog (OpenAPI/Swagger registry) with an assigned owner, data classification, environment tag, and lifecycle state for every endpoint — no undocumented endpoint should be reachable in production",
-    "Enforce deprecation and sunset policies with communicated timelines, Sunset response headers on deprecated routes, and hard-block or return 410 Gone after the end-of-life date",
-    "Reconcile runtime API traffic logs from the gateway against the API inventory on a regular schedule using automated discovery tools to surface shadow APIs, zombie endpoints, and unregistered services",
-    "Restrict API exposure by environment using network controls: test, debug, and internal maintenance endpoints must be unreachable in production regardless of application-layer configuration"
+    "Maintain a live API catalog (OpenAPI/Swagger registry) with owner, data class, version, and lifecycle state for every endpoint — require catalog registration before any endpoint is deployed; reconcile against runtime traffic regularly",
+    "Enforce deprecation and sunset policies with Sunset response headers and hard-block or 410 Gone after end-of-life; apply security patches retroactively to all supported versions",
+    "Restrict API exposure by environment using network controls — test, debug, and internal endpoints must be unreachable in production at the network layer regardless of application config",
+    "Run automated shadow API discovery scans on a regular schedule; audit JavaScript bundles and mobile binaries for hardcoded paths; disable GraphQL introspection and restrict API documentation in production"
   ]
 }

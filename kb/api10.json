@@ -1,28 +1,129 @@
 {
   "id": "API10",
   "name": "Unsafe Consumption of APIs",
-  "what_it_means": "Trusting upstream/external APIs without validation, TLS checks, or safe failure allows data poisoning, spoofing, or logic abuse.",
-  "animated_example": "Eating mystery food without checking the label — could be spoiled or mislabeled.",
+  "what_it_means": "The API blindly trusts data received from upstream third-party or internal services without validation, TLS verification, or safe failure handling — allowing attackers who can influence upstream responses to inject malicious data, cause logic errors, trigger injection attacks, or compromise the consuming service through its dependencies.",
+  "animated_example": "Eating mystery food without checking the label, expiry date, or source — it could be spoiled, mislabeled, or deliberately tampered with by whoever put it in the fridge.",
   "quick_checks": [
-    "Validate upstream responses against strict schemas/types",
-    "TLS validation/cert pinning; timeouts/retries/circuit breakers",
-    "Fail securely (no fail-open); sanitize before use",
-    "Cache poisoning protections; verify source authenticity"
+    "All upstream API responses validated against a strict JSON schema before processing",
+    "TLS with full certificate chain validation enforced for all external integrations — never disabled in production",
+    "Timeouts, retries with exponential backoff, and circuit breakers configured for every external dependency",
+    "Fail-closed design: on upstream error or unexpected response, default to denial — never fail open",
+    "All data from upstream services sanitized and re-encoded before passing to downstream systems or rendering layers",
+    "Webhook signatures verified cryptographically before processing any webhook payload"
+  ],
+  "payload_types": [
+    {
+      "type": "Upstream Response Data Poisoning",
+      "description": "Attacker compromises or manipulates a third-party upstream API to inject malicious data into responses — which the consuming API processes without validation, leading to SQL injection, XSS, command injection, or business logic corruption in the downstream service.",
+      "examples": [
+        "Compromised currency exchange rate API returns a manipulated rate — consuming payment API processes it without validation, applying the fraudulent exchange rate to transactions",
+        "Third-party user profile API response includes an injected script tag in the 'name' field — consuming API stores it without sanitization, triggering stored XSS when displayed",
+        "Upstream product catalog API returns { \"price\": -500 } — consuming e-commerce API processes the negative price, applying a credit to the attacker's account",
+        "Compromised partner API injects SQL fragments into address fields — consuming API concatenates them directly into a SQL query without parameterization",
+        "Supply chain attack on an upstream identity provider returns modified role claims — consuming API elevates attacker's privileges based on the poisoned claims"
+      ],
+      "mitigation": [
+        "Validate all upstream API responses against a strict JSON schema before any processing — reject responses with unexpected fields, incorrect types, out-of-range values, or sizes exceeding defined thresholds.",
+        "Apply business logic validation to upstream data: reject semantically invalid values (negative prices, dates in the past for future bookings, impossible quantities) even if they pass schema validation.",
+        "Sanitize and re-encode all string data from upstream services before passing to downstream systems — apply output encoding appropriate to the consumption context (SQL parameterization, HTML encoding, shell escaping).",
+        "Treat upstream APIs as untrusted external inputs — apply the same input validation rigor to upstream responses as to direct user input.",
+        "Monitor upstream response anomalies: alert on unexpected field additions, value range changes, or response structure changes that deviate from the established baseline."
+      ]
+    },
+    {
+      "type": "TLS Bypass and Certificate Validation Disabled",
+      "description": "Attacker performs a man-in-the-middle attack against an integration where TLS certificate validation has been disabled — intercepting and modifying upstream API responses in transit to inject malicious data or credentials.",
+      "examples": [
+        "Integration code contains verify=False (Python requests) or rejectUnauthorized: false (Node.js) — MITM attacker intercepts all upstream communication",
+        "Certificate pinning disabled for a payment gateway integration — attacker with a rogue CA certificate intercepts payment confirmation responses",
+        "Internal service-to-service API using self-signed certificates with validation disabled — anyone on the same network segment can MITM the connection",
+        "Expired certificate in production causing application errors — team disables validation as a quick fix, leaving MITM window open indefinitely",
+        "Integration accepting any certificate from an intermediate CA rather than pinning to the specific leaf certificate — compromised CA issues a valid certificate for MITM"
+      ],
+      "mitigation": [
+        "Enforce TLS with full certificate chain validation for all external API integrations — never disable certificate verification in production code under any circumstances.",
+        "Use certificate pinning for high-trust third-party integrations (payment processors, identity providers) — pin to the specific leaf or intermediate certificate and rotate pins on a defined schedule.",
+        "Implement automated certificate expiry monitoring with alerts triggering at least 30 days before expiry — establish a documented certificate rotation process to prevent emergency disablement of validation.",
+        "Audit all HTTP client configurations across the codebase for verify=False, rejectUnauthorized: false, ssl_verify=False, or equivalent insecure settings — treat any finding as critical.",
+        "Apply mutual TLS (mTLS) for high-sensitivity service-to-service integrations — require both parties to authenticate with certificates, not just server-side validation."
+      ]
+    },
+    {
+      "type": "Third-Party Webhook Spoofing",
+      "description": "Attacker sends forged webhook payloads mimicking legitimate third-party event notifications — exploiting missing or insufficient webhook signature verification to trigger unauthorized business actions in the consuming API.",
+      "examples": [
+        "Forged POST /api/webhooks/payment payload mimicking Stripe's payment.succeeded event without HMAC signature verification — triggers order fulfillment without a real payment",
+        "Crafted GitHub webhook event sent to a CI/CD integration endpoint — triggers a pipeline build with attacker-controlled parameters due to missing webhook secret validation",
+        "Spoofed Slack webhook event injecting commands into an internal bot integration — executes unauthorized administrative actions",
+        "Replaying a legitimate captured webhook payload after its expiry — server processes the replay because timestamp validation is not enforced",
+        "Forged identity provider (IdP) assertion callback to the SSO integration — logs attacker in as another user due to missing signature verification on the SAML response"
+      ],
+      "mitigation": [
+        "Verify cryptographic signatures on all incoming webhooks before processing any payload — use the provider's recommended HMAC-SHA256 verification with a secret known only to your server.",
+        "Reject webhook payloads with missing, invalid, or expired signatures with 401 — never process an unverified webhook payload as a precautionary measure.",
+        "Validate webhook event timestamps and reject events older than a defined tolerance window (e.g., 5 minutes) to prevent replay attacks.",
+        "Use webhook-specific secrets distinct from other API credentials — rotate them on a regular schedule and never expose them in client-side code or logs.",
+        "Log all webhook signature verification failures with the source IP, payload hash, and timestamp — alert on patterns of repeated failures from the same source as potential spoofing attempts."
+      ]
+    },
+    {
+      "type": "Malformed Upstream Response Exploitation",
+      "description": "Attacker or a compromised upstream service returns malformed, oversized, or structurally unexpected responses that exploit parsing vulnerabilities, trigger unsafe error handling, or cause the consuming service to enter an exploitable error state.",
+      "examples": [
+        "Upstream API returns a null value for a required field — consuming service proceeds with null user ID, bypassing authorization checks that assumed a valid ID",
+        "Oversized upstream JSON response (500MB) triggers memory exhaustion in the consuming service while buffering the full response",
+        "Unexpected Content-Type (text/html instead of application/json) returned by upstream — consuming service fails to parse and falls back to a permissive default behavior",
+        "Upstream returns HTTP 200 with an error body — consuming service interprets the 200 status as success and proceeds without reading the error details",
+        "Recursive or self-referencing JSON structure in upstream response causes consuming service's JSON parser to enter infinite recursion"
+      ],
+      "mitigation": [
+        "Validate upstream response Content-Type headers before parsing — reject responses with unexpected MIME types rather than attempting to parse them.",
+        "Apply size limits to upstream API responses — terminate and reject responses exceeding the defined maximum size before buffering the full body.",
+        "Validate HTTP status codes from upstream APIs against expected values — treat unexpected 2xx responses with non-conforming bodies as errors, not successes.",
+        "Implement null-safe processing for all upstream response fields — never assume a field present in the schema will contain a valid non-null value.",
+        "Set strict JSON parsing options (maximum depth, maximum string length, maximum array size) when deserializing upstream responses — reject malformed structures before any business logic executes."
+      ]
+    },
+    {
+      "type": "Cache Poisoning via Upstream Manipulation",
+      "description": "Attacker influences data returned by an upstream API that is cached by the consuming service — causing the poisoned response to be served to all subsequent consumers of that cached data, amplifying the impact of a single upstream manipulation.",
+      "examples": [
+        "Upstream permissions API response for user 99 cached with an incorrect elevated role — all subsequent requests for user 99 receive the poisoned cached permissions",
+        "CDN or API gateway caches a manipulated upstream product price response — all users receive the manipulated price until cache expiry",
+        "Upstream IP geolocation service response poisoned to return an incorrect country — consuming API's geo-restriction bypass cached and served to all callers in that IP range",
+        "Shared cache key not scoped per user — upstream response for admin user cached with a generic key, served to non-admin users hitting the same cache key",
+        "Poisoned upstream feature flag API response cached — incorrect feature flags served to all users, enabling or disabling features across the entire user base"
+      ],
+      "mitigation": [
+        "Scope cache keys to include all relevant request parameters that affect the response — never use a single shared cache key for responses that vary per user, role, or context.",
+        "Apply short, appropriate TTLs to cached upstream responses for security-sensitive data (permissions, feature flags, pricing) — balance performance against the risk window of a poisoned cache entry.",
+        "Validate cached upstream responses at read time against the expected schema — invalidate and refresh the cache entry if the stored response fails validation.",
+        "Never cache upstream responses for authentication, authorization, or permission-related data without careful scope isolation — prefer real-time lookups for access control decisions.",
+        "Implement cache poisoning detection by monitoring for sudden changes in cached values that deviate significantly from historical baselines — alert and purge on anomalies."
+      ]
+    }
   ],
   "how_to_test": [
-    "Malformed/oversized upstream responses; inconsistent types",
-    "Invalid/self-signed certificates; simulate timeouts/errors",
-    "Manipulated nested objects; missing required fields"
+    "Step 1: Intercept upstream API responses in a test environment and inject malformed, oversized, or schema-violating responses — verify the consuming service rejects them and fails safely",
+    "Step 2: Disable TLS validation in a test integration and perform a MITM interception — verify the production configuration does not permit this; audit all HTTP client configurations for insecure TLS settings",
+    "Step 3: Send forged webhook payloads without a valid HMAC signature and verify they are rejected with 401 before any processing occurs",
+    "Step 4: Replay a legitimate webhook payload with an expired timestamp — verify the consumer rejects it based on the timestamp validation window",
+    "Step 5: Submit upstream responses with null, negative, or out-of-range values for required fields — verify business logic validation catches semantically invalid data that passes schema validation",
+    "Step 6: Test cache key isolation — make upstream data requests as different users and verify that cached responses are scoped correctly and do not leak across user boundaries",
+    "Step 7: Simulate upstream service failures (timeout, 500 error, connection refused) and verify the consuming API fails closed — returns a safe error to callers without processing partial or empty responses"
   ],
   "expected_outcomes": [
-    "Graceful failure with safe defaults; no state corruption",
-    "No leakage of upstream internals; events logged"
+    "Malformed, schema-violating, or oversized upstream responses are rejected before processing — consuming service fails closed with a safe error",
+    "TLS certificate validation is enforced for all upstream connections — no integration accepts invalid, expired, or self-signed certificates without explicit pinning",
+    "Webhook payloads with invalid or missing HMAC signatures are rejected with 401 before any business logic executes",
+    "Cache entries are scoped per user and context — poisoned upstream data does not propagate across user boundaries",
+    "All upstream validation failures are logged with the upstream source, response details, and actor context for security monitoring"
   ],
-  "minimal_example": "Upstream /profiles returns unexpected fields → local service rejects and logs; operation aborted",
+  "minimal_example": "Upstream /profiles returns unexpected fields → consuming service validates against schema → rejects response → logs error → returns safe 503 to caller; forged webhook → HMAC check fails → 401 returned immediately",
   "mitigation": [
-    "Validate all upstream API responses against a strict JSON schema before any processing — reject responses with unexpected fields, incorrect types, or sizes exceeding defined thresholds",
-    "Enforce TLS with full certificate chain validation for all external integrations; never disable certificate checks in production code, and consider certificate pinning for high-trust third-party services",
-    "Implement timeouts, retries with exponential backoff, and circuit breakers for every external API dependency — design all integrations to fail closed (deny by default on error, not fail open)",
-    "Sanitize and re-encode all data received from upstream services before passing it to downstream systems, databases, or rendering layers to prevent injection attacks, cache poisoning, and data integrity violations"
+    "Validate all upstream API responses against a strict JSON schema before any processing — reject responses with unexpected fields, incorrect types, null required fields, or sizes exceeding thresholds; treat upstream data as untrusted input",
+    "Enforce TLS with full certificate chain validation for all external integrations; never disable certificate verification in production; implement certificate pinning for high-trust integrations and automated expiry monitoring",
+    "Verify cryptographic HMAC signatures on all incoming webhooks before processing; validate event timestamps to prevent replay attacks; use webhook-specific secrets rotated on a regular schedule",
+    "Implement timeouts, retries with exponential backoff, and circuit breakers for every external dependency; design all integrations to fail closed; sanitize all upstream data before passing to downstream systems"
   ]
 }
