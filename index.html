@@ -86,7 +86,7 @@ body{background:var(--bg);color:var(--text);font:13.5px/1.6 'Segoe UI',system-ui
 .badge.llmplay{background:#2d0a1a;color:var(--llm-accent);border:1px solid #7c1340}
 /* payload types table */
 .payload-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px}
-.payload-table th{text-align:left;padding:7px 10px;background:var(--soft);color:var(--llm-accent);font-size:11px;font-weight:700;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.payload-table th{text-align:left;padding:7px 10px;background:var(--soft);font-size:11px;font-weight:700;letter-spacing:.4px;border-bottom:1px solid var(--border)}
 .payload-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:#c4d3e8}
 .payload-table tr:last-child td{border-bottom:none}
 .payload-table tr:hover td{background:#160520}
@@ -824,7 +824,7 @@ function llmPayloadSection(arr, accent){
     </tr>`).join('');
   return `<div class="section-title" style="color:${ac}">Payload Types &amp; Mitigations</div>
     <div style="overflow-x:auto"><table class="payload-table">
-      <thead><tr><th style="color:${ac}">Payload Type</th><th>Description</th><th>Example Payloads</th><th>Mitigation</th></tr></thead>
+      <thead><tr><th style="color:${ac}">Payload Type</th><th style="color:${ac}">Description</th><th style="color:${ac}">Example Payloads</th><th style="color:${ac}">Mitigation</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }
