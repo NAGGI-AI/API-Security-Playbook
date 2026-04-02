@@ -1,33 +1,167 @@
 {
   "id": "API1",
   "name": "Broken Object Level Authorization (BOLA)",
-  "what_it_means": "The API does not verify that the requester owns or is entitled to the object referenced by an ID, allowing access by simply changing the identifier.",
-  "animated_example": "Changing the apartment number on a keycard and it still opens the door — that’s BOLA.",
+  "what_it_means": "The API fails to verify that the requesting user is entitled to the specific object referenced by an ID in the request. Any authenticated user can access, modify, or delete another user's data simply by substituting a different identifier — no special privileges required.",
+  "animated_example": "Changing the apartment number on a keycard and it still opens the door — that's BOLA. You're authenticated (you have a valid card), but the system never checks whether that specific door is yours.",
   "quick_checks": [
     "Server-side ownership/tenant checks on every object operation (GET/PUT/PATCH/DELETE)",
     "Consistent 403/404 for unauthorized object access (no existence leaks)",
-    "IDs validated and mapped to subject before DB calls (prevent enumeration)",
-    "Multi-tenant isolation enforced on backend (not UI only)",
-    "Authorization logic centralized and covered by unit tests",
-    "Failed object-access attempts are logged with subject/object IDs",
-    "No insecure ‘owner = request.body.userId’ style trust in client data",
-    "Random/non-sequential IDs for externally visible objects (when feasible)"
+    "IDs validated and mapped to the authenticated subject before any DB call",
+    "Multi-tenant isolation enforced on the backend — not just in the UI",
+    "Authorization logic centralized in shared middleware or policy service, covered by unit tests",
+    "Failed object-access attempts are logged with subject ID, object ID, and HTTP method",
+    "No insecure 'owner = request.body.userId' style trust in client-supplied data",
+    "Non-sequential UUIDs or cryptographic tokens used for externally visible object identifiers"
+  ],
+  "payload_types": [
+    {
+      "type": "Sequential ID Enumeration",
+      "description": "Attacker increments or decrements a numeric object identifier in the URL or request body to access objects belonging to other users, exploiting predictable integer-based IDs with no ownership validation.",
+      "examples": [
+        "GET /api/orders/1001 authenticated as user A → change to /api/orders/1002 to access user B's order",
+        "GET /api/invoices/500 → iterate through /api/invoices/499, 501, 502 to harvest all invoices in the system",
+        "PUT /api/users/42/address with body modifying user 42's address while authenticated as user 99",
+        "DELETE /api/files/88 where the authenticated user owns file 91 but file 88 belongs to another tenant",
+        "POST /api/messages/reply with message_id=2001 referencing a private thread from another user's account"
+      ],
+      "mitigation": [
+        "Enforce server-side ownership checks on every object operation before executing any database query — verify the authenticated user's identity maps to the requested object, not just that they are authenticated.",
+        "Use non-guessable UUIDs (e.g., UUID v4) or cryptographically random tokens as public-facing object identifiers to eliminate sequential enumeration.",
+        "Centralize authorization in a policy middleware or service layer so it cannot be accidentally bypassed when new endpoints are added.",
+        "Log every denied object access attempt with user ID, object ID, endpoint, and HTTP method — alert on burst patterns indicating enumeration.",
+        "Apply automated BOLA test cases in CI/CD pipelines: create two test accounts, access account A's resources as account B, and assert 403/404 is returned."
+      ]
+    },
+    {
+      "type": "Cross-Tenant Object Access",
+      "description": "In multi-tenant APIs, attacker substitutes object IDs belonging to a different tenant, exploiting missing tenant-scope enforcement that only isolates tenants at the UI layer or through optional filter parameters.",
+      "examples": [
+        "Tenant A's API token used to request GET /api/reports/tenant-b-report-id and successfully receives tenant B's financial report",
+        "Admin endpoint /api/orgs/{orgId}/users accepts any orgId — attacker enumerates other organizations' user lists",
+        "POST /api/projects/{projectId}/export where projectId belongs to a competing company's workspace",
+        "Multi-tenant SaaS: changing the X-Tenant-ID header to a different organization ID bypasses data isolation",
+        "Shared document endpoint /api/docs/{docId} returns content regardless of which workspace the document belongs to"
+      ],
+      "mitigation": [
+        "Enforce tenant scope at the database query level — always join the tenant identifier from the authenticated session token, never from client-supplied parameters.",
+        "Never trust tenant IDs supplied in request headers, query parameters, or request bodies — derive tenancy exclusively from the authenticated JWT or session.",
+        "Use separate database schemas or row-level security policies per tenant in high-sensitivity deployments to make cross-tenant access architecturally impossible.",
+        "Conduct explicit cross-tenant penetration tests before every release: create two test tenants with known data sets and verify zero cross-tenant data leakage.",
+        "Alert on API calls where the requested object's tenant does not match the authenticated session's tenant — treat these as high-severity security events."
+      ]
+    },
+    {
+      "type": "HTTP Method Tampering on Object Endpoints",
+      "description": "Attacker changes the HTTP method on an object endpoint — e.g., from GET (read-only) to PUT, PATCH, or DELETE — to perform unauthorized modifications or deletions on objects they can read but not write.",
+      "examples": [
+        "GET /api/records/55 works as a read — attacker sends DELETE /api/records/55 and successfully deletes another user's record",
+        "Endpoint authorizes GET on /api/contracts/{id} but PATCH is not separately protected — attacker updates contract terms",
+        "OPTIONS response reveals PUT is supported — attacker sends PUT /api/settings/77 overwriting another user's configuration",
+        "POST /api/admin/users/{id}/disable works without admin check because GET is restricted but POST is not",
+        "PATCH /api/subscriptions/203 used to downgrade a competitor's subscription by modifying plan fields"
+      ],
+      "mitigation": [
+        "Apply authorization checks independently for each HTTP method on every endpoint — never assume that securing GET automatically secures PUT, PATCH, DELETE on the same path.",
+        "Use an API gateway or middleware to enforce a per-method allow-list: reject any HTTP method not explicitly permitted for the authenticated role on that resource.",
+        "Remove or restrict the OPTIONS response to avoid advertising supported methods that are not fully authorization-hardened.",
+        "Test each HTTP method on every object endpoint separately in your security test suite — BOLA via method tampering is frequently missed in read-only testing.",
+        "Apply server-side validation of the operation being requested against the authenticated user's entitlements before executing any write or delete."
+      ]
+    },
+    {
+      "type": "Indirect Object Reference via Nested Resources",
+      "description": "Attacker accesses unauthorized objects through nested or relational URL paths, where the parent resource is authorized but the authorization check is not propagated to the nested child object.",
+      "examples": [
+        "GET /api/teams/7/members/99 — user is a member of team 7 but user 99 belongs to a different team, and no cross-check is performed",
+        "GET /api/orders/123/items/456 — order 123 is the authenticated user's, but item 456 belongs to order 999 from another user",
+        "GET /api/projects/10/documents/888 where document 888 was created under project 20 — document ID is globally unique and leaks across project boundaries",
+        "POST /api/courses/5/enrollments/{userId} allows enrolling arbitrary users by ID without confirming the caller has authority over those users",
+        "GET /api/invoices/44/payments/77 — invoice 44 is accessible, but payment 77 is from invoice 100 belonging to a different customer"
+      ],
+      "mitigation": [
+        "Validate the full resource ownership chain for nested paths — confirm both the parent resource and the child resource belong to the authenticated user before returning data.",
+        "Never use globally unique child IDs as a substitute for proper authorization — a document ID that is globally unique can still be accessed through any parent path if authorization only checks the parent.",
+        "Apply authorization at each level of nesting independently rather than trusting that access to the parent implies access to all children.",
+        "Write integration tests that explicitly verify cross-resource authorization: access child resource A through a parent it does not belong to and assert 403/404.",
+        "Use database queries that always filter by both the parent ID and the authenticated user ID in a single query to prevent nested-path BOLA."
+      ]
+    },
+    {
+      "type": "Mass Object Harvesting via Batch or Filter Endpoints",
+      "description": "Attacker exploits batch request endpoints, export features, or flexible filter parameters to retrieve large volumes of objects from multiple users or tenants in a single API call.",
+      "examples": [
+        "POST /api/users/batch with body {\"ids\": [1,2,3,4,5,...,10000]} returns all matching user profiles regardless of ownership",
+        "GET /api/orders?userId=* or GET /api/orders?userId=undefined returns all orders across all users",
+        "Export endpoint GET /api/reports/export?format=csv with no ownership filter dumps all records in the table",
+        "GraphQL query with no depth or ownership limit: { allUsers { id, email, paymentMethods { cardNumber } } }",
+        "GET /api/messages?after=0 with no user scope returns the entire message history across all conversations"
+      ],
+      "mitigation": [
+        "Apply ownership and scope filters at the query layer for every batch or list endpoint — never allow a batch request to retrieve objects outside the authenticated user's entitlement.",
+        "Enforce a hard maximum on the number of IDs accepted in batch requests and validate each ID against the authenticated user's ownership before processing.",
+        "Restrict export and bulk endpoints to the authenticated user's own data scope — require explicit admin role elevation with audit logging for any cross-user exports.",
+        "Disable or strictly scope wildcard and open-ended filter parameters — reject requests where filter values would result in cross-user data access.",
+        "Monitor for batch requests with large ID sets or unusually high response volumes and alert as potential mass-harvesting attempts."
+      ]
+    },
+    {
+      "type": "Object Reference in Request Body or Headers",
+      "description": "Attacker manipulates object identifiers embedded in request body parameters, hidden form fields, or custom headers — exploiting APIs that trust client-supplied IDs without re-validating ownership server-side.",
+      "examples": [
+        "POST /api/transfer with body {\"from_account_id\": 9001} where 9001 belongs to another user — API trusts the body without ownership check",
+        "PUT /api/profile with body {\"user_id\": 42, \"email\": \"attacker@evil.com\"} — changes email for user 42 by supplying their ID in the update payload",
+        "Request body {\"document_id\": 777, \"action\": \"sign\"} processes document 777 which was created by another user",
+        "Custom header X-Resource-Owner: 55 accepted by the API to determine ownership, allowing any user to impersonate another by changing the header value",
+        "POST /api/payments with {\"invoice_id\": 303, \"amount\": 0.01} — applies a near-zero payment against another customer's invoice balance"
+      ],
+      "mitigation": [
+        "Never derive object ownership from client-supplied request body fields or headers — always resolve ownership from the authenticated session (JWT sub, session user ID) on the server.",
+        "Validate that the subject in the authenticated token matches the owner of every object referenced in the request body before executing operations.",
+        "Ignore or reject any request body or header fields that attempt to specify a user ID, owner ID, or tenant ID — these should only come from the server-side session.",
+        "Apply automated fuzz tests that inject random object IDs into every request body field and assert unauthorized IDs are rejected.",
+        "Conduct code reviews specifically targeting any endpoint where user identity is read from request body or header parameters rather than the authenticated session."
+      ]
+    },
+    {
+      "type": "BOLA via GraphQL or WebSocket Object References",
+      "description": "Attacker exploits flexible query interfaces (GraphQL, WebSocket subscriptions, RPC) where object-level authorization is not enforced consistently on dynamically constructed queries or real-time event subscriptions.",
+      "examples": [
+        "GraphQL query: { user(id: 42) { email, creditCard { number } } } — returns sensitive fields for any user ID supplied",
+        "GraphQL mutation updateUser(id: 99, role: \"admin\") — no ownership check on the id argument allows privilege escalation",
+        "WebSocket subscription: SUBSCRIBE /orders/{orderId}/updates — attacker subscribes to updates for another user's order by ID",
+        "gRPC GetUserProfile(user_id: 500) — service does not validate that the caller's token corresponds to user 500",
+        "GraphQL introspection used to discover internal object IDs and field names, then targeted queries extract other users' data"
+      ],
+      "mitigation": [
+        "Apply field-level and object-level authorization resolvers on every GraphQL query and mutation — do not rely on schema-level type definitions alone to enforce access control.",
+        "Validate that all object ID arguments in GraphQL mutations and queries resolve to objects owned by the authenticated user before the resolver executes.",
+        "Restrict or disable GraphQL introspection in production environments to prevent attackers from mapping internal ID structures and object relationships.",
+        "Enforce subscription-level authorization for WebSocket and real-time endpoints — validate object ownership at subscription time and re-validate on each event delivery.",
+        "Include GraphQL and WebSocket BOLA test cases in your API security test suite, testing each queryable object type for unauthorized cross-user access."
+      ]
+    }
   ],
   "how_to_test": [
-    "Change /objects/{myId} → another valid ID and observe",
-    "Attempt cross-tenant IDs using two test tenants",
-    "Try update/delete with modified object IDs",
-    "Measure error/timing differences for valid vs. invalid IDs"
+    "Step 1: Authenticate as User A, retrieve a valid object ID (order, invoice, profile, document), then replay the request authenticated as User B — assert 403 or 404 is returned, never User A's data",
+    "Step 2: Test cross-tenant access — create two test tenant accounts, use Tenant A's token to request Tenant B's object IDs across all major resource types",
+    "Step 3: Test every HTTP method independently — confirm that authorization is enforced on GET, PUT, PATCH, DELETE separately for the same object endpoint",
+    "Step 4: Test nested resource paths — access a child resource through a parent it does not belong to (e.g., /api/orders/A-id/items/B-item-id where B-item-id belongs to order B)",
+    "Step 5: Test batch and export endpoints — submit batch ID lists containing IDs from multiple users and verify only the authenticated user's objects are returned",
+    "Step 6: Inspect all request bodies and headers for client-supplied object or user ID fields — test supplying another user's ID and verify the server rejects it",
+    "Step 7: Verify error response consistency — confirm the same response (403 or 404) is returned regardless of whether the unauthorized object exists, to prevent existence leakage"
   ],
   "expected_outcomes": [
-    "403 Forbidden or 404 Not Found with generic message",
-    "No object fields from other users; denial events logged"
+    "Any object ID not owned by the authenticated user returns 403 Forbidden or 404 Not Found — never the object's data",
+    "Cross-tenant object access is blocked at the database query layer, not just the UI layer",
+    "All unauthorized object access attempts are logged with user ID, object ID, endpoint, and HTTP method",
+    "Batch and export endpoints return only the authenticated user's own objects regardless of IDs supplied in the request",
+    "GraphQL, WebSocket, and RPC object references enforce the same ownership checks as REST endpoints"
   ],
-  "minimal_example": "GET /badge/requests/123 → change to /badge/requests/124 → must return 403/404 (never other user’s data)",
+  "minimal_example": "GET /api/badge/requests/123 authenticated as user A → change to /api/badge/requests/124 → server checks: does user A own request 124? No → returns 403 Forbidden with generic message — never returns user B's data.",
   "mitigation": [
-    "Enforce server-side ownership checks on every object operation (GET/PUT/PATCH/DELETE) — verify the authenticated user is entitled to the requested object before any data is returned or modified",
-    "Use non-guessable UUIDs or cryptographic tokens as object identifiers to eliminate sequential ID enumeration attacks",
-    "Centralize authorization logic in a shared middleware or policy service so checks cannot be accidentally omitted on new endpoints or methods",
-    "Return a consistent 403 or 404 for all unauthorized object access regardless of whether the object exists — never leak existence through different error codes"
+    "Enforce server-side ownership checks on every object operation (GET/PUT/PATCH/DELETE) — verify the authenticated user is entitled to the requested object before any data is returned or modified; centralize this logic in shared middleware so it cannot be omitted on new endpoints",
+    "Use non-guessable UUIDs or cryptographic tokens as public-facing object identifiers to eliminate sequential ID enumeration; never trust object owner or user IDs supplied in request bodies, headers, or query parameters — derive tenancy and ownership exclusively from the authenticated session",
+    "Apply scope enforcement at the database query layer for batch, export, filter, and list endpoints — always join the authenticated user's identity into the query rather than filtering client-supplied ID lists post-fetch",
+    "Return a consistent 403 or 404 for all unauthorized object access regardless of whether the object exists; log every denial with full context; include explicit cross-user and cross-tenant BOLA test cases in your automated security test suite and CI/CD pipeline"
   ]
 }
