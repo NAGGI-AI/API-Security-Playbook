@@ -1358,14 +1358,14 @@ document.getElementById('copyBtn').onclick = () => {
   let chipsShown = false;
 
   const SUGGESTED = [
-    "Write finding for BOLA on /api/users/123",
-    "Payload for SQL Injection",
-    "Test steps for XSS",
-    "Impact of SSRF",
-    "Tools for BOLA testing",
+    "What is SQL Injection?",
     "Show all Critical vulnerabilities",
-    "How to fix Broken Auth?",
-    "What is CWE-89?"
+    "List LLM01 vulnerabilities",
+    "How to fix XSS?",
+    "OWASP API Top 10 overview",
+    "What is CWE-89?",
+    "What is BOLA?",
+    "How to fix CSRF?"
   ];
 
   /* ── abbreviation / alias expansion ── */
@@ -1642,46 +1642,6 @@ document.getElementById('copyBtn').onclick = () => {
       if (catResult) return catResult;
     }
 
-    /* ── Security Finding Writer ── */
-    if (/\b(write|create|generate|draft|document)\b.{0,25}\b(finding|report|writeup)\b/.test(q) ||
-        /\bfinding\b.{0,20}\b(for|on|about)\b/.test(q) ||
-        /\bi (found|discovered|identified)\b/.test(q)) {
-      const stripped = q
-        .replace(/\b(write|create|generate|draft|document|finding|report|writeup|i found|i discovered|i identified|for|on|about|a|the|an)\b/g, ' ')
-        .replace(/\s+/g, ' ').trim();
-      const epMatch = raw.match(/\bon\s+(\/[\w\/\-\.?=&%]+)/i);
-      const endpoint = epMatch ? epMatch[1] : null;
-      const results = scoreVulns(stripped);
-      if (results.length && results[0].score >= 5) {
-        return generateFinding(results[0], endpoint);
-      }
-      return (
-        "📋 **Security Finding Writer**\n\n" +
-        "Describe the vulnerability and I'll generate a structured finding report.\n\n" +
-        "**Examples:**\n" +
-        "• \"Write finding for SQL Injection\"\n" +
-        "• \"Create finding for BOLA on /api/users/123\"\n" +
-        "• \"I found XSS on the login page\"\n" +
-        "• \"Draft finding for Broken Auth\""
-      );
-    }
-
-    /* ── AppSec keyword handlers — payload / PoC / test steps / impact / tools ── */
-    if (/\b(payload|payloads|poc|proof of concept|test steps?|how to test|pentest|impact of|business impact|tools? for|tools? to test|tools? used|bypass)\b/.test(q)) {
-      const stripped = q
-        .replace(/\b(payload|payloads|poc|proof of concept|test steps?|how to test|pentest|impact of|business impact of|business impact|impact|tools? for|tools? to test|tools? used for|tools? used|bypass for|bypass|the|a|an|for|of|on)\b/g, ' ')
-        .replace(/\s+/g, ' ').trim();
-      const results = scoreVulns(stripped);
-      if (!results.length || results[0].score < 5) {
-        return "I need a vulnerability name. Try:\n• \"Payload for XSS\"\n• \"Test steps for BOLA\"\n• \"Impact of SSRF\"\n• \"Tools for SQL Injection\"";
-      }
-      if (/\b(payload|payloads|poc|proof of concept)\b/.test(q)) return getPayloads(results[0]);
-      if (/\b(test steps?|how to test|pentest)\b/.test(q)) return getTestSteps(results[0]);
-      if (/\b(impact|business impact)\b/.test(q)) return getBusinessImpact(results[0]);
-      if (/\btools?\b/.test(q)) return getToolsForVuln(results[0]);
-      if (/\bbypass\b/.test(q)) return getPayloads(results[0]);
-    }
-
     /* remediation — "how to fix", "remediation for" */
     if (/\b(how to fix|remediat|fix|prevent|mitigat)\b/.test(q)) {
       const stripped = q.replace(/\b(how to fix|remediat|fix for|prevent|mitigat(ion|e)?|for)\b/g, ' ').trim();
@@ -1724,178 +1684,19 @@ document.getElementById('copyBtn').onclick = () => {
   /* ── helpers ── */
   function getWelcomeText() {
     return (
-      "👋 **Security Assistant** — built for AppSec teams:\n\n" +
-      "📋 **Finding Writer** — \"Write finding for BOLA on /api/users/123\"\n" +
-      "💉 **Payloads / PoC** — \"Payload for SQL Injection\"\n" +
-      "🧪 **Test Steps** — \"Test steps for XSS\"\n" +
-      "💼 **Business Impact** — \"Impact of SSRF\"\n" +
-      "🛠️ **Testing Tools** — \"Tools for BOLA testing\"\n" +
-      "🩹 **Remediation** — \"How to fix Broken Auth?\"\n" +
-      "🔍 **Vuln Lookup** — \"What is CSRF?\"\n" +
-      "📊 **Severity Filter** — \"Show all Critical vulnerabilities\"\n" +
-      "📚 **OWASP Overview** — \"OWASP API Top 10\"\n" +
-      "🔢 **CWE Lookup** — \"What is CWE-89?\""
+      "👋 **Security Assistant** — here's what I can do:\n\n" +
+      "• **Vulnerability lookup** — \"What is SQL Injection?\"\n" +
+      "• **Severity filter** — \"Show all Critical vulnerabilities\"\n" +
+      "• **Category browse** — \"List LLM01 vulnerabilities\"\n" +
+      "• **Remediation** — \"How to fix XSS?\"\n" +
+      "• **OWASP overview** — \"OWASP API Top 10 overview\"\n" +
+      "• **CWE lookup** — \"What is CWE-89?\"\n" +
+      "• **Counts** — \"How many vulnerabilities are there?\""
     );
   }
 
   function sourceLabel(src) {
     return src === 'llm' ? 'LLM' : src === 'waapi' ? 'Web API' : 'Web App';
-  }
-
-  /* ══════════════════════════════════════════════════════════
-     SECURITY FINDING WRITER
-  ══════════════════════════════════════════════════════════ */
-  function generateFinding(result, endpoint) {
-    const v = result.vuln;
-    const c = result.cat;
-    const src = result.source;
-    const ep = endpoint || '/api/endpoint';
-    const cvssRanges = {critical:'9.1–10.0', high:'7.0–8.9', medium:'4.0–6.9', low:'0.1–3.9'};
-    const sev = (v.severity || 'Medium').toLowerCase();
-    const cvss = v.cvss_score ? v.cvss_score : (cvssRanges[sev] || 'N/A');
-    const cweStr = v.cwe ? `\n**CWE:** ${v.cwe}` : '';
-    const steps = v.test_steps || v.exploitation ||
-      (v.payload_examples && v.payload_examples.length
-        ? `1. Intercept request to \`${ep}\` using Burp Suite\n2. Inject payload: \`${v.payload_examples[0]}\`\n3. Observe response for unexpected behaviour\n4. Confirm impact and document evidence`
-        : `1. Identify target endpoint: \`${ep}\`\n2. Intercept request using Burp Suite / OWASP ZAP\n3. Modify parameters to test for ${v.name} conditions\n4. Confirm exploitability and document request/response`);
-    const impact = v.impact || v.business_impact ||
-      `Exploitation of **${v.name}** may lead to unauthorized data access, privilege escalation, or system compromise depending on application context.`;
-    const rec = v.remediation ||
-      (v.recommendations && v.recommendations.length ? v.recommendations[0] : null) ||
-      'Apply input validation, enforce proper authorization controls, and follow OWASP security guidelines.';
-    return (
-      `📋 **SECURITY FINDING REPORT**\n` +
-      `${'─'.repeat(38)}\n\n` +
-      `**Title:** ${v.name}\n` +
-      `**Severity:** ${v.severity || 'Medium'}  |  **CVSS:** ${cvss}\n` +
-      `**Category:** ${c.id} — ${c.name}  (${sourceLabel(src)})${cweStr}\n` +
-      `**Affected Endpoint:** \`${ep}\`\n\n` +
-      `**Description:**\n${v.summary || v.description || 'See OWASP reference for full details.'}\n\n` +
-      `**Steps to Reproduce:**\n${steps}\n\n` +
-      `**Business Impact:**\n${impact}\n\n` +
-      `**Recommendation:**\n${rec}\n\n` +
-      `**References:** OWASP ${sourceLabel(src)} ${c.id}${v.cwe ? ' · ' + v.cwe : ''}\n\n` +
-      `_Generated by Security Playbook Agent · ${new Date().toLocaleDateString()}_`
-    );
-  }
-
-  /* ══════════════════════════════════════════════════════════
-     APPSEC KEYWORD HANDLERS
-  ══════════════════════════════════════════════════════════ */
-  function getPayloads(result) {
-    const v = result.vuln;
-    if (v.payload_examples && v.payload_examples.length) {
-      return (
-        `💉 **Attack Payloads — ${v.name}**\n\n` +
-        v.payload_examples.slice(0, 6).map((p, i) => `**${i+1}.** \`${p}\``).join('\n') +
-        `\n\n⚠️ _Authorized testing only. Use in controlled environments._`
-      );
-    }
-    const name = v.name.toLowerCase();
-    const fallbacks = [
-      {keys:['sql'],         samples:["' OR '1'='1'--","' UNION SELECT NULL,NULL--","1; DROP TABLE users--","admin'--","1' AND SLEEP(5)--"]},
-      {keys:['script','xss'],samples:['<script>alert(1)</script>','"><img src=x onerror=alert(1)>','javascript:alert(1)','<svg onload=alert(1)>']},
-      {keys:['ssrf'],        samples:['http://169.254.169.254/latest/meta-data/','http://localhost:22','file:///etc/passwd','http://[::1]/admin']},
-      {keys:['command','cmd'],samples:['| whoami','; cat /etc/passwd','`id`','$(id)','|| ping -c 1 attacker.com']},
-      {keys:['traversal','path'],samples:['../../../etc/passwd','..%2F..%2F..%2Fetc%2Fpasswd','....//....//etc/passwd']},
-      {keys:['xxe','xml'],   samples:['<!ENTITY xxe SYSTEM "file:///etc/passwd">','<!ENTITY ssrf SYSTEM "http://169.254.169.254/">']},
-      {keys:['template','ssti'],samples:['{{7*7}}','${7*7}','<%= 7*7 %>','#{7*7}','*{7*7}']},
-      {keys:['csrf'],        samples:['<form method=POST action=/transfer><input name=amount value=1000><input type=submit>']},
-      {keys:['bola','idor'], samples:['/api/users/1 → /api/users/2','/api/orders/100 → /api/orders/101','?user_id=1 → ?user_id=2']},
-    ];
-    const match = fallbacks.find(f => f.keys.some(k => name.includes(k)));
-    const samples = match ? match.samples : ['Refer to OWASP Testing Guide for ' + v.name];
-    return (
-      `💉 **Attack Payloads — ${v.name}**\n\n` +
-      samples.map((p, i) => `**${i+1}.** \`${p}\``).join('\n') +
-      `\n\n⚠️ _Authorized testing only. Use in controlled environments._`
-    );
-  }
-
-  function getTestSteps(result) {
-    const v = result.vuln;
-    const c = result.cat;
-    if (v.test_steps) return `🧪 **Test Steps — ${v.name}**\n\n${v.test_steps}`;
-    const payloadHint = v.payload_examples && v.payload_examples.length
-      ? `   • Inject payload: \`${v.payload_examples[0]}\``
-      : `   • Craft input targeting ${v.name} behaviour`;
-    return (
-      `🧪 **Test Steps — ${v.name}** (${c.id})\n\n` +
-      `**1. Reconnaissance**\n` +
-      `   • Map all endpoints/parameters in scope\n` +
-      `   • Use Burp Suite / ZAP spider to enumerate attack surface\n\n` +
-      `**2. Manual Testing**\n` +
-      `${payloadHint}\n` +
-      `   • Intercept and modify requests in Burp Suite\n` +
-      `   • Check response — error messages, status codes, data leakage\n\n` +
-      `**3. Verify Exploitability**\n` +
-      `   • Confirm reproducibility across multiple test cases\n` +
-      `   • Attempt impact escalation (read, modify, bypass controls)\n` +
-      `   • Capture full request/response as evidence\n\n` +
-      `**4. Document Finding**\n` +
-      `   • Record: URL, method, parameter, payload, response\n` +
-      `   • Assign severity: **${v.severity || 'Medium'}**${v.cwe ? '  |  ' + v.cwe : ''}\n` +
-      `   • Reference: ${c.id} — ${c.name}\n\n` +
-      `_Tip: Use "Write finding for ${v.name}" to auto-generate a full report._`
-    );
-  }
-
-  function getBusinessImpact(result) {
-    const v = result.vuln;
-    if (v.impact || v.business_impact) {
-      return `💼 **Business Impact — ${v.name}**\n\n${v.impact || v.business_impact}`;
-    }
-    const sev = (v.severity || 'medium').toLowerCase();
-    const riskLevel = {
-      critical:'**CRITICAL** — Full system/data compromise likely. Immediate escalation required.',
-      high:    '**HIGH** — Significant data exposure or privilege escalation risk. Urgent remediation.',
-      medium:  '**MEDIUM** — Limited exposure, often chainable with other issues. Schedule remediation.',
-      low:     '**LOW** — Minor information disclosure or low exploitability. Address in next release.'
-    };
-    return (
-      `💼 **Business Impact — ${v.name}**\n\n` +
-      `**Risk Rating:** ${riskLevel[sev] || riskLevel.medium}\n\n` +
-      (v.summary ? `**Context:** ${v.summary}\n\n` : '') +
-      `**Potential consequences:**\n` +
-      `• Unauthorized access to sensitive / customer data\n` +
-      `• Compliance violations — GDPR, PCI DSS, ISO 27001, SOC 2\n` +
-      `• Financial loss, regulatory fines, legal liability\n` +
-      `• Reputational damage and customer trust erosion\n` +
-      `• Potential for lateral movement and full system compromise`
-    );
-  }
-
-  function getToolsForVuln(result) {
-    const v = result.vuln;
-    const name = v.name.toLowerCase();
-    const toolMap = [
-      {keys:['sql injection'],      tools:['**sqlmap** — automated SQLi detection & exploitation','**Burp Suite** — manual SQLi probing','**OWASP ZAP** — passive/active scanner']},
-      {keys:['cross site script','xss'],tools:['**XSStrike** — advanced XSS fuzzer','**Burp Suite** — reflected/stored XSS scanner','**OWASP ZAP** — DOM XSS detection']},
-      {keys:['ssrf'],               tools:['**Burp Collaborator** — SSRF OOB detection','**SSRFmap** — automated SSRF scanner','**Interactsh** — OOB interaction server']},
-      {keys:['command injection'],  tools:['**commix** — automated command injection','**Burp Suite Intruder** — manual fuzzing','**Metasploit** — exploitation framework']},
-      {keys:['bola','idor','object level'],tools:['**Autorize (Burp Extension)** — IDOR testing','**Burp Suite Repeater** — manual BOLA verification','**Postman** — API parameter manipulation']},
-      {keys:['broken auth','authentication'],tools:['**Hydra** — brute force / credential stuffing','**jwt_tool** — JWT analysis & attacks','**Burp Suite** — session token analysis']},
-      {keys:['csrf'],               tools:['**Burp Suite** — CSRF PoC generator','**OWASP ZAP** — CSRF scanner','**Manual HTML form** — custom CSRF test page']},
-      {keys:['path traversal','directory traversal'],tools:['**DotDotPwn** — path traversal fuzzer','**Burp Suite Intruder** — wordlist traversal','**curl** — manual path traversal']},
-      {keys:['xxe','xml'],          tools:['**XXEinjector** — automated XXE','**Burp Suite** — XML tampering','**OWASP ZAP** — XML scanner']},
-      {keys:['deserialization'],    tools:['**ysoserial** — Java deserialization payloads','**Burp Suite** — deserialization scanner','**PHPGGC** — PHP gadget chain generator']},
-      {keys:['template','ssti'],    tools:['**tplmap** — SSTI scanner & exploiter','**Burp Suite** — manual template probe','**Manual {{7*7}} probe** — quick detection']},
-      {keys:['rate limit'],         tools:['**Burp Suite Intruder** — rate limit bypass','**ffuf** — high-speed fuzzer','**Hydra** — credential brute force']},
-      {keys:['cors'],               tools:['**CORStest** — CORS misconfiguration scanner','**Burp Suite** — Origin header manipulation','**curl** — manual CORS probe']},
-    ];
-    const match = toolMap.find(t => t.keys.some(k => name.includes(k)));
-    const tools = match ? match.tools : [
-      '**Burp Suite Pro** — industry standard web security testing',
-      '**OWASP ZAP** — open source web app scanner',
-      '**Postman** — API security testing',
-      '**Nikto** — web server scanner',
-      '**Nmap** — network/service enumeration'
-    ];
-    return (
-      `🛠️ **Testing Tools — ${v.name}**\n\n` +
-      tools.map((t, i) => `**${i+1}.** ${t}`).join('\n') +
-      `\n\n**Universal tools:** Burp Suite, OWASP ZAP, curl, Postman`
-    );
   }
 
   function getCount() {
