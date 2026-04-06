@@ -1358,13 +1358,13 @@ document.getElementById('copyBtn').onclick = () => {
   let chipsShown = false;
 
   const SUGGESTED = [
+    "Write finding for BOLA on /api/users/123",
+    "Write finding for SQL Injection",
     "What is SQL Injection?",
     "Show all Critical vulnerabilities",
-    "List LLM01 vulnerabilities",
     "How to fix XSS?",
     "OWASP API Top 10 overview",
     "What is CWE-89?",
-    "What is BOLA?",
     "How to fix CSRF?"
   ];
 
@@ -1642,6 +1642,30 @@ document.getElementById('copyBtn').onclick = () => {
       if (catResult) return catResult;
     }
 
+    /* ── Security Finding Writer ── */
+    if (/\b(write|create|generate|draft|document)\b.{0,25}\b(finding|report|writeup)\b/.test(q) ||
+        /\bfinding\b.{0,20}\b(for|on|about)\b/.test(q) ||
+        /\bi (found|discovered|identified)\b/.test(q)) {
+      const stripped = q
+        .replace(/\b(write|create|generate|draft|document|finding|report|writeup|i found|i discovered|i identified|for|on|about|a|the|an)\b/g, ' ')
+        .replace(/\s+/g, ' ').trim();
+      const epMatch = raw.match(/\bon\s+(\/[\w\/\-\.?=&%]+)/i);
+      const endpoint = epMatch ? epMatch[1] : null;
+      const results = scoreVulns(stripped);
+      if (results.length && results[0].score >= 5) {
+        return generateFinding(results[0], endpoint);
+      }
+      return (
+        "📋 **Security Finding Writer**\n\n" +
+        "Tell me the vulnerability name and I'll generate a structured finding report.\n\n" +
+        "**Examples:**\n" +
+        "• \"Write finding for SQL Injection\"\n" +
+        "• \"Create finding for BOLA on /api/users/123\"\n" +
+        "• \"I found XSS on the login page\"\n" +
+        "• \"Draft finding for Broken Auth\""
+      );
+    }
+
     /* remediation — "how to fix", "remediation for" */
     if (/\b(how to fix|remediat|fix|prevent|mitigat)\b/.test(q)) {
       const stripped = q.replace(/\b(how to fix|remediat|fix for|prevent|mitigat(ion|e)?|for)\b/g, ' ').trim();
@@ -1684,14 +1708,53 @@ document.getElementById('copyBtn').onclick = () => {
   /* ── helpers ── */
   function getWelcomeText() {
     return (
-      "👋 **Security Assistant** — here's what I can do:\n\n" +
-      "• **Vulnerability lookup** — \"What is SQL Injection?\"\n" +
-      "• **Severity filter** — \"Show all Critical vulnerabilities\"\n" +
-      "• **Category browse** — \"List LLM01 vulnerabilities\"\n" +
-      "• **Remediation** — \"How to fix XSS?\"\n" +
-      "• **OWASP overview** — \"OWASP API Top 10 overview\"\n" +
-      "• **CWE lookup** — \"What is CWE-89?\"\n" +
-      "• **Counts** — \"How many vulnerabilities are there?\""
+      "👋 **Security Assistant** — built for AppSec teams:\n\n" +
+      "📋 **Finding Writer** — \"Write finding for BOLA on /api/users/123\"\n" +
+      "🔍 **Vuln Lookup** — \"What is SQL Injection?\"\n" +
+      "🩹 **Remediation** — \"How to fix XSS?\"\n" +
+      "📊 **Severity Filter** — \"Show all Critical vulnerabilities\"\n" +
+      "📂 **Category Browse** — \"List LLM01 vulnerabilities\"\n" +
+      "📚 **OWASP Overview** — \"OWASP API Top 10 overview\"\n" +
+      "🔢 **CWE Lookup** — \"What is CWE-89?\"\n" +
+      "📈 **Counts** — \"How many vulnerabilities are there?\""
+    );
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     SECURITY FINDING WRITER
+  ══════════════════════════════════════════════════════════ */
+  function generateFinding(result, endpoint) {
+    const v = result.vuln;
+    const c = result.cat;
+    const src = result.source;
+    const ep = endpoint || '/api/endpoint';
+    const cvssRanges = {critical:'9.1–10.0', high:'7.0–8.9', medium:'4.0–6.9', low:'0.1–3.9'};
+    const sev = (v.severity || 'Medium').toLowerCase();
+    const cvss = v.cvss_score ? v.cvss_score : (cvssRanges[sev] || 'N/A');
+    const cweStr = v.cwe ? `\n**CWE:** ${v.cwe}` : '';
+    const steps = v.test_steps || v.exploitation ||
+      `1. Identify target endpoint: \`${ep}\`\n` +
+      `2. Intercept the request using Burp Suite or OWASP ZAP\n` +
+      `3. Modify parameters / headers to trigger ${v.name} conditions\n` +
+      `4. Confirm exploitability and capture full request/response as evidence`;
+    const impact = v.impact || v.business_impact ||
+      `Exploitation of **${v.name}** may lead to unauthorized data access, privilege escalation, or system compromise depending on application context.`;
+    const rec = v.remediation ||
+      (v.recommendations && v.recommendations.length ? v.recommendations[0] : null) ||
+      'Apply input validation, enforce proper authorization controls, and follow OWASP security guidelines.';
+    return (
+      `📋 **SECURITY FINDING REPORT**\n` +
+      `${'─'.repeat(38)}\n\n` +
+      `**Title:** ${v.name}\n` +
+      `**Severity:** ${v.severity || 'Medium'}  |  **CVSS:** ${cvss}\n` +
+      `**Category:** ${c.id} — ${c.name}  (${sourceLabel(src)})${cweStr}\n` +
+      `**Affected Endpoint:** \`${ep}\`\n\n` +
+      `**Description:**\n${v.summary || v.description || 'See OWASP reference for full details.'}\n\n` +
+      `**Steps to Reproduce:**\n${steps}\n\n` +
+      `**Business Impact:**\n${impact}\n\n` +
+      `**Recommendation:**\n${rec}\n\n` +
+      `**References:** OWASP ${sourceLabel(src)} — ${c.id}${v.cwe ? '  |  ' + v.cwe : ''}\n\n` +
+      `_Generated by Security Playbook Agent · ${new Date().toLocaleDateString()}_`
     );
   }
 
