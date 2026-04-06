@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <title>Security Playbook Agent</title>
 <style>
 :root {
@@ -298,6 +300,15 @@ ul.play-list li{margin-bottom:5px}
 #chatInput::placeholder{color:var(--muted)}
 #chatSendBtn{background:var(--accent);border:none;border-radius:9px;color:#052e1a;font-weight:700;cursor:pointer;padding:9px 14px;font-size:16px;line-height:1;transition:all .15s;flex-shrink:0}
 #chatSendBtn:hover{background:var(--accent2);box-shadow:0 0 14px #3b82f640}
+.chat-input-wrap{flex:1;display:flex;flex-direction:column;gap:3px}
+.chat-char-count{font-size:10px;color:var(--muted);text-align:right;padding-right:2px;height:12px}
+.chat-char-count.warn{color:#f59e0b}
+.chat-char-count.over{color:#ef4444}
+.chat-copy-btn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;margin-top:4px;transition:all .15s;font-family:inherit}
+.chat-copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.chat-copy-btn.copied{color:var(--accent);border-color:var(--accent)}
+.chat-clear-btn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.chat-clear-btn:hover{border-color:#ef4444;color:#ef4444}
 </style>
 </head>
 <body>
@@ -1341,8 +1352,11 @@ document.getElementById('copyBtn').onclick = () => {
   </div>
   <div class="chat-messages" id="chatMessages"></div>
   <div class="chat-input-row">
-    <input id="chatInput" type="text" placeholder="Ask about a vulnerability…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}" />
-    <button id="chatSendBtn" onclick="chatSend()" title="Send">➤</button>
+    <div class="chat-input-wrap">
+      <input id="chatInput" type="text" placeholder="Ask about a vulnerability…" maxlength="500" autocomplete="off" spellcheck="false" />
+      <span class="chat-char-count" id="chatCharCount"></span>
+    </div>
+    <button id="chatSendBtn" title="Send (Enter)">➤</button>
   </div>
 </div>
 
@@ -1356,6 +1370,10 @@ document.getElementById('copyBtn').onclick = () => {
   let chatOpen = false;
   let chatReady = false;
   let chipsShown = false;
+  let lastMsgTime = 0;
+  const MAX_INPUT   = 500;   // chars
+  const RATE_MS     = 1000;  // min ms between messages
+  const DATA_TIMEOUT= 15000; // ms before giving up on data load
 
   const SUGGESTED = [
     "Write finding for BOLA on /api/users/123",
@@ -1461,15 +1479,37 @@ document.getElementById('copyBtn').onclick = () => {
     'tell','show','give','provide','define','definition','example','examples'
   ]);
 
-  /* ── wait for vcData to be populated ── */
-  function waitForData() {
+  /* ── wait for vcData (with timeout) ── */
+  (function waitForData(elapsed) {
     if (vcData.llm && vcData.waapi && vcData.wa) {
       chatReady = true;
+    } else if (elapsed < DATA_TIMEOUT) {
+      setTimeout(() => waitForData(elapsed + 300), 300);
     } else {
-      setTimeout(waitForData, 300);
+      chatReady = false; // timed out — keep false so user gets the loading message
     }
-  }
-  waitForData();
+  })(0);
+
+  /* ── bind events (no inline handlers) ── */
+  document.addEventListener('DOMContentLoaded', function() {
+    const input   = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSendBtn');
+    const counter = document.getElementById('chatCharCount');
+    if (input) {
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSend(); }
+      });
+      input.addEventListener('input', function() {
+        const len = input.value.length;
+        if (counter) {
+          if (len === 0) { counter.textContent = ''; counter.className = 'chat-char-count'; return; }
+          counter.textContent = `${len}/${MAX_INPUT}`;
+          counter.className = 'chat-char-count' + (len >= MAX_INPUT ? ' over' : len > 400 ? ' warn' : '');
+        }
+      });
+    }
+    if (sendBtn) sendBtn.addEventListener('click', chatSend);
+  });
 
   /* ── toggle panel ── */
   window.toggleChat = function() {
@@ -1522,13 +1562,18 @@ document.getElementById('copyBtn').onclick = () => {
     scrollChat();
   }
 
-  /* ── send ── */
+  /* ── send (with rate limit + length guard) ── */
   window.chatSend = function() {
     const input = document.getElementById('chatInput');
-    const text = input.value.trim();
+    const raw = input.value;
+    const text = raw.trim().slice(0, MAX_INPUT); // hard cap
     if (!text) return;
+    const now = Date.now();
+    if (now - lastMsgTime < RATE_MS) return; // rate limit
+    lastMsgTime = now;
     input.value = '';
-    // remove chips if visible
+    const counter = document.getElementById('chatCharCount');
+    if (counter) { counter.textContent = ''; counter.className = 'chat-char-count'; }
     const sugg = document.getElementById('chatSuggestions');
     if (sugg) { sugg.remove(); chipsShown = false; }
     processUserMessage(text);
@@ -1539,7 +1584,13 @@ document.getElementById('copyBtn').onclick = () => {
     showTyping();
     setTimeout(() => {
       removeTyping();
-      const reply = getResponse(text);
+      let reply;
+      try {
+        reply = getResponse(text);
+      } catch (err) {
+        reply = "⚠️ Something went wrong processing your request. Please try again or rephrase your question.";
+        console.error('[Security Assistant]', err);
+      }
       appendBot(reply);
     }, 600);
   }
@@ -1558,6 +1609,22 @@ document.getElementById('copyBtn').onclick = () => {
     el.className = 'chat-msg bot';
     el.innerHTML = renderMd(text);
     document.getElementById('chatMessages').appendChild(el);
+    // attach Copy button to finding reports
+    if (text.startsWith('📋 **SECURITY FINDING REPORT**')) {
+      const btn = document.createElement('button');
+      btn.className = 'chat-copy-btn';
+      btn.textContent = '📋 Copy Finding';
+      btn.addEventListener('click', function() {
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = '✓ Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = '📋 Copy Finding'; btn.classList.remove('copied'); }, 2000);
+        }).catch(() => {
+          btn.textContent = 'Copy not available';
+        });
+      });
+      document.getElementById('chatMessages').appendChild(btn);
+    }
     scrollChat();
   }
 
