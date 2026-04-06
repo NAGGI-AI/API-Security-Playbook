@@ -1718,7 +1718,7 @@ document.getElementById('copyBtn').onclick = () => {
         .replace(/\s+/g, ' ').trim();
       const epMatch = raw.match(/\bon\s+(\/[\w\/\-\.?=&%]+)/i);
       const endpoint = epMatch ? epMatch[1] : null;
-      const results = scoreVulns(stripped);
+      const results = scoreVulns(stripped, q);
       if (results.length && results[0].score >= 5) {
         return generateFinding(results[0], endpoint);
       }
@@ -1736,8 +1736,8 @@ document.getElementById('copyBtn').onclick = () => {
     /* remediation — "how to fix", "remediation for" */
     if (/\b(how to fix|remediat|fix|prevent|mitigat)\b/.test(q)) {
       const stripped = q.replace(/\b(how to fix|remediat|fix for|prevent|mitigat(ion|e)?|for)\b/g, ' ').trim();
-      const results = scoreVulns(stripped);
-      if (results.length) return formatRemediation(results[0]);
+      const results = scoreVulns(stripped, q);
+      if (results.length) return formatRemediation(results);
       return "I couldn't find a specific vulnerability matching that. Try asking by name, e.g. \"How to fix SQL Injection?\"";
     }
 
@@ -1752,12 +1752,12 @@ document.getElementById('copyBtn').onclick = () => {
       const stripped = q
         .replace(/\b(what (is|are)|tell me about|explain|describe|info on|details? on|details? about|details? for|look up|lookup|find out about)\b/g, ' ')
         .trim();
-      const results = scoreVulns(stripped);
+      const results = scoreVulns(stripped, q);
       if (results.length && results[0].score >= 10) return formatVuln(results[0]);
     }
 
     /* fallback — general search */
-    const results = scoreVulns(q);
+    const results = scoreVulns(q, q);
     if (results.length === 0) {
       return "I couldn't find anything matching that. Try asking about a specific vulnerability name, CWE number, severity level, or OWASP category. Type **help** to see what I can do.";
     }
@@ -1946,11 +1946,15 @@ document.getElementById('copyBtn').onclick = () => {
     return out;
   }
 
-  /* ── scoring ── */
-  function scoreVulns(query) {
+  /* ── scoring ──
+     hintQ: original user query used to detect LLM vs web context.
+     Without explicit LLM context, non-LLM sources rank higher. */
+  function scoreVulns(query, hintQ) {
     const expanded = expandAliases(query);
     const qWords = expanded.split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
     if (!qWords.length) return [];
+
+    const isLLMCtx = hintQ && /\b(llm|language model|ai model|gpt|chatgpt|claude|generative)\b/.test(hintQ.toLowerCase());
 
     const results = [];
     for (const src of ['llm','waapi','wa']) {
@@ -1973,6 +1977,10 @@ document.getElementById('copyBtn').onclick = () => {
             if (descLower.includes(w)) score += 10;
             if (catNameLower.includes(w)) score += 20;
           }
+
+          // Source preference: without LLM context, deprioritise llm entries
+          // so "XSS" returns web app XSS, not "XSS via LLM Output"
+          if (score > 0 && src === 'llm' && !isLLMCtx) score -= 8;
 
           if (score > 0) {
             results.push({score, source: src, cat, catIdx: ci, vulnIdx: vi, vuln: v});
@@ -2004,12 +2012,44 @@ document.getElementById('copyBtn').onclick = () => {
     return out.trim();
   }
 
-  function formatRemediation(r) {
-    const v = r.vuln;
-    if (!v.remediation) {
-      return `No specific remediation found for **${v.name}**. Try asking about it generally.`;
+  /* formatRemediation now receives the full sorted results array.
+     It shows all closely-scoring variants (e.g. XSS Reflected + Stored + DOM)
+     so the user gets the complete picture from the playbook. */
+  function formatRemediation(results) {
+    const top = results[0];
+    const topScore = top.score;
+
+    // Collect all variants that score within 70% of the top score
+    const variants = results.filter(r => r.score >= topScore * 0.7 && r.vuln.remediation);
+
+    if (!variants.length) {
+      return `No specific remediation found for **${top.vuln.name}**. Try asking about it by name.`;
     }
-    return `🛠 **Remediation for ${v.name}:**\n\n${v.remediation}`;
+
+    if (variants.length === 1) {
+      const v = variants[0].vuln;
+      const c = variants[0].cat;
+      let out = `🛠 **Remediation — ${v.name}** · ${sevEmoji(v.severity)}\n`;
+      out += `📂 ${c.id} — ${c.name}  (${sourceLabel(variants[0].source)})`;
+      if (v.cwe) out += `  |  🔗 ${v.cwe}`;
+      if (v.description) out += `\n\n${v.description}`;
+      out += `\n\n**Fix:**\n${v.remediation}`;
+      return out;
+    }
+
+    // Multiple variants — group them
+    const familyName = variants[0].vuln.name.split(/[–—(]/)[0].trim();
+    let out = `🛠 **Remediation — ${familyName}** · ${variants.length} variants from the playbook\n\n`;
+    for (const r of variants) {
+      const v = r.vuln;
+      out += `**${v.name}** · ${sevEmoji(v.severity)}\n`;
+      if (v.description) out += `${v.description}\n`;
+      out += `**Fix:** ${v.remediation}\n\n`;
+    }
+    // Shared reference
+    const cweSet = [...new Set(variants.map(r => r.vuln.cwe).filter(Boolean))];
+    if (cweSet.length) out += `🔗 ${cweSet[0]}`;
+    return out.trim();
   }
 
 })();
