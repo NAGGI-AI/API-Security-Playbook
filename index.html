@@ -178,6 +178,43 @@ ul.play-list li{margin-bottom:5px}
 .placeholder-icon{font-size:42px;opacity:.35}
 .placeholder-text{font-size:14px;opacity:.6}
 
+/* ── Dashboard Home ── */
+.dash-home{max-width:960px;padding:4px 0 24px}
+.dash-headline{margin-bottom:22px}
+.dash-headline-text{font-size:20px;font-weight:800;line-height:1.3;margin-bottom:4px}
+.dash-headline-accent{color:var(--accent)}
+.dash-headline-sub{font-size:13px;color:var(--muted)}
+.dash-section-label{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+.dash-sev-section{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden}
+.dash-sev-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(16,217,160,.04),transparent);pointer-events:none}
+.dash-sev-bar{display:flex;height:12px;border-radius:8px;overflow:hidden;gap:2px;margin-bottom:11px}
+.dash-sev-seg{height:100%;border-radius:4px;transform-origin:left;transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.dash-sev-legend{display:flex;gap:18px;flex-wrap:wrap}
+.dash-sev-li{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}
+.dash-sev-li strong{color:var(--text);font-weight:700}
+.dash-sev-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dash-fw-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.dash-fw-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 16px;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;text-align:center}
+.dash-fw-card:hover{transform:translateY(-3px)}
+.dash-fw-api:hover{border-color:var(--api-accent);box-shadow:0 0 22px rgba(16,217,160,.14)}
+.dash-fw-llm:hover{border-color:var(--llm-accent);box-shadow:0 0 22px rgba(244,114,182,.14)}
+.dash-fw-wa:hover {border-color:var(--wa-accent); box-shadow:0 0 22px rgba(56,189,248,.14)}
+.dash-fw-icon{font-size:22px;margin-bottom:8px}
+.dash-fw-name{font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.dash-fw-num{font-size:30px;font-weight:800;line-height:1;margin-bottom:4px}
+.dash-fw-sub{font-size:10.5px;color:var(--muted)}
+.dash-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.dash-stat-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:16px 14px;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;text-align:center}
+.dash-stat-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 0 16px rgba(16,217,160,.1)}
+.dash-stat-num{font-size:30px;font-weight:800;line-height:1;margin-bottom:5px}
+.dash-stat-label{font-size:11px;color:var(--muted);font-weight:600;line-height:1.4}
+.dash-stat-hint{font-size:10px;color:var(--accent);opacity:0;transition:opacity .15s;margin-top:3px}
+.dash-stat-card:hover .dash-stat-hint{opacity:1}
+.dash-qa-label{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.dash-qa-row{display:flex;gap:8px;flex-wrap:wrap}
+.dash-qa-btn{padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg);color:var(--muted);cursor:pointer;font-size:12.5px;font-family:inherit;transition:all .2s;white-space:nowrap;font-weight:600}
+.dash-qa-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(16,217,160,.05);transform:translateY(-1px)}
+
 /* animations */
 @keyframes scanline{0%{background-position:0% 0%}100%{background-position:0% 200%}}
 .brand-icon-inner{width:100%;height:100%;border-radius:8px;background:linear-gradient(180deg,transparent 45%,rgba(16,217,160,.25) 50%,transparent 55%);background-size:100% 200%;animation:scanline 2.5s linear infinite;display:flex;align-items:center;justify-content:center}
@@ -431,8 +468,8 @@ ul.play-list li{margin-bottom:5px}
   <div class="content">
     <div id="card">
       <div class="placeholder">
-        <div class="placeholder-icon">&#x1F50D;</div>
-        <div class="placeholder-text">Select a risk or vulnerability on the left to view its Playbook.</div>
+        <div class="placeholder-icon">&#x1F6E1;</div>
+        <div class="placeholder-text">Loading Security Playbook Agent…</div>
       </div>
     </div>
   </div>
@@ -537,7 +574,130 @@ Promise.all([
   vcData.wa    = wa;
   buildVCSidebar();
   clInit();
+  renderDashboard();
 }).catch(e => console.error('Failed to load VC data:', e));
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD HOME
+═══════════════════════════════════════════════════════════ */
+function renderDashboard() {
+  // Count severities across all loaded vc sources
+  const sev = {Critical:0, High:0, Medium:0, Low:0};
+  const src = {llm:0, waapi:0, wa:0};
+  for (const key of ['llm','waapi','wa']) {
+    const d = vcData[key];
+    if (!d) continue;
+    for (const cat of d.categories) {
+      for (const v of cat.vulnerabilities) {
+        src[key]++;
+        if (sev[v.severity] !== undefined) sev[v.severity]++;
+      }
+    }
+  }
+  const total = sev.Critical + sev.High + sev.Medium + sev.Low || 1;
+  const fl = (n) => Math.max(1, Math.round(n / total * 100)); // flex value
+
+  document.getElementById('card').innerHTML = `
+    <div class="dash-home">
+
+      <div class="dash-headline">
+        <div class="dash-headline-text">Security Playbook Agent &mdash; <span class="dash-headline-accent">Overview</span></div>
+        <div class="dash-headline-sub">${total} vulnerabilities across 3 frameworks &middot; Select any item on the left to begin</div>
+      </div>
+
+      <div class="dash-sev-section">
+        <div class="dash-section-label">Severity Distribution</div>
+        <div class="dash-sev-bar" id="dashSevBar">
+          <div class="dash-sev-seg" style="flex:${fl(sev.Critical)};background:#f87171" title="Critical: ${sev.Critical}"></div>
+          <div class="dash-sev-seg" style="flex:${fl(sev.High)};background:#fb923c"    title="High: ${sev.High}"></div>
+          <div class="dash-sev-seg" style="flex:${fl(sev.Medium)};background:#fbbf24"  title="Medium: ${sev.Medium}"></div>
+          <div class="dash-sev-seg" style="flex:${fl(sev.Low)};background:#4ade80"     title="Low: ${sev.Low}"></div>
+        </div>
+        <div class="dash-sev-legend">
+          <span class="dash-sev-li"><span class="dash-sev-dot" style="background:#f87171"></span>Critical <strong>${sev.Critical}</strong></span>
+          <span class="dash-sev-li"><span class="dash-sev-dot" style="background:#fb923c"></span>High <strong>${sev.High}</strong></span>
+          <span class="dash-sev-li"><span class="dash-sev-dot" style="background:#fbbf24"></span>Medium <strong>${sev.Medium}</strong></span>
+          <span class="dash-sev-li"><span class="dash-sev-dot" style="background:#4ade80"></span>Low <strong>${sev.Low}</strong></span>
+        </div>
+      </div>
+
+      <div class="dash-fw-row">
+        <div class="dash-fw-card dash-fw-api" onclick="document.querySelector('#apiList .item')?.click()">
+          <div class="dash-fw-icon">&#x1F50C;</div>
+          <div class="dash-fw-name">Web API Security</div>
+          <div class="dash-fw-num dash-anim" style="color:var(--api-accent)" data-target="${src.waapi}">0</div>
+          <div class="dash-fw-sub">vulnerabilities &middot; OWASP API Top 10</div>
+        </div>
+        <div class="dash-fw-card dash-fw-llm" onclick="document.querySelector('#llmList .item')?.click()">
+          <div class="dash-fw-icon">&#x1F916;</div>
+          <div class="dash-fw-name">LLM Application Security</div>
+          <div class="dash-fw-num dash-anim" style="color:var(--llm-accent)" data-target="${src.llm}">0</div>
+          <div class="dash-fw-sub">vulnerabilities &middot; OWASP LLM Top 10</div>
+        </div>
+        <div class="dash-fw-card dash-fw-wa" onclick="document.getElementById('sg-wa')?.querySelector('.vc-item')?.click()">
+          <div class="dash-fw-icon">&#x1F310;</div>
+          <div class="dash-fw-name">Web Application Security</div>
+          <div class="dash-fw-num dash-anim" style="color:var(--wa-accent)" data-target="${src.wa}">0</div>
+          <div class="dash-fw-sub">vulnerabilities &middot; OWASP WSTG</div>
+        </div>
+      </div>
+
+      <div class="dash-stat-row">
+        <div class="dash-stat-card" onclick="toggleSevFilter('Critical')">
+          <div class="dash-stat-num dash-anim" style="color:#f87171" data-target="${sev.Critical}">0</div>
+          <div class="dash-stat-label">Critical</div>
+          <div class="dash-stat-hint">Filter ↓</div>
+        </div>
+        <div class="dash-stat-card" onclick="toggleSevFilter('High')">
+          <div class="dash-stat-num dash-anim" style="color:#fb923c" data-target="${sev.High}">0</div>
+          <div class="dash-stat-label">High</div>
+          <div class="dash-stat-hint">Filter ↓</div>
+        </div>
+        <div class="dash-stat-card" onclick="toggleSevFilter('Medium')">
+          <div class="dash-stat-num dash-anim" style="color:#fbbf24" data-target="${sev.Medium}">0</div>
+          <div class="dash-stat-label">Medium</div>
+          <div class="dash-stat-hint">Filter ↓</div>
+        </div>
+        <div class="dash-stat-card" onclick="toggleSevFilter('Low')">
+          <div class="dash-stat-num dash-anim" style="color:#4ade80" data-target="${sev.Low}">0</div>
+          <div class="dash-stat-label">Low</div>
+          <div class="dash-stat-hint">Filter ↓</div>
+        </div>
+      </div>
+
+      <div class="dash-qa-label">Quick Actions</div>
+      <div class="dash-qa-row">
+        <button class="dash-qa-btn" onclick="toggleSevFilter('Critical')">&#x1F534; Show Critical</button>
+        <button class="dash-qa-btn" onclick="toggleChat()">&#x1F4CB; Write Finding</button>
+        <button class="dash-qa-btn" onclick="toggleChecklist()">&#x2705; Assessment Checklist</button>
+        <button class="dash-qa-btn" onclick="document.querySelector('#apiList .item')?.click()">&#x1F50C; API Top 10</button>
+        <button class="dash-qa-btn" onclick="document.querySelector('#llmList .item')?.click()">&#x1F916; LLM Top 10</button>
+      </div>
+
+    </div>`;
+
+  // Animate severity bar entrance
+  requestAnimationFrame(() => {
+    document.querySelectorAll('#dashSevBar .dash-sev-seg').forEach((el, i) => {
+      el.style.transform = 'scaleX(0)';
+      requestAnimationFrame(() => {
+        el.style.transitionDelay = (i * 0.08) + 's';
+        el.style.transform = 'scaleX(1)';
+      });
+    });
+    // Count-up animation for all numbers
+    document.querySelectorAll('.dash-anim').forEach(el => {
+      const target = parseInt(el.dataset.target, 10) || 0;
+      let cur = 0;
+      const step = Math.ceil(target / 28);
+      const t = setInterval(() => {
+        cur = Math.min(cur + step, target);
+        el.textContent = cur;
+        if (cur >= target) clearInterval(t);
+      }, 22);
+    });
+  });
+}
 
 /* ═══════════════════════════════════════════════════════════
    SIDEBAR – COLLAPSE
@@ -621,7 +781,7 @@ function filterVC(q) {
     });
     renderUnifiedSearch(q);
   } else if (mode !== 'api' && mode !== 'llmplay' && !currentVuln) {
-    document.getElementById('card').innerHTML = '<div class="placeholder"><div class="placeholder-icon">&#x1F50D;</div><div class="placeholder-text">Select a risk or vulnerability on the left to view its Playbook.</div></div>';
+    renderDashboard();
   }
 }
 
@@ -984,7 +1144,7 @@ function toggleChecklist() {
     }
     document.getElementById('chipsBar').innerHTML = '';
   } else {
-    document.getElementById('card').innerHTML = '<div class="placeholder"><div class="placeholder-icon">&#x1F50D;</div><div class="placeholder-text">Select a risk or vulnerability on the left to view its Playbook.</div></div>';
+    renderDashboard();
   }
 }
 
