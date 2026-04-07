@@ -1592,11 +1592,12 @@ document.getElementById('copyBtn').onclick = () => {
   const NVD_DELAY = 700; /* ms between NVD calls to respect 5 req/30 s limit */
 
   /* ── State ── */
-  let kevIndex  = null;   /* {[cveId]: entry} */
-  let kevList   = [];     /* sorted by dateAdded desc */
-  let kevLoading = false;
-  let kevReady  = false;
-  let ihActive  = false;
+  let kevIndex   = null;   /* {[cveId]: entry} */
+  let kevList    = [];     /* sorted by dateAdded desc */
+  let kevPromise = null;   /* singleton in-flight Promise — prevents double-fetch */
+  let kevReady   = false;
+  let kevFailed  = false;
+  let ihActive   = false;
 
   /* ── Helpers ── */
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1615,23 +1616,28 @@ document.getElementById('copyBtn').onclick = () => {
     return ['CRITICAL','HIGH','MEDIUM','LOW','NONE'].includes(s) ? s : 'UNKNOWN';
   }
 
-  /* ── KEV loader (cached) ── */
-  async function loadKEV(){
-    if (kevReady || kevLoading) return;
-    kevLoading = true;
-    try {
-      const r = await fetch(KEV_URL);
-      if (!r.ok) throw new Error('KEV fetch failed');
-      const data = await r.json();
-      const vulns = data.vulnerabilities || [];
-      kevList = [...vulns].sort((a,b)=> (b.dateAdded||'').localeCompare(a.dateAdded||''));
-      kevIndex = Object.fromEntries(vulns.map(v => [v.cveID, v]));
-      kevReady = true;
-    } catch(e){
-      console.warn('[IntelHub] KEV load failed:', e.message);
-    } finally {
-      kevLoading = false;
-    }
+  /* ── KEV loader (singleton Promise — safe to call multiple times) ── */
+  function loadKEV(){
+    if (kevReady)  return Promise.resolve();
+    if (kevFailed) return Promise.reject(new Error('CISA KEV feed unavailable'));
+    if (kevPromise) return kevPromise;   /* already in-flight — reuse same Promise */
+    kevPromise = (async () => {
+      try {
+        const r = await fetch(KEV_URL);
+        if (!r.ok) throw new Error('CISA server returned ' + r.status);
+        const data = await r.json();
+        const vulns = data.vulnerabilities || [];
+        kevList  = [...vulns].sort((a,b)=> (b.dateAdded||'').localeCompare(a.dateAdded||''));
+        kevIndex = Object.fromEntries(vulns.map(v => [v.cveID, v]));
+        kevReady = true;
+      } catch(e){
+        kevFailed  = true;
+        kevPromise = null;   /* allow retry on explicit user action */
+        console.warn('[IntelHub] KEV load failed:', e.message);
+        throw e;
+      }
+    })();
+    return kevPromise;
   }
 
   /* ── NVD fetch helpers ── */
@@ -1777,12 +1783,9 @@ document.getElementById('copyBtn').onclick = () => {
     ihActive = true;
     document.getElementById('chipsBar').innerHTML = '';
 
-    /* kick off KEV load in background */
-    loadKEV();
-
     if (mode==='kev') {
-      renderIntelHubMain(loadingHTML('Fetching CISA KEV Feed…'));
-      loadKEV().then(() => window.ihShowKEV());
+      renderIntelHubMain('');
+      window.ihShowKEV();   /* ihShowKEV owns its own loading state */
     } else if (mode==='critical') {
       renderIntelHubMain(loadingHTML('Querying NVD for Critical CVEs in the last 30 days…'));
       window.ihShowCritical();
@@ -1843,14 +1846,23 @@ document.getElementById('copyBtn').onclick = () => {
     }
   };
 
-  window.ihShowKEV = function(){
+  window.ihShowKEV = async function(){
     const res = document.getElementById('ihResults');
     if (!res) return;
-    if (!kevReady){ res.innerHTML = loadingHTML('Loading CISA KEV feed…'); loadKEV().then(()=>window.ihShowKEV()); return; }
-    const entries = kevList.slice(0, 20);
-    if (!entries.length){ res.innerHTML = '<div class="ih-empty">KEV feed not available.</div>'; return; }
-    res.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Showing 20 most recently added entries from the CISA Known Exploited Vulnerabilities catalogue</div>`
-      + entries.map(renderKEVEntry).join('');
+    res.innerHTML = loadingHTML('Fetching CISA KEV feed…');
+    /* allow retry after a previous failure */
+    if (kevFailed) { kevFailed = false; }
+    try {
+      await loadKEV();
+      const entries = kevList.slice(0, 20);
+      if (!entries.length){ res.innerHTML = '<div class="ih-empty">KEV feed returned no entries.</div>'; return; }
+      res.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Showing 20 most recently added entries · CISA Known Exploited Vulnerabilities catalogue</div>`
+        + entries.map(renderKEVEntry).join('');
+    } catch(e){
+      res.innerHTML = errorHTML('CISA KEV feed failed: ' + e.message
+        + '<br><small style="color:var(--muted)">This may be a CORS restriction on GitHub Pages. '
+        + 'Try the CVE search or Recent Critical instead.</small>');
+    }
   };
 
   window.ihQuick = async function(keyword){
