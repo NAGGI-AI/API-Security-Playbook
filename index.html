@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' raw.githubusercontent.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' raw.githubusercontent.com services.nvd.nist.gov www.cisa.gov; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <title>Security Playbook Agent</title>
 <style>
@@ -346,6 +346,79 @@ ul.play-list li{margin-bottom:5px}
 .chat-copy-btn.copied{color:var(--accent);border-color:var(--accent)}
 .chat-clear-btn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .chat-clear-btn:hover{border-color:#ef4444;color:#ef4444}
+
+/* ── AppSec Intel Hub ── */
+:root{--ih-accent:#f59e0b;--ih-accent2:#d97706;--ih-glow:rgba(245,158,11,.18)}
+.group-header.ih-hdr .dot{background:var(--ih-accent);box-shadow:0 0 8px var(--ih-accent)}
+.group-header.ih-hdr .glabel{color:var(--ih-accent)}
+.ih-live{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ih-accent);border:1px solid var(--ih-accent);border-radius:4px;padding:1px 5px;margin-left:6px;animation:ihPulse 2s ease-in-out infinite}
+@keyframes ihPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--ih-glow)}50%{opacity:.7;box-shadow:0 0 0 5px transparent}}
+.ih-dot{width:5px;height:5px;border-radius:50%;background:var(--ih-accent);animation:ihBlink 1.2s step-start infinite}
+@keyframes ihBlink{0%,100%{opacity:1}50%{opacity:0}}
+/* Hub main view */
+.ih-wrap{max-width:900px;padding:4px 0 28px}
+.ih-title-row{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.ih-title-row h2{font-size:22px;font-weight:800;letter-spacing:-.3px;margin:0}
+.ih-badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:6px;background:linear-gradient(135deg,var(--ih-accent),var(--ih-accent2));color:#000;letter-spacing:.05em}
+.ih-sub{font-size:12px;color:var(--muted);margin-left:auto}
+.ih-search-row{display:flex;gap:8px;margin-bottom:14px}
+.ih-input{flex:1;background:var(--panel);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13.5px;padding:9px 14px;font-family:inherit;outline:none;transition:border-color .2s}
+.ih-input:focus{border-color:var(--ih-accent);box-shadow:0 0 0 3px var(--ih-glow)}
+.ih-btn{background:linear-gradient(135deg,var(--ih-accent),var(--ih-accent2));border:none;border-radius:10px;color:#000;font-size:13px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:transform .15s,opacity .15s}
+.ih-btn:hover{opacity:.88;transform:scale(1.02)}
+.ih-btn.sec{background:var(--soft);color:var(--text);border:1px solid var(--border)}
+.ih-btn.sec:hover{border-color:var(--ih-accent);color:var(--ih-accent)}
+.ih-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.ih-chip{background:var(--soft);border:1px solid var(--border);border-radius:20px;font-size:11.5px;padding:5px 13px;cursor:pointer;color:var(--text);transition:all .15s;font-family:inherit}
+.ih-chip:hover{border-color:var(--ih-accent);color:var(--ih-accent);background:var(--ih-glow)}
+.ih-results{display:flex;flex-direction:column;gap:10px}
+/* CVE Card */
+.cve-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;transition:border-color .2s,box-shadow .2s;position:relative;overflow:hidden}
+.cve-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--ih-accent),var(--ih-accent2))}
+.cve-card:hover{border-color:var(--ih-accent);box-shadow:0 4px 24px var(--ih-glow)}
+.cve-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px}
+.cve-id{font-size:13px;font-weight:800;font-family:monospace;color:var(--ih-accent);flex-shrink:0}
+.cve-title{font-size:13px;font-weight:600;line-height:1.4;flex:1}
+.cve-sev{font-size:10px;font-weight:800;padding:2px 8px;border-radius:5px;letter-spacing:.05em;flex-shrink:0;align-self:flex-start}
+.cve-sev.CRITICAL{background:#7f1d1d;color:#fca5a5}
+.cve-sev.HIGH{background:#78350f;color:#fcd34d}
+.cve-sev.MEDIUM{background:#713f12;color:#fde68a}
+.cve-sev.LOW{background:#1e3a2f;color:#6ee7b7}
+.cve-sev.NONE,.cve-sev.UNKNOWN{background:var(--soft);color:var(--muted)}
+.cve-desc{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.cve-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+.cve-chip{font-size:10.5px;padding:2px 8px;border-radius:5px;background:var(--soft);border:1px solid var(--border);color:var(--text);font-family:monospace}
+.cve-chip.kev{background:#7f1d1d;border-color:#ef4444;color:#fca5a5;font-family:inherit;font-weight:700;animation:ihPulse 2s ease-in-out infinite}
+.cve-chip.kev .ih-dot{background:#ef4444}
+.cve-cvss{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cve-cvss-label{font-size:11px;color:var(--muted);white-space:nowrap}
+.cve-cvss-bar{flex:1;height:6px;border-radius:3px;background:var(--soft);overflow:hidden}
+.cve-cvss-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.cve-cvss-score{font-size:12px;font-weight:700;white-space:nowrap}
+.cve-actions{display:flex;gap:8px;flex-wrap:wrap}
+.cve-actions button{font-size:11px;padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:var(--soft);color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s}
+.cve-actions button:hover{border-color:var(--ih-accent);color:var(--ih-accent)}
+.cve-actions button.primary{background:linear-gradient(135deg,var(--ih-accent),var(--ih-accent2));border:none;color:#000;font-weight:700}
+.cve-actions button.primary:hover{opacity:.88;transform:scale(1.02)}
+.kev-detail{margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:11px;color:#fca5a5;display:none}
+.kev-detail.show{display:block}
+/* Loading / empty states */
+.ih-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 0;color:var(--muted)}
+.ih-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--ih-accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ih-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:13px}
+.ih-error{text-align:center;padding:30px 0;font-size:13px;color:#ef4444}
+/* KEV list entries */
+.kev-entry{background:var(--panel);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:5px}
+.kev-entry-top{display:flex;align-items:center;gap:10px}
+.kev-cve-id{font-size:12px;font-weight:800;font-family:monospace;color:#ef4444}
+.kev-name{font-size:12.5px;font-weight:600;flex:1}
+.kev-date{font-size:10px;color:var(--muted);white-space:nowrap}
+.kev-product{font-size:11px;color:var(--muted)}
+/* Sidebar icon in hub group */
+.ih-sidebar-btn{width:100%;background:none;border:none;display:flex;align-items:center;gap:9px;padding:7px 14px;cursor:pointer;border-radius:7px;color:var(--text);font-family:inherit;font-size:12.5px;font-weight:600;transition:background .15s,color .15s;text-align:left}
+.ih-sidebar-btn:hover{background:var(--soft);color:var(--ih-accent)}
+.ih-sidebar-btn.active{background:var(--ih-glow);color:var(--ih-accent)}
 </style>
 </head>
 <body>
@@ -453,6 +526,21 @@ ul.play-list li{margin-bottom:5px}
           <div class="sub-body" id="wa-cats"></div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- AppSec Intel Hub -->
+    <div class="group" id="grp-ih">
+      <div class="group-header ih-hdr" onclick="toggleGroup('grp-ih')">
+        <span class="dot" style="background:var(--ih-accent);box-shadow:0 0 8px var(--ih-accent)"></span>
+        <span class="glabel" style="color:var(--ih-accent)">AppSec Intel Hub</span>
+        <span class="ih-live"><span class="ih-dot"></span>LIVE</span>
+        <span class="chevron">&#9660;</span>
+      </div>
+      <div class="group-body" id="grp-ih-body">
+        <button class="ih-sidebar-btn" id="ihOpenBtn" onclick="openIntelHub()">🔍 CVE &amp; Threat Intel</button>
+        <button class="ih-sidebar-btn" id="ihKevBtn" onclick="openIntelHub('kev')">🚨 CISA KEV Feed</button>
+        <button class="ih-sidebar-btn" id="ihCritBtn" onclick="openIntelHub('critical')">🔴 Recent Critical CVEs</button>
       </div>
     </div>
 
@@ -1493,6 +1581,328 @@ document.getElementById('copyBtn').onclick = () => {
 };
 </script>
 
+<!-- ── AppSec Intel Hub Module ── -->
+<script>
+(function(){
+  'use strict';
+
+  /* ── Config ── */
+  const NVD_API  = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
+  const KEV_URL  = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
+  const NVD_DELAY = 700; /* ms between NVD calls to respect 5 req/30 s limit */
+
+  /* ── State ── */
+  let kevIndex  = null;   /* {[cveId]: entry} */
+  let kevList   = [];     /* sorted by dateAdded desc */
+  let kevLoading = false;
+  let kevReady  = false;
+  let ihActive  = false;
+
+  /* ── Helpers ── */
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function cvssColor(score){
+    const n = parseFloat(score);
+    if (isNaN(n)) return '#6b7280';
+    if (n >= 9)  return '#ef4444';
+    if (n >= 7)  return '#f97316';
+    if (n >= 4)  return '#eab308';
+    return '#22c55e';
+  }
+
+  function sevClass(sev){
+    const s = (sev||'').toUpperCase();
+    return ['CRITICAL','HIGH','MEDIUM','LOW','NONE'].includes(s) ? s : 'UNKNOWN';
+  }
+
+  /* ── KEV loader (cached) ── */
+  async function loadKEV(){
+    if (kevReady || kevLoading) return;
+    kevLoading = true;
+    try {
+      const r = await fetch(KEV_URL);
+      if (!r.ok) throw new Error('KEV fetch failed');
+      const data = await r.json();
+      const vulns = data.vulnerabilities || [];
+      kevList = [...vulns].sort((a,b)=> (b.dateAdded||'').localeCompare(a.dateAdded||''));
+      kevIndex = Object.fromEntries(vulns.map(v => [v.cveID, v]));
+      kevReady = true;
+    } catch(e){
+      console.warn('[IntelHub] KEV load failed:', e.message);
+    } finally {
+      kevLoading = false;
+    }
+  }
+
+  /* ── NVD fetch helpers ── */
+  async function nvdFetch(params){
+    const url = NVD_API + '?' + new URLSearchParams(params).toString();
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('NVD API error ' + r.status);
+    return r.json();
+  }
+
+  async function nvdById(cveId){
+    const data = await nvdFetch({ cveId });
+    return (data.vulnerabilities || [])[0]?.cve || null;
+  }
+
+  async function nvdSearch(keyword, maxResults = 8){
+    const data = await nvdFetch({ keywordSearch: keyword, resultsPerPage: maxResults });
+    return (data.vulnerabilities || []).map(v => v.cve);
+  }
+
+  async function nvdRecentCritical(){
+    const end   = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - 30);
+    const fmt = d => d.toISOString().replace(/\.\d+Z$/,'Z');
+    const data = await nvdFetch({
+      cvssV3Severity: 'CRITICAL',
+      pubStartDate: fmt(start),
+      pubEndDate:   fmt(end),
+      resultsPerPage: 10
+    });
+    return (data.vulnerabilities || []).map(v => v.cve);
+  }
+
+  /* ── CVE Card renderer ── */
+  function renderCVECard(cve, idx){
+    const id    = cve.id || '';
+    const descs = cve.descriptions || [];
+    const desc  = (descs.find(d=>d.lang==='en')||descs[0]||{}).value || 'No description available.';
+    const title = desc.slice(0,120) + (desc.length > 120 ? '…' : '');
+    const metrics= cve.metrics || {};
+    const cvssData = (metrics.cvssMetricV31||metrics.cvssMetricV30||metrics.cvssMetricV2||[])[0]?.cvssData || {};
+    const score = cvssData.baseScore != null ? cvssData.baseScore : null;
+    const sev   = (metrics.cvssMetricV31||metrics.cvssMetricV30||[])[0]?.cvssData?.baseSeverity
+                  || (score != null ? (score>=9?'CRITICAL':score>=7?'HIGH':score>=4?'MEDIUM':'LOW') : 'UNKNOWN');
+    const cwes  = (cve.weaknesses||[]).flatMap(w=>w.description||[]).filter(d=>d.lang==='en').map(d=>d.value).slice(0,4);
+    const refs  = (cve.references||[]).find(r=>r.url&&r.url.includes('nvd.nist.gov'))?.url
+                  || `https://nvd.nist.gov/vuln/detail/${esc(id)}`;
+    const kev   = kevIndex && kevIndex[id];
+    const color = cvssColor(score);
+    const pct   = score != null ? Math.min(100, (score/10)*100).toFixed(1) : 0;
+    const sc    = sevClass(sev);
+
+    return `<div class="cve-card" id="cve-card-${esc(id)}">
+      <div class="cve-top">
+        <span class="cve-id">${esc(id)}</span>
+        <span class="cve-title">${esc(title)}</span>
+        <span class="cve-sev ${sc}">${esc(sev)}</span>
+      </div>
+      ${kev ? `<div class="cve-meta"><span class="cve-chip kev"><span class="ih-dot"></span> &nbsp;🚨 ACTIVELY EXPLOITED · CISA KEV</span></div>` : ''}
+      <div class="cve-desc">${esc(desc)}</div>
+      ${score != null ? `
+      <div class="cve-cvss">
+        <span class="cve-cvss-label">CVSS ${cvssData.version||'3.x'}</span>
+        <div class="cve-cvss-bar"><div class="cve-cvss-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="cve-cvss-score" style="color:${color}">${score.toFixed(1)}</span>
+      </div>` : ''}
+      ${cwes.length ? `<div class="cve-meta">${cwes.map(c=>`<span class="cve-chip">${esc(c)}</span>`).join('')}</div>` : ''}
+      ${kev ? `<div class="kev-detail" id="kev-detail-${esc(id)}">
+        <strong>Vulnerability Name:</strong> ${esc(kev.vulnerabilityName||'')} &nbsp;·&nbsp;
+        <strong>Vendor:</strong> ${esc(kev.vendorProject||'')} &nbsp;·&nbsp;
+        <strong>Product:</strong> ${esc(kev.product||'')} &nbsp;·&nbsp;
+        <strong>Date Added:</strong> ${esc(kev.dateAdded||'')} &nbsp;·&nbsp;
+        <strong>Due Date:</strong> ${esc(kev.dueDate||'')}
+        ${kev.notes ? `<br><strong>Notes:</strong> ${esc(kev.notes)}` : ''}
+      </div>` : ''}
+      <div class="cve-actions">
+        <button class="primary" onclick="window.intelWriteFinding('${esc(id)}')">✍️ Write Finding</button>
+        <button onclick="window.open('${esc(refs)}','_blank','noopener noreferrer')">🔗 NVD Details</button>
+        ${kev ? `<button onclick="document.getElementById('kev-detail-${esc(id)}').classList.toggle('show')">🚨 KEV Info</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  /* ── KEV entry renderer ── */
+  function renderKEVEntry(entry){
+    return `<div class="kev-entry">
+      <div class="kev-entry-top">
+        <span class="kev-cve-id">${esc(entry.cveID||'')}</span>
+        <span class="kev-name">${esc(entry.vulnerabilityName||'')}</span>
+        <span class="kev-date">${esc(entry.dateAdded||'')}</span>
+      </div>
+      <div class="kev-product">${esc(entry.vendorProject||'')} · ${esc(entry.product||'')}</div>
+      <div class="cve-actions" style="margin-top:6px">
+        <button class="primary" onclick="window.intelWriteFinding('${esc(entry.cveID||'')}')">✍️ Write Finding</button>
+        <button onclick="window.ihLookupCVECard('${esc(entry.cveID||'')}')">🔍 Full CVE Details</button>
+      </div>
+    </div>`;
+  }
+
+  /* ── Main hub view renderer ── */
+  function renderIntelHubMain(resultsHTML, query){
+    document.getElementById('card').innerHTML = `
+      <div class="ih-wrap">
+        <div class="ih-title-row">
+          <h2>AppSec Intel Hub</h2>
+          <span class="ih-badge">LIVE THREAT INTEL</span>
+          <span class="ih-sub">NVD · CISA KEV · Real-time</span>
+        </div>
+        <div class="ih-search-row">
+          <input class="ih-input" id="ihSearchInput" placeholder="Search CVEs or enter CVE-YYYY-NNNNN…" value="${esc(query||'')}" />
+          <button class="ih-btn" onclick="window.ihSearch()">🔍 Search</button>
+          <button class="ih-btn sec" onclick="window.ihClear()">✕</button>
+        </div>
+        <div class="ih-chips">
+          <button class="ih-chip" onclick="window.ihShowCritical()">🔴 Recent Critical</button>
+          <button class="ih-chip" onclick="window.ihShowKEV()">🚨 CISA KEV Latest</button>
+          <button class="ih-chip" onclick="window.ihQuick('SQL Injection')">SQL Injection</button>
+          <button class="ih-chip" onclick="window.ihQuick('authentication bypass')">Auth Bypass</button>
+          <button class="ih-chip" onclick="window.ihQuick('remote code execution')">RCE</button>
+          <button class="ih-chip" onclick="window.ihQuick('SSRF')">SSRF</button>
+          <button class="ih-chip" onclick="window.ihQuick('XXE')">XXE</button>
+        </div>
+        <div class="ih-results" id="ihResults">${resultsHTML || '<div class="ih-empty">🔍 Search CVE IDs, keywords, or use the chips above to explore live threat intelligence.</div>'}</div>
+      </div>`;
+    const inp = document.getElementById('ihSearchInput');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key==='Enter') window.ihSearch(); });
+  }
+
+  function loadingHTML(msg){ return `<div class="ih-loading"><div class="ih-spinner"></div><span>${esc(msg)}</span></div>`; }
+  function errorHTML(msg)  { return `<div class="ih-error">⚠️ ${esc(msg)}</div>`; }
+
+  /* ── Public actions exposed on window ── */
+
+  window.openIntelHub = function(mode){
+    /* deactivate other items */
+    if (typeof clearAllActive === 'function') clearAllActive();
+    document.querySelectorAll('.ih-sidebar-btn').forEach(b=>b.classList.remove('active'));
+    const btn = mode==='kev' ? document.getElementById('ihKevBtn')
+              : mode==='critical' ? document.getElementById('ihCritBtn')
+              : document.getElementById('ihOpenBtn');
+    if (btn) btn.classList.add('active');
+    ihActive = true;
+    document.getElementById('chipsBar').innerHTML = '';
+
+    /* kick off KEV load in background */
+    loadKEV();
+
+    if (mode==='kev') {
+      renderIntelHubMain(loadingHTML('Fetching CISA KEV Feed…'));
+      loadKEV().then(() => window.ihShowKEV());
+    } else if (mode==='critical') {
+      renderIntelHubMain(loadingHTML('Querying NVD for Critical CVEs in the last 30 days…'));
+      window.ihShowCritical();
+    } else {
+      renderIntelHubMain('');
+    }
+  };
+
+  window.ihSearch = async function(){
+    const inp = document.getElementById('ihSearchInput');
+    const query = inp ? inp.value.trim() : '';
+    if (!query) return;
+    const res = document.getElementById('ihResults');
+    if (!res) return;
+
+    /* detect CVE-YYYY-NNNNN pattern */
+    const cveMatch = query.match(/CVE-\d{4}-\d{4,}/i);
+    if (cveMatch) {
+      await window.ihLookupCVECard(cveMatch[0].toUpperCase(), res);
+      return;
+    }
+    res.innerHTML = loadingHTML('Searching NVD — ' + esc(query) + '…');
+    try {
+      await new Promise(r=>setTimeout(r, NVD_DELAY));
+      const cves = await nvdSearch(query);
+      if (!cves.length){ res.innerHTML = '<div class="ih-empty">No CVEs found for that query. Try different keywords.</div>'; return; }
+      res.innerHTML = cves.map(renderCVECard).join('');
+    } catch(e){
+      res.innerHTML = errorHTML('NVD lookup failed: ' + e.message + '. The NVD API is rate-limited (5 req/30 s). Try again shortly.');
+    }
+  };
+
+  window.ihLookupCVECard = async function(cveId, container){
+    const res = container || document.getElementById('ihResults');
+    if (!res) return;
+    res.innerHTML = loadingHTML('Fetching ' + esc(cveId) + '…');
+    try {
+      await loadKEV();
+      const cve = await nvdById(cveId);
+      if (!cve){ res.innerHTML = errorHTML(cveId + ' not found in NVD.'); return; }
+      res.innerHTML = renderCVECard(cve);
+    } catch(e){
+      res.innerHTML = errorHTML('Failed to fetch ' + esc(cveId) + ': ' + e.message);
+    }
+  };
+
+  window.ihShowCritical = async function(){
+    const res = document.getElementById('ihResults');
+    if (!res) return;
+    res.innerHTML = loadingHTML('Querying NVD for Critical CVEs in the last 30 days…');
+    try {
+      await loadKEV();
+      const cves = await nvdRecentCritical();
+      if (!cves.length){ res.innerHTML = '<div class="ih-empty">No Critical CVEs found in the last 30 days (NVD query).</div>'; return; }
+      res.innerHTML = cves.map(renderCVECard).join('');
+    } catch(e){
+      res.innerHTML = errorHTML('NVD query failed: ' + e.message);
+    }
+  };
+
+  window.ihShowKEV = function(){
+    const res = document.getElementById('ihResults');
+    if (!res) return;
+    if (!kevReady){ res.innerHTML = loadingHTML('Loading CISA KEV feed…'); loadKEV().then(()=>window.ihShowKEV()); return; }
+    const entries = kevList.slice(0, 20);
+    if (!entries.length){ res.innerHTML = '<div class="ih-empty">KEV feed not available.</div>'; return; }
+    res.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Showing 20 most recently added entries from the CISA Known Exploited Vulnerabilities catalogue</div>`
+      + entries.map(renderKEVEntry).join('');
+  };
+
+  window.ihQuick = async function(keyword){
+    const inp = document.getElementById('ihSearchInput');
+    if (inp) inp.value = keyword;
+    await window.ihSearch();
+  };
+
+  window.ihClear = function(){
+    const inp = document.getElementById('ihSearchInput');
+    if (inp) inp.value = '';
+    const res = document.getElementById('ihResults');
+    if (res) res.innerHTML = '<div class="ih-empty">🔍 Search CVE IDs, keywords, or use the chips above to explore live threat intelligence.</div>';
+  };
+
+  window.intelWriteFinding = function(cveId){
+    if (typeof toggleChat === 'function') toggleChat();
+    const inp = document.getElementById('chatInput');
+    if (inp){ inp.value = 'Write finding for ' + cveId; inp.focus(); }
+  };
+
+  /* ── Chatbot helper — used by chat widget ── */
+  window.lookupCVEForChat = async function(cveId){
+    try {
+      await loadKEV();
+      const cve = await nvdById(cveId);
+      if (!cve) return `❌ **${esc(cveId)}** was not found in the NVD database. Verify the CVE ID and try again.`;
+      const descs  = cve.descriptions || [];
+      const desc   = (descs.find(d=>d.lang==='en')||descs[0]||{}).value || 'No description.';
+      const metrics= cve.metrics || {};
+      const cvssD  = (metrics.cvssMetricV31||metrics.cvssMetricV30||metrics.cvssMetricV2||[])[0]?.cvssData || {};
+      const score  = cvssD.baseScore != null ? cvssD.baseScore.toFixed(1) : 'N/A';
+      const sev    = (metrics.cvssMetricV31||metrics.cvssMetricV30||[])[0]?.cvssData?.baseSeverity || 'N/A';
+      const cwes   = (cve.weaknesses||[]).flatMap(w=>w.description||[]).filter(d=>d.lang==='en').map(d=>d.value).slice(0,4).join(', ') || 'N/A';
+      const kev    = kevIndex && kevIndex[cveId.toUpperCase()];
+      const line   = '─'.repeat(36);
+      let out = `🔍 **CVE Lookup — ${cveId}**\n${line}\n\n`;
+      out += `**Severity:** ${sev}  ·  **CVSS Score:** ${score}\n\n`;
+      if (kev) out += `🚨 **CISA KEV** — This vulnerability is on the Known Exploited Vulnerabilities catalogue!\n**Vendor/Product:** ${kev.vendorProject||''} / ${kev.product||''}\n**Date Added:** ${kev.dateAdded||''}  ·  **Due Date:** ${kev.dueDate||''}\n\n`;
+      out += `**Description:**\n${desc}\n\n`;
+      if (cwes !== 'N/A') out += `**CWE:** ${cwes}\n\n`;
+      out += `**NVD Reference:** https://nvd.nist.gov/vuln/detail/${cveId}\n\n`;
+      out += `💡 *Type "write finding for ${cveId}" to generate a structured security report.*`;
+      return out;
+    } catch(e){
+      return `⚠️ Failed to retrieve **${cveId}** from NVD: ${e.message}. The NVD API is rate-limited (5 req/30 s) — try again in a moment.`;
+    }
+  };
+
+})();
+</script>
+
 <!-- ── Chat Widget ── -->
 <button id="chatBtn" title="Security Assistant" onclick="toggleChat()">
   💬 Ask AI
@@ -1736,20 +2146,20 @@ document.getElementById('copyBtn').onclick = () => {
     processUserMessage(text);
   };
 
-  function processUserMessage(text) {
+  async function processUserMessage(text) {
     appendUser(text);
     showTyping();
-    setTimeout(() => {
-      removeTyping();
-      let reply;
-      try {
-        reply = getResponse(text);
-      } catch (err) {
-        reply = "⚠️ Something went wrong processing your request. Please try again or rephrase your question.";
-        console.error('[Security Assistant]', err);
-      }
-      appendBot(reply);
-    }, 600);
+    await new Promise(r => setTimeout(r, 600));
+    removeTyping();
+    let reply;
+    try {
+      const result = getResponse(text);
+      reply = (result instanceof Promise) ? await result : result;
+    } catch (err) {
+      reply = "⚠️ Something went wrong processing your request. Please try again or rephrase your question.";
+      console.error('[Security Assistant]', err);
+    }
+    appendBot(reply);
   }
 
   /* ── DOM helpers ── */
@@ -1824,6 +2234,12 @@ document.getElementById('copyBtn').onclick = () => {
   function getResponse(raw) {
     if (!chatReady) {
       return "⏳ Still loading vulnerability data, please try again in a moment.";
+    }
+
+    /* ── CVE Lookup (async, delegates to Intel Hub module) ── */
+    const cveMatch = raw.match(/CVE-\d{4}-\d{4,}/i);
+    if (cveMatch && typeof window.lookupCVEForChat === 'function') {
+      return window.lookupCVEForChat(cveMatch[0].toUpperCase());
     }
 
     const qRaw = expandAliases(raw.toLowerCase()).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
