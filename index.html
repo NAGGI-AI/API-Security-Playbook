@@ -408,6 +408,7 @@ ul.play-list li{margin-bottom:5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ih-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:13px}
 .ih-error{text-align:center;padding:30px 0;font-size:13px;color:#ef4444}
+.ih-error-hint{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.6}
 /* KEV list entries */
 .kev-entry{background:var(--panel);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:5px}
 .kev-entry-top{display:flex;align-items:center;gap:10px}
@@ -1596,7 +1597,7 @@ document.getElementById('copyBtn').onclick = () => {
   let kevList    = [];     /* sorted by dateAdded desc */
   let kevPromise = null;   /* singleton in-flight Promise — prevents double-fetch */
   let kevReady   = false;
-  let kevFailed  = false;
+  let kevError   = null;   /* error string if KEV load failed, null if ok */
   let ihActive   = false;
 
   /* ── Helpers ── */
@@ -1616,25 +1617,25 @@ document.getElementById('copyBtn').onclick = () => {
     return ['CRITICAL','HIGH','MEDIUM','LOW','NONE'].includes(s) ? s : 'UNKNOWN';
   }
 
-  /* ── KEV loader (singleton Promise — safe to call multiple times) ── */
+  /* ── KEV loader — always resolves, never throws (NVD features must never be blocked by KEV) ── */
   function loadKEV(){
-    if (kevReady)  return Promise.resolve();
-    if (kevFailed) return Promise.reject(new Error('CISA KEV feed unavailable'));
+    if (kevReady)   return Promise.resolve();
     if (kevPromise) return kevPromise;   /* already in-flight — reuse same Promise */
     kevPromise = (async () => {
       try {
         const r = await fetch(KEV_URL);
-        if (!r.ok) throw new Error('CISA server returned ' + r.status);
+        if (!r.ok) throw new Error('CISA server returned HTTP ' + r.status);
         const data = await r.json();
         const vulns = data.vulnerabilities || [];
         kevList  = [...vulns].sort((a,b)=> (b.dateAdded||'').localeCompare(a.dateAdded||''));
         kevIndex = Object.fromEntries(vulns.map(v => [v.cveID, v]));
         kevReady = true;
+        kevError = null;
       } catch(e){
-        kevFailed  = true;
-        kevPromise = null;   /* allow retry on explicit user action */
-        console.warn('[IntelHub] KEV load failed:', e.message);
-        throw e;
+        kevError   = e.message;
+        kevPromise = null;   /* clear so user can retry by clicking again */
+        console.warn('[IntelHub] KEV unavailable:', e.message);
+        /* intentionally does NOT rethrow — callers must check kevError if needed */
       }
     })();
     return kevPromise;
@@ -1768,7 +1769,8 @@ document.getElementById('copyBtn').onclick = () => {
   }
 
   function loadingHTML(msg){ return `<div class="ih-loading"><div class="ih-spinner"></div><span>${esc(msg)}</span></div>`; }
-  function errorHTML(msg)  { return `<div class="ih-error">⚠️ ${esc(msg)}</div>`; }
+  /* hint is trusted safe HTML (not user input) — passed as second arg for links/formatting */
+  function errorHTML(msg, hint){ return `<div class="ih-error">⚠️ ${esc(msg)}${hint ? `<div class="ih-error-hint">${hint}</div>` : ''}</div>`; }
 
   /* ── Public actions exposed on window ── */
 
@@ -1822,13 +1824,14 @@ document.getElementById('copyBtn').onclick = () => {
     const res = container || document.getElementById('ihResults');
     if (!res) return;
     res.innerHTML = loadingHTML('Fetching ' + esc(cveId) + '…');
+    loadKEV(); /* start silently — KEV badge is optional */
     try {
-      await loadKEV();
       const cve = await nvdById(cveId);
-      if (!cve){ res.innerHTML = errorHTML(cveId + ' not found in NVD.'); return; }
+      if (!cve){ res.innerHTML = errorHTML(esc(cveId) + ' not found in NVD.'); return; }
       res.innerHTML = renderCVECard(cve);
     } catch(e){
-      res.innerHTML = errorHTML('Failed to fetch ' + esc(cveId) + ': ' + e.message);
+      res.innerHTML = errorHTML('Failed to fetch ' + esc(cveId) + ': ' + e.message,
+        'The NVD API is rate-limited (5 req/30 s). Wait a moment and try again.');
     }
   };
 
@@ -1836,13 +1839,14 @@ document.getElementById('copyBtn').onclick = () => {
     const res = document.getElementById('ihResults');
     if (!res) return;
     res.innerHTML = loadingHTML('Querying NVD for Critical CVEs in the last 30 days…');
+    loadKEV(); /* start silently — KEV badges are optional, NVD must not wait */
     try {
-      await loadKEV();
       const cves = await nvdRecentCritical();
-      if (!cves.length){ res.innerHTML = '<div class="ih-empty">No Critical CVEs found in the last 30 days (NVD query).</div>'; return; }
+      if (!cves.length){ res.innerHTML = '<div class="ih-empty">No Critical CVEs found in the last 30 days.</div>'; return; }
       res.innerHTML = cves.map(renderCVECard).join('');
     } catch(e){
-      res.innerHTML = errorHTML('NVD query failed: ' + e.message);
+      res.innerHTML = errorHTML('NVD API error: ' + e.message,
+        'The NVD API is rate-limited (5 req/30 s). Wait a moment and try again.');
     }
   };
 
@@ -1850,19 +1854,24 @@ document.getElementById('copyBtn').onclick = () => {
     const res = document.getElementById('ihResults');
     if (!res) return;
     res.innerHTML = loadingHTML('Fetching CISA KEV feed…');
-    /* allow retry after a previous failure */
-    if (kevFailed) { kevFailed = false; }
-    try {
-      await loadKEV();
-      const entries = kevList.slice(0, 20);
-      if (!entries.length){ res.innerHTML = '<div class="ih-empty">KEV feed returned no entries.</div>'; return; }
-      res.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Showing 20 most recently added entries · CISA Known Exploited Vulnerabilities catalogue</div>`
-        + entries.map(renderKEVEntry).join('');
-    } catch(e){
-      res.innerHTML = errorHTML('CISA KEV feed failed: ' + e.message
-        + '<br><small style="color:var(--muted)">This may be a CORS restriction on GitHub Pages. '
-        + 'Try the CVE search or Recent Critical instead.</small>');
+    kevError = null;   /* reset so retry is always attempted */
+    kevPromise = null;
+    await loadKEV();
+    if (!kevReady){
+      /* CORS or network failure — show actionable error with direct link */
+      res.innerHTML = errorHTML(
+        'CISA KEV feed could not be loaded' + (kevError ? ' — ' + kevError : ''),
+        `The CISA.gov feed is blocked by browser CORS policy when accessed from GitHub Pages.<br>
+         <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener noreferrer"
+            style="color:var(--ih-accent);font-weight:600">🔗 Open CISA KEV Catalogue directly</a>
+         &nbsp;·&nbsp; Use <strong>CVE search</strong> or <strong>Recent Critical</strong> above for live NVD data.`
+      );
+      return;
     }
+    const entries = kevList.slice(0, 20);
+    if (!entries.length){ res.innerHTML = '<div class="ih-empty">KEV feed returned no entries.</div>'; return; }
+    res.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Showing 20 most recently added entries · CISA Known Exploited Vulnerabilities catalogue</div>`
+      + entries.map(renderKEVEntry).join('');
   };
 
   window.ihQuick = async function(keyword){
@@ -1887,7 +1896,7 @@ document.getElementById('copyBtn').onclick = () => {
   /* ── Chatbot helper — used by chat widget ── */
   window.lookupCVEForChat = async function(cveId){
     try {
-      await loadKEV();
+      loadKEV(); /* start silently — KEV flag is optional in chat response */
       const cve = await nvdById(cveId);
       if (!cve) return `❌ **${esc(cveId)}** was not found in the NVD database. Verify the CVE ID and try again.`;
       const descs  = cve.descriptions || [];
