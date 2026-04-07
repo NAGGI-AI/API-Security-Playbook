@@ -215,6 +215,17 @@ ul.play-list li{margin-bottom:5px}
 .dash-qa-btn{padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg);color:var(--muted);cursor:pointer;font-size:12.5px;font-family:inherit;transition:all .2s;white-space:nowrap;font-weight:600}
 .dash-qa-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(16,217,160,.05);transform:translateY(-1px)}
 
+/* Dashboard — Live Intelligence section */
+.dash-intel-label{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.dash-intel-live{font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:#f59e0b;animation:ihPulse 2s ease-in-out infinite}
+.dash-intel-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.dash-intel-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .2s,transform .2s,box-shadow .2s;position:relative;overflow:hidden}
+.dash-intel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:0}
+.dash-intel-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.dash-intel-card-icon{font-size:22px;margin-bottom:9px}
+.dash-intel-card-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.dash-intel-card-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.dash-intel-card-action{font-size:10px;font-weight:700;margin-top:9px;opacity:.7}
 /* animations */
 @keyframes scanline{0%{background-position:0% 0%}100%{background-position:0% 200%}}
 .brand-icon-inner{width:100%;height:100%;border-radius:8px;background:linear-gradient(180deg,transparent 45%,rgba(16,217,160,.25) 50%,transparent 55%);background-size:100% 200%;animation:scanline 2.5s linear infinite;display:flex;align-items:center;justify-content:center}
@@ -494,7 +505,7 @@ ul.play-list li{margin-bottom:5px}
     </div>
     <div class="sb-search-wrap">
       <span class="sb-search-icon">&#x1F50D;</span>
-      <input type="text" class="sb-search-input" placeholder="Search vulnerabilities…" oninput="filterVC(this.value)" />
+      <input type="text" class="sb-search-input" placeholder="Search vulnerabilities or CVE-YYYY-NNNNN…" oninput="filterVC(this.value)" />
     </div>
   </div>
 
@@ -813,6 +824,41 @@ function renderDashboard() {
         </div>
       </div>
 
+      <!-- Live Intelligence Entry Points -->
+      <div class="dash-intel-label">
+        AppSec Intel Hub
+        <span class="dash-intel-live">LIVE</span>
+      </div>
+      <div class="dash-intel-row">
+        <div class="dash-intel-card" onclick="window.openIntelHub('critical')"
+             style="border-color:rgba(239,68,68,.3)"
+             onmouseenter="this.style.borderColor='#ef4444'" onmouseleave="this.style.borderColor='rgba(239,68,68,.3)'">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#f97316)"></div>
+          <div class="dash-intel-card-icon">🔴</div>
+          <div class="dash-intel-card-title">Recent Critical CVEs</div>
+          <div class="dash-intel-card-desc">Latest CVSS 9.0+ vulnerabilities published in the past 30 days from NVD</div>
+          <div class="dash-intel-card-action" style="color:#ef4444">Open live feed →</div>
+        </div>
+        <div class="dash-intel-card" onclick="window.openCWERef()"
+             style="border-color:rgba(99,102,241,.3)"
+             onmouseenter="this.style.borderColor='#6366f1'" onmouseleave="this.style.borderColor='rgba(99,102,241,.3)'">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6366f1,#8b5cf6)"></div>
+          <div class="dash-intel-card-icon">🧩</div>
+          <div class="dash-intel-card-title">CWE Taxonomy</div>
+          <div class="dash-intel-card-desc">55+ MITRE weaknesses mapped to OWASP 2021 — parent/child tree, descriptions, NVD cross-search</div>
+          <div class="dash-intel-card-action" style="color:#6366f1">Browse taxonomy →</div>
+        </div>
+        <div class="dash-intel-card" onclick="window.openIntelHub()"
+             style="border-color:rgba(245,158,11,.3)"
+             onmouseenter="this.style.borderColor='#f59e0b'" onmouseleave="this.style.borderColor='rgba(245,158,11,.3)'">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#d97706)"></div>
+          <div class="dash-intel-card-icon">🔍</div>
+          <div class="dash-intel-card-title">CVE Lookup &amp; Finding Writer</div>
+          <div class="dash-intel-card-desc">Search any CVE ID for CVSS score, KEV status, playbook match — then generate a pentest finding in one click</div>
+          <div class="dash-intel-card-action" style="color:#f59e0b">Search CVEs →</div>
+        </div>
+      </div>
+
       <div class="dash-qa-label">Quick Actions</div>
       <div class="dash-qa-row">
         <button class="dash-qa-btn" onclick="toggleSevFilter('Critical')">&#x1F534; Show Critical</button>
@@ -820,6 +866,8 @@ function renderDashboard() {
         <button class="dash-qa-btn" onclick="toggleChecklist()">&#x2705; Assessment Checklist</button>
         <button class="dash-qa-btn" onclick="document.querySelector('#apiList .item')?.click()">&#x1F50C; API Top 10</button>
         <button class="dash-qa-btn" onclick="document.querySelector('#llmList .item')?.click()">&#x1F916; LLM Top 10</button>
+        <button class="dash-qa-btn" onclick="window.openIntelHub('critical')" style="border-color:rgba(239,68,68,.4);color:#ef4444">&#x1F534; Critical CVEs</button>
+        <button class="dash-qa-btn" onclick="window.openCWERef()" style="border-color:rgba(99,102,241,.4);color:#6366f1">&#x1F9E9; CWE Browser</button>
       </div>
 
     </div>`;
@@ -920,6 +968,17 @@ function buildVCSidebar(query) {
 }
 
 function filterVC(q) {
+  /* Route CVE IDs directly to Intel Hub search */
+  if (/^CVE-\d{4}-\d{4,}/i.test(q.trim())) {
+    if (typeof window.openIntelHub === 'function') {
+      window.openIntelHub();
+      setTimeout(() => {
+        const inp = document.getElementById('ihSearchInput');
+        if (inp){ inp.value = q.trim().toUpperCase(); window.ihSearch(); }
+      }, 150);
+    }
+    return;
+  }
   vcSearch = q;
   buildVCSidebar(q);
   if (q) {
@@ -2838,15 +2897,19 @@ document.getElementById('copyBtn').onclick = () => {
   /* ── helpers ── */
   function getWelcomeText() {
     return (
-      "👋 **Security Assistant** — built for AppSec teams:\n\n" +
-      "📋 **Finding Writer** — \"Write finding for BOLA on /api/users/123\"\n" +
-      "🔍 **Vuln Lookup** — \"What is SQL Injection?\"\n" +
-      "🩹 **Remediation** — \"How to fix XSS?\"\n" +
-      "📊 **Severity Filter** — \"Show all Critical vulnerabilities\"\n" +
-      "📂 **Category Browse** — \"List LLM01 vulnerabilities\"\n" +
-      "📚 **OWASP Overview** — \"OWASP API Top 10 overview\"\n" +
-      "🔢 **CWE Lookup** — \"What is CWE-89?\"\n" +
-      "📈 **Counts** — \"How many vulnerabilities are there?\""
+      "👋 **Security Assistant** — built for AppSec engineers:\n\n" +
+      "─── **Live Threat Intelligence** ───\n" +
+      "🔎 **CVE Lookup** — `CVE-2021-44228` → CVSS, KEV status, description\n" +
+      "📋 **CVE Finding** — `Write finding for CVE-2024-3400` → full pentest report\n" +
+      "🧩 **CWE Detail** — `What is CWE-918?` → taxonomy, parent/children, OWASP map\n\n" +
+      "─── **Playbook Reference** ───\n" +
+      "🔍 **Vuln Lookup** — `What is SQL Injection?`\n" +
+      "🩹 **Remediation** — `How to fix XSS?`\n" +
+      "📋 **Finding Writer** — `Write finding for BOLA on /api/users/123`\n" +
+      "📊 **Severity Filter** — `Show all Critical vulnerabilities`\n" +
+      "📚 **OWASP Overview** — `OWASP API Top 10 overview`\n" +
+      "🔢 **CWE Lookup** — `What is CWE-89?`\n\n" +
+      "💡 *Tip: Type a CVE ID in the sidebar search to jump straight to NVD details.*"
     );
   }
 
