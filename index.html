@@ -792,6 +792,8 @@ function clearAllActive() {
   document.querySelectorAll('.item.active-api, .item.active-vc, .item.active-llm, .vc-item.active-vc').forEach(x => {
     x.classList.remove('active-api','active-vc','active-llm');
   });
+  clActive = false;
+  document.getElementById('clLaunchBtn').classList.remove('active');
 }
 
 // ── API ──
@@ -1131,21 +1133,16 @@ function clGetItems() {
 }
 
 function toggleChecklist() {
-  clActive = !clActive;
-  const btn = document.getElementById('clLaunchBtn');
-  btn.classList.toggle('active', clActive);
-  if (clActive) {
-    clearAllActive();
-    mode = null;
-    if (clType && vcData[clType === 'all' ? 'waapi' : clType]) {
-      renderChecklistView();
-    } else {
-      renderChecklistTypeSelect();
-    }
-    document.getElementById('chipsBar').innerHTML = '';
+  clActive = true;
+  document.getElementById('clLaunchBtn').classList.add('active');
+  clearAllActive();
+  mode = null;
+  if (clType && vcData[clType === 'all' ? 'waapi' : clType]) {
+    renderChecklistView();
   } else {
-    renderDashboard();
+    renderChecklistTypeSelect();
   }
+  document.getElementById('chipsBar').innerHTML = '';
 }
 
 function renderChecklistTypeSelect() {
