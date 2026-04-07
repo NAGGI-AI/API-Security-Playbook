@@ -409,6 +409,32 @@ ul.play-list li{margin-bottom:5px}
 .ih-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:13px}
 .ih-error{text-align:center;padding:30px 0;font-size:13px;color:#ef4444}
 .ih-error-hint{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.6}
+.ih-section-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+/* KEV Reference page */
+.ih-kev-ref{background:var(--panel);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:28px 28px 24px;max-width:640px;margin:0 auto}
+.ih-kev-ref-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+.ih-kev-ref-icon{font-size:32px;flex-shrink:0;margin-top:2px}
+.ih-kev-ref-header h3{font-size:18px;font-weight:800;margin:0 0 4px;color:var(--text)}
+.ih-kev-ref-header p{font-size:12px;color:var(--muted);margin:0}
+.ih-kev-ref-desc{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:18px}
+.ih-kev-ref-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.ih-kev-ref-stat{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.ih-kev-ref-stat span{display:block;font-size:20px;font-weight:800;color:var(--ih-accent)}
+.ih-kev-ref-stat label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.ih-kev-ref-note{font-size:12px;color:#f97316;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:9px 13px;margin-bottom:16px}
+.ih-kev-ref-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.ih-kev-ref-actions a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;border-radius:10px;font-size:13px;font-weight:700;padding:9px 18px;font-family:inherit;transition:opacity .15s,transform .15s}
+.ih-kev-ref-actions a.ih-btn{background:linear-gradient(135deg,var(--ih-accent),var(--ih-accent2));color:#000}
+.ih-kev-ref-actions a.ih-btn:hover{opacity:.88;transform:scale(1.02)}
+.ih-kev-ref-actions a.ih-btn.sec{background:var(--soft);color:var(--text);border:1px solid var(--border)}
+.ih-kev-ref-actions a.ih-btn.sec:hover{border-color:var(--ih-accent);color:var(--ih-accent)}
+.ih-kev-ref-tip{font-size:12px;color:var(--muted);background:var(--soft);border-radius:8px;padding:10px 14px;line-height:1.5}
+/* Trending welcome cards */
+.ih-welcome{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.ih-welcome-card{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s}
+.ih-welcome-card:hover{border-color:var(--ih-accent);background:var(--ih-glow)}
+.ih-welcome-card-title{font-size:12.5px;font-weight:700;margin-bottom:4px}
+.ih-welcome-card-sub{font-size:11px;color:var(--muted)}
 /* KEV list entries */
 .kev-entry{background:var(--panel);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:5px}
 .kev-entry-top{display:flex;align-items:center;gap:10px}
@@ -1754,13 +1780,14 @@ document.getElementById('copyBtn').onclick = () => {
           <button class="ih-btn sec" onclick="window.ihClear()">✕</button>
         </div>
         <div class="ih-chips">
-          <button class="ih-chip" onclick="window.ihShowCritical()">🔴 Recent Critical</button>
-          <button class="ih-chip" onclick="window.ihShowKEV()">🚨 CISA KEV Latest</button>
-          <button class="ih-chip" onclick="window.ihQuick('SQL Injection')">SQL Injection</button>
-          <button class="ih-chip" onclick="window.ihQuick('authentication bypass')">Auth Bypass</button>
-          <button class="ih-chip" onclick="window.ihQuick('remote code execution')">RCE</button>
-          <button class="ih-chip" onclick="window.ihQuick('SSRF')">SSRF</button>
-          <button class="ih-chip" onclick="window.ihQuick('XXE')">XXE</button>
+          <button class="ih-chip" onclick="window.ihQuick('SQL Injection')">💉 SQL Injection</button>
+          <button class="ih-chip" onclick="window.ihQuick('authentication bypass')">🔐 Auth Bypass</button>
+          <button class="ih-chip" onclick="window.ihQuick('remote code execution')">💥 RCE</button>
+          <button class="ih-chip" onclick="window.ihQuick('privilege escalation')">⬆️ Priv Escalation</button>
+          <button class="ih-chip" onclick="window.ihQuick('path traversal')">📁 Path Traversal</button>
+          <button class="ih-chip" onclick="window.ihQuick('SSRF')">🌐 SSRF</button>
+          <button class="ih-chip" onclick="window.ihQuick('XXE')">📄 XXE</button>
+          <button class="ih-chip" onclick="window.ihQuick('command injection')">⚡ Cmd Injection</button>
         </div>
         <div class="ih-results" id="ihResults">${resultsHTML || '<div class="ih-empty">🔍 Search CVE IDs, keywords, or use the chips above to explore live threat intelligence.</div>'}</div>
       </div>`;
@@ -1787,12 +1814,14 @@ document.getElementById('copyBtn').onclick = () => {
 
     if (mode==='kev') {
       renderIntelHubMain('');
-      window.ihShowKEV();   /* ihShowKEV owns its own loading state */
+      window.ihShowKEV();
     } else if (mode==='critical') {
       renderIntelHubMain(loadingHTML('Querying NVD for Critical CVEs in the last 30 days…'));
       window.ihShowCritical();
     } else {
-      renderIntelHubMain('');
+      /* default — auto-load recent high-severity CVEs so user sees data immediately */
+      renderIntelHubMain(loadingHTML('Loading recent high-severity vulnerabilities…'));
+      window.ihShowTrending();
     }
   };
 
@@ -1843,35 +1872,71 @@ document.getElementById('copyBtn').onclick = () => {
     try {
       const cves = await nvdRecentCritical();
       if (!cves.length){ res.innerHTML = '<div class="ih-empty">No Critical CVEs found in the last 30 days.</div>'; return; }
-      res.innerHTML = cves.map(renderCVECard).join('');
+      res.innerHTML = `<div class="ih-section-title">🔴 Critical CVEs · Published last 30 days (CVSS 9.0+)</div>` + cves.map(renderCVECard).join('');
     } catch(e){
       res.innerHTML = errorHTML('NVD API error: ' + e.message,
         'The NVD API is rate-limited (5 req/30 s). Wait a moment and try again.');
     }
   };
 
-  window.ihShowKEV = async function(){
+  /* ── Trending: auto-loads HIGH severity CVEs last 14 days — shown on hub landing ── */
+  window.ihShowTrending = async function(){
     const res = document.getElementById('ihResults');
     if (!res) return;
-    res.innerHTML = loadingHTML('Fetching CISA KEV feed…');
-    kevError = null;   /* reset so retry is always attempted */
-    kevPromise = null;
-    await loadKEV();
-    if (!kevReady){
-      /* CORS or network failure — show actionable error with direct link */
-      res.innerHTML = errorHTML(
-        'CISA KEV feed could not be loaded' + (kevError ? ' — ' + kevError : ''),
-        `The CISA.gov feed is blocked by browser CORS policy when accessed from GitHub Pages.<br>
-         <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener noreferrer"
-            style="color:var(--ih-accent);font-weight:600">🔗 Open CISA KEV Catalogue directly</a>
-         &nbsp;·&nbsp; Use <strong>CVE search</strong> or <strong>Recent Critical</strong> above for live NVD data.`
-      );
-      return;
+    loadKEV(); /* start silently */
+    try {
+      const end   = new Date();
+      const start = new Date(end);
+      start.setDate(start.getDate() - 14);
+      const fmt = d => d.toISOString().replace(/\.\d+Z$/,'Z');
+      const data = await nvdFetch({ cvssV3Severity:'HIGH', pubStartDate:fmt(start), pubEndDate:fmt(end), resultsPerPage:8 });
+      const cves = (data.vulnerabilities||[]).map(v=>v.cve);
+      if (!cves.length){
+        res.innerHTML = '<div class="ih-empty">No high-severity CVEs in the last 14 days. Try a keyword search above.</div>';
+        return;
+      }
+      res.innerHTML = `<div class="ih-section-title">🔥 High-Severity CVEs · Published last 14 days</div>` + cves.map(renderCVECard).join('');
+    } catch(e){
+      res.innerHTML = errorHTML('NVD API error: ' + e.message,
+        'The NVD API is rate-limited (5 req/30 s). Wait a moment and try again, or search by keyword above.');
     }
-    const entries = kevList.slice(0, 20);
-    if (!entries.length){ res.innerHTML = '<div class="ih-empty">KEV feed returned no entries.</div>'; return; }
-    res.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Showing 20 most recently added entries · CISA Known Exploited Vulnerabilities catalogue</div>`
-      + entries.map(renderKEVEntry).join('');
+  };
+
+  /* ── CISA KEV reference page — live feed blocked by CORS on GitHub Pages ── */
+  window.ihShowKEV = function(){
+    const res = document.getElementById('ihResults');
+    if (!res) return;
+    res.innerHTML = `
+      <div class="ih-kev-ref">
+        <div class="ih-kev-ref-header">
+          <span class="ih-kev-ref-icon">🚨</span>
+          <div>
+            <h3>CISA Known Exploited Vulnerabilities</h3>
+            <p>Cybersecurity &amp; Infrastructure Security Agency (CISA) · Updated daily</p>
+          </div>
+        </div>
+        <p class="ih-kev-ref-desc">
+          The KEV catalogue is the authoritative source of vulnerabilities actively exploited in the wild.
+          Under <strong>Binding Operational Directive 22-01</strong>, US federal agencies must remediate
+          every KEV entry by its due date. For any organisation, a KEV entry means <em>patch immediately</em>.
+        </p>
+        <div class="ih-kev-ref-stats">
+          <div class="ih-kev-ref-stat"><span>1,100+</span><label>Known Exploited CVEs</label></div>
+          <div class="ih-kev-ref-stat"><span>BOD 22-01</span><label>Federal Mandate</label></div>
+          <div class="ih-kev-ref-stat"><span>Daily</span><label>Feed Updated</label></div>
+        </div>
+        <div class="ih-kev-ref-note">
+          ⚠️ Direct API access is blocked by browser CORS policy from GitHub Pages.
+          Use the links below to access the catalogue.
+        </div>
+        <div class="ih-kev-ref-actions">
+          <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener noreferrer" class="ih-btn">🔗 Open CISA KEV Catalogue</a>
+          <a href="https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json" target="_blank" rel="noopener noreferrer" class="ih-btn sec">📥 Download JSON Feed</a>
+        </div>
+        <div class="ih-kev-ref-tip">
+          💡 <strong>Pro tip:</strong> Search any CVE ID in the search bar above (e.g. <em>CVE-2021-44228</em>) — KEV status is automatically checked and shown on the result card when available.
+        </div>
+      </div>`;
   };
 
   window.ihQuick = async function(keyword){
