@@ -2354,6 +2354,22 @@ document.getElementById('copyBtn').onclick = () => {
     'A09':['Logging & Monitoring Gaps',   '#ec4899'],
     'A10':['Server-Side Request Forgery', '#f43f5e'],
   };
+  const _WACAT_DESC = {
+    'A01':'Access control failures allow users to act outside intended permissions, exposing unauthorised data or functionality to attackers.',
+    'A02':'Weak cryptography, improper key management, or unencrypted data in transit and at rest leads to sensitive data exposure.',
+    'A03':'Untrusted data sent to an interpreter as part of a command or query, enabling data theft, authentication bypass, or remote code execution.',
+    'A04':'Security requirements not embedded into the design make flaws impossible to fully fix at implementation level alone.',
+    'A05':'Default credentials, unnecessary features, verbose errors, and insecure defaults provide attackers an easy initial foothold.',
+    'A06':'Third-party components with known CVEs, unmaintained libraries, or incompatible licences introduce unmanaged supply-chain risk.',
+    'A07':'Weaknesses in authentication, session management, and credential protection enable credential stuffing or full account takeover.',
+    'A08':'Insecure deserialization, auto-update without integrity checks, and compromised CI/CD pipelines enable RCE or hidden backdoors.',
+    'A09':'Insufficient logging and monitoring allows attackers to persist, pivot, and achieve goals undetected for extended periods.',
+    'A10':'Attacker-controlled URLs fetched server-side grant access to internal services, cloud metadata endpoints, and internal networks.',
+  };
+  const _WACAT_SEV = {
+    'A01':'CRITICAL','A02':'HIGH','A03':'CRITICAL','A04':'HIGH',
+    'A05':'HIGH','A06':'HIGH','A07':'HIGH','A08':'HIGH','A09':'MEDIUM','A10':'HIGH',
+  };
 
   /* ── OWASP API Security Top 10 — 2023 ── */
   const OWASP_API_DB = {
@@ -2476,6 +2492,9 @@ document.getElementById('copyBtn').onclick = () => {
     const owaspCards = Object.entries(OWASP_CAT).map(([o,[name,color]])=>{
       const ids = byOwasp[o]||[];
       if (!ids.length) return '';
+      const desc = _WACAT_DESC[o]||'';
+      const sev  = _WACAT_SEV[o]||'HIGH';
+      const sevC = {'CRITICAL':'#ef4444','HIGH':'#f97316','MEDIUM':'#eab308','LOW':'#22c55e'}[sev]||'#6b7280';
       const chips = ids.map((id,i)=>{
         const hidden = i >= 5;
         return `<span class="cwe-mini-chip${hidden?' cwe-hidden':''}" onclick="event.stopPropagation();window.renderCWEDetail('${esc(id)}')" style="border-color:${color}40;color:${color}${hidden?';display:none':''}">CWE-${esc(id)}</span>`;
@@ -2483,13 +2502,14 @@ document.getElementById('copyBtn').onclick = () => {
       const moreBtn = ids.length > 5
         ? `<span class="cwe-mini-chip cwe-more" onclick="event.stopPropagation();this.closest('.cwe-owasp-chips').querySelectorAll('.cwe-hidden').forEach(e=>{e.style.display='';e.classList.remove('cwe-hidden')});this.remove()">+${ids.length-5} more ▾</span>`
         : '';
-      return `<div class="cwe-owasp-card" onclick="window.renderCWEDetail('${esc(ids[0])}')">
+      return `<div class="cwe-owasp-card" data-search="${o.toLowerCase()} ${name.toLowerCase()}" onclick="window.renderCWEDetail('${esc(ids[0])}')">
         <div class="cwe-owasp-hdr" style="color:${color}">
-          <span class="cwe-owasp-badge" style="background:${color}15;border-color:${color}40;color:${color}">${esc(o)}</span>
+          <span class="cwe-owasp-badge" style="background:${color}15;border-color:${color}40;color:${color}">${esc(o)}:2021</span>
           ${esc(name)}
-          <span style="margin-left:auto;font-size:10px;color:var(--muted)">${ids.length} CWEs</span>
+          <span style="margin-left:auto;font-size:10px;font-weight:800;color:${sevC}">${sev}</span>
         </div>
-        <div class="cwe-owasp-chips">${chips}${moreBtn}</div>
+        <div class="owasp-card-desc">${esc(desc)}</div>
+        <div class="cwe-owasp-chips" style="margin-top:8px">${chips}${moreBtn}</div>
       </div>`;
     }).filter(Boolean).join('');
 
@@ -2503,7 +2523,7 @@ document.getElementById('copyBtn').onclick = () => {
         </div>
         ${_tabBar('cwe')}
         <div class="ih-search-row" style="margin-bottom:16px">
-          <input class="ih-input" id="cweSearchInput" placeholder="Search by CWE number or name (e.g. 89, SQL Injection, SSRF)…"/>
+          <input class="ih-input" id="cweSearchInput" placeholder="Search by CWE number or name (e.g. 89, SQL Injection, SSRF)…" oninput="window._filterWebAppCards(this.value)"/>
           <button class="ih-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)" onclick="window.cweSearch()">🔍 Search</button>
         </div>
         <div class="ih-section-title">Browse by OWASP Web App Top 10 — 2021</div>
@@ -2518,6 +2538,10 @@ document.getElementById('copyBtn').onclick = () => {
     const title = type === 'api' ? 'OWASP API Security Top 10' : 'OWASP LLM Top 10';
     const ver   = type === 'api' ? '2023' : '2025 v2.0';
     const clr   = type === 'api' ? '#22c55e' : '#ec4899';
+    const browseLabel = type === 'api' ? 'Browse by OWASP API Security Top 10 — 2023' : 'Browse by OWASP LLM Top 10 — 2025';
+    const searchPlaceholder = type === 'api'
+      ? 'Search by risk ID or name (e.g. API1, BOLA, injection)…'
+      : 'Search by risk ID or name (e.g. LLM01, Prompt Injection)…';
     const allCwes = [...new Set(Object.values(DB).flatMap(e=>e[6]||[]))];
 
     const cards = Object.entries(DB).map(([id, e])=>{
@@ -2537,7 +2561,7 @@ document.getElementById('copyBtn').onclick = () => {
       const moreBtn = cwes.length > 5
         ? `<span class="cwe-mini-chip cwe-more" onclick="event.stopPropagation();this.closest('.cwe-owasp-chips').querySelectorAll('.cwe-hidden').forEach(e=>{e.style.display='';e.classList.remove('cwe-hidden')});this.remove()">+${cwes.length-5} more ▾</span>`
         : '';
-      return `<div class="cwe-owasp-card" onclick="window.renderOWASPDetail('${type}','${id}')">
+      return `<div class="cwe-owasp-card" data-search="${id.toLowerCase()} ${name.toLowerCase()}" onclick="window.renderOWASPDetail('${type}','${id}')">
         <div class="cwe-owasp-hdr" style="color:${color}">
           <span class="cwe-owasp-badge" style="background:${color}15;border-color:${color}40;color:${color}">${id}:${ver.split(' ')[0]}</span>
           ${esc(name)}
@@ -2558,9 +2582,31 @@ document.getElementById('copyBtn').onclick = () => {
           <span class="ih-sub">10 risks · ${allCwes.length} CWE mappings · ${type==='api'?'REST/GraphQL APIs':'LLM Applications'}</span>
         </div>
         ${_tabBar(type)}
-        <div class="cwe-owasp-grid">${cards}</div>
+        <div class="ih-search-row" style="margin-bottom:16px">
+          <input class="ih-input" id="owaspSearchInput" placeholder="${searchPlaceholder}" oninput="window._filterOWASPCards(this.value)"/>
+          <button class="ih-btn" style="background:linear-gradient(135deg,${clr},${clr}99)" onclick="window._filterOWASPCards(document.getElementById('owaspSearchInput').value)">🔍 Search</button>
+        </div>
+        <div class="ih-section-title">${browseLabel}</div>
+        <div class="cwe-owasp-grid" id="owaspGrid">${cards}</div>
       </div>`;
   }
+
+  window._filterOWASPCards = function(q){
+    const grid = document.getElementById('owaspGrid');
+    if (!grid) return;
+    const qL = (q||'').toLowerCase().trim();
+    grid.querySelectorAll('.cwe-owasp-card').forEach(card=>{
+      card.style.display = (!qL || (card.dataset.search||'').includes(qL)) ? '' : 'none';
+    });
+  };
+
+  window._filterWebAppCards = function(q){
+    const qL = (q||'').toLowerCase().trim();
+    if (!qL) { document.querySelectorAll('.cwe-owasp-grid .cwe-owasp-card').forEach(c=>c.style.display=''); return; }
+    document.querySelectorAll('.cwe-owasp-grid .cwe-owasp-card').forEach(card=>{
+      card.style.display = (card.dataset.search||'').includes(qL) ? '' : 'none';
+    });
+  };
 
   /* ── Attack chain data per OWASP Web App category ── */
   const _CATCHAIN = {
