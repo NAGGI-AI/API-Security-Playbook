@@ -416,8 +416,8 @@ ul.play-list li{margin-bottom:5px}
 .ih-live-dot2{width:4px;height:4px;border-radius:50%;background:var(--ih-accent);animation:ihBlink 1.2s step-start infinite;flex-shrink:0}
 .ih-nav-divider{height:1px;background:var(--border);margin:10px 8px}
 .ih-nav-group-title{display:flex;align-items:center;gap:8px;padding:7px 10px 5px;font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.1px}
-.ih-nav-sub{padding-left:26px;font-size:12px}
-.ih-nav-sub::before{content:'›';margin-right:5px;opacity:.5;font-size:13px}
+.ih-nav-sub{padding-left:20px;font-size:12px}
+.ih-nav-sub-arrow{font-size:12px;opacity:.45;flex-shrink:0;margin-right:2px}
 .ih-ws-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .ih-ws-topbar{padding:12px 20px 10px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;gap:8px;align-items:center;flex-shrink:0}
 .ih-ws-search{flex:1;margin-bottom:0}
@@ -1999,13 +1999,13 @@ document.getElementById('copyBtn').onclick = () => {
               <span class="ih-nav-ico">🧩</span> CWE Taxonomy
             </div>
             <button class="ih-nav-item ih-nav-sub${activeNav==='cwe'?' active cwe-mode':''}" id="ihn-cwe" onclick="window.ihNav('cwe',this)">
-              OWASP Web App
+              <span class="ih-nav-sub-arrow">›</span>OWASP Web App 2021
             </button>
             <button class="ih-nav-item ih-nav-sub${activeNav==='api'?' active api-mode':''}" id="ihn-api" onclick="window.ihNav('api',this)">
-              OWASP API 2023
+              <span class="ih-nav-sub-arrow">›</span>OWASP API 2023
             </button>
             <button class="ih-nav-item ih-nav-sub${activeNav==='llm'?' active llm-mode':''}" id="ihn-llm" onclick="window.ihNav('llm',this)">
-              OWASP LLM 2025
+              <span class="ih-nav-sub-arrow">›</span>OWASP LLM 2025
             </button>
           </div>
         </nav>
@@ -2518,11 +2518,10 @@ document.getElementById('copyBtn').onclick = () => {
     document.getElementById('ihResults').innerHTML = `
       <div class="cwe-browser">
         <div class="ih-title-row" style="margin-bottom:14px">
-          <h2>OWASP Web App 2021</h2>
+          <h2>OWASP Web App Security Top 10 2021</h2>
           <span class="ih-badge" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">2021</span>
-          <span class="ih-sub">${Object.keys(CWE_DB).length} CWEs mapped to OWASP Top 10 — 2021</span>
+          <span class="ih-sub">10 categories · ${Object.keys(CWE_DB).length} CWEs · Web Application Security</span>
         </div>
-        ${_tabBar('cwe')}
         <div class="ih-search-row" style="margin-bottom:16px">
           <input class="ih-input" id="cweSearchInput" placeholder="Search by CWE number or name (e.g. 89, SQL Injection, SSRF)…" oninput="window._filterWebAppCards(this.value)"/>
           <button class="ih-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)" onclick="window.cweSearch()">🔍 Search</button>
@@ -2582,7 +2581,6 @@ document.getElementById('copyBtn').onclick = () => {
           <span class="ih-badge" style="background:linear-gradient(135deg,${clr},${clr}99)">${ver}</span>
           <span class="ih-sub">10 risks · ${allCwes.length} CWE mappings · ${type==='api'?'REST/GraphQL APIs':'LLM Applications'}</span>
         </div>
-        ${_tabBar(type)}
         <div class="ih-search-row" style="margin-bottom:16px">
           <input class="ih-input" id="owaspSearchInput" placeholder="${searchPlaceholder}" oninput="window._filterOWASPCards(this.value)"/>
           <button class="ih-btn" style="background:linear-gradient(135deg,${clr},${clr}99)" onclick="window._filterOWASPCards(document.getElementById('owaspSearchInput').value)">🔍 Search</button>
