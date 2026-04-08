@@ -2453,10 +2453,12 @@ document.getElementById('copyBtn').onclick = () => {
   };
 
   function _tabBar(active){
+    const apiCweCount = [...new Set(Object.values(OWASP_API_DB).flatMap(e=>e[6]||[]))].length;
+    const llmCweCount = [...new Set(Object.values(OWASP_LLM_DB).flatMap(e=>e[6]||[]))].length;
     return `<div class="cwe-tabs">
-      <button class="cwe-tab${active==='cwe'?' active':''}" onclick="renderCWEBrowser('cwe')">🔐 CWE · ${Object.keys(CWE_DB).length} Weaknesses</button>
-      <button class="cwe-tab${active==='api'?' active':''}" onclick="renderCWEBrowser('api')">🌐 OWASP API 2023</button>
-      <button class="cwe-tab${active==='llm'?' active':''}" onclick="renderCWEBrowser('llm')">🤖 OWASP LLM 2025</button>
+      <button class="cwe-tab${active==='cwe'?' active':''}" onclick="renderCWEBrowser('cwe')">🌐 OWASP Web App · ${Object.keys(CWE_DB).length} CWEs</button>
+      <button class="cwe-tab${active==='api'?' active':''}" onclick="renderCWEBrowser('api')">⚡ OWASP API 2023 · ${apiCweCount} CWEs</button>
+      <button class="cwe-tab${active==='llm'?' active':''}" onclick="renderCWEBrowser('llm')">🤖 OWASP LLM 2025 · ${llmCweCount} CWEs</button>
     </div>`;
   }
 
@@ -2495,9 +2497,9 @@ document.getElementById('copyBtn').onclick = () => {
     document.getElementById('ihResults').innerHTML = `
       <div class="cwe-browser">
         <div class="ih-title-row" style="margin-bottom:14px">
-          <h2>Taxonomy Browser</h2>
-          <span class="ih-badge" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">MITRE · OWASP</span>
-          <span class="ih-sub">${Object.keys(CWE_DB).length} CWEs · API 2023 · LLM 2025</span>
+          <h2>OWASP Web App 2021</h2>
+          <span class="ih-badge" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">MITRE CWE</span>
+          <span class="ih-sub">${Object.keys(CWE_DB).length} CWEs mapped to OWASP Top 10 — 2021</span>
         </div>
         ${_tabBar('cwe')}
         <div class="ih-search-row" style="margin-bottom:16px">
@@ -2516,9 +2518,10 @@ document.getElementById('copyBtn').onclick = () => {
     const title = type === 'api' ? 'OWASP API Security Top 10' : 'OWASP LLM Top 10';
     const ver   = type === 'api' ? '2023' : '2025 v2.0';
     const clr   = type === 'api' ? '#22c55e' : '#ec4899';
+    const allCwes = [...new Set(Object.values(DB).flatMap(e=>e[6]||[]))];
 
     const cards = Object.entries(DB).map(([id, e])=>{
-      const [name,,sev,color,desc,changed] = e;
+      const [name,,sev,color,desc,changed,cwes=[]] = e;
       const isNew = changed.startsWith('NEW');
       const isRen = changed.startsWith('RENAMED') || changed.startsWith('EXPANDED') || changed.startsWith('MERGED');
       const changeBadge = isNew
@@ -2527,6 +2530,13 @@ document.getElementById('copyBtn').onclick = () => {
           ? `<span class="owasp-change-badge renamed">UPDATED</span>`
           : '';
       const sevC = {'CRITICAL':'#ef4444','HIGH':'#f97316','MEDIUM':'#eab308','LOW':'#22c55e'}[sev]||'#6b7280';
+      const chips = cwes.map((cid,i)=>{
+        const hidden = i >= 5;
+        return `<span class="cwe-mini-chip${hidden?' cwe-hidden':''}" onclick="event.stopPropagation();window.renderCWEDetail('${esc(cid)}')" style="border-color:${color}40;color:${color}${hidden?';display:none':''}">CWE-${esc(cid)}</span>`;
+      }).join('');
+      const moreBtn = cwes.length > 5
+        ? `<span class="cwe-mini-chip cwe-more" onclick="event.stopPropagation();this.closest('.cwe-owasp-chips').querySelectorAll('.cwe-hidden').forEach(e=>{e.style.display='';e.classList.remove('cwe-hidden')});this.remove()">+${cwes.length-5} more ▾</span>`
+        : '';
       return `<div class="cwe-owasp-card" onclick="window.renderOWASPDetail('${type}','${id}')">
         <div class="cwe-owasp-hdr" style="color:${color}">
           <span class="cwe-owasp-badge" style="background:${color}15;border-color:${color}40;color:${color}">${id}:${ver.split(' ')[0]}</span>
@@ -2534,6 +2544,7 @@ document.getElementById('copyBtn').onclick = () => {
           <span style="margin-left:auto;font-size:10px;font-weight:800;color:${sevC}">${sev}</span>
         </div>
         <div class="owasp-card-desc">${esc(desc)}</div>
+        ${cwes.length ? `<div class="cwe-owasp-chips" style="margin-top:8px">${chips}${moreBtn}</div>` : ''}
         ${changeBadge ? `<div style="margin-top:6px">${changeBadge}</div>` : ''}
       </div>`;
     }).join('');
@@ -2544,7 +2555,7 @@ document.getElementById('copyBtn').onclick = () => {
         <div class="ih-title-row" style="margin-bottom:14px">
           <h2>${title}</h2>
           <span class="ih-badge" style="background:linear-gradient(135deg,${clr},${clr}99)">${ver}</span>
-          <span class="ih-sub">10 risk categories · ${type==='api'?'REST/GraphQL APIs':'LLM Applications'}</span>
+          <span class="ih-sub">10 risks · ${allCwes.length} CWE mappings · ${type==='api'?'REST/GraphQL APIs':'LLM Applications'}</span>
         </div>
         ${_tabBar(type)}
         <div class="cwe-owasp-grid">${cards}</div>
