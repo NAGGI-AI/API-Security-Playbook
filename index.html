@@ -383,6 +383,36 @@ ul.play-list li{margin-bottom:5px}
 .ih-chip{background:var(--soft);border:1px solid var(--border);border-radius:20px;font-size:11.5px;padding:5px 13px;cursor:pointer;color:var(--text);transition:all .15s;font-family:inherit}
 .ih-chip:hover{border-color:var(--ih-accent);color:var(--ih-accent);background:var(--ih-glow)}
 .ih-results{display:flex;flex-direction:column;gap:10px}
+/* ── Intel Hub Two-Column Layout ── */
+.ih-layout{display:flex;height:calc(100vh - 90px);margin:-22px -24px;overflow:hidden}
+.ih-sub-nav{width:210px;min-width:180px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;padding:0 0 16px;flex-shrink:0}
+.ih-sub-nav::-webkit-scrollbar{width:3px}
+.ih-sub-nav::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.ih-sub-nav-brand{padding:14px 12px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ih-sub-nav-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--ih-accent),var(--ih-accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 0 10px var(--ih-glow)}
+.ih-sub-nav-title{font-size:12.5px;font-weight:800;letter-spacing:-.2px}
+.ih-sub-nav-subtitle{font-size:10px;color:var(--muted);margin-top:1px}
+.ih-nav-group{margin-top:12px;padding:0 8px}
+.ih-nav-group-label{font-size:9.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);padding:0 8px;margin-bottom:4px}
+.ih-nav-item{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:1px solid transparent;border-radius:7px;color:var(--muted);font:12.5px 'Segoe UI',system-ui,sans-serif;padding:8px 10px;cursor:pointer;text-align:left;transition:all .15s;margin-bottom:2px}
+.ih-nav-item:hover{background:var(--soft);color:var(--text)}
+.ih-nav-item.active{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--ih-accent);font-weight:600}
+.ih-nav-item.active.cwe-mode{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:#6366f1}
+.ih-nav-item.active.api-mode{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:#22c55e}
+.ih-nav-item.active.llm-mode{background:rgba(236,72,153,.1);border-color:rgba(236,72,153,.3);color:#ec4899}
+.ih-nav-item.active.nist-mode{background:rgba(6,182,212,.1);border-color:rgba(6,182,212,.3);color:#06b6d4}
+.ih-nav-ico{width:16px;text-align:center;flex-shrink:0}
+.ih-nav-badge{margin-left:auto;font-size:9.5px;background:var(--soft);border:1px solid var(--border);border-radius:8px;padding:1px 6px;color:var(--muted)}
+.ih-live-pill{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;color:var(--ih-accent);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:1px 5px}
+.ih-live-dot2{width:4px;height:4px;border-radius:50%;background:var(--ih-accent);animation:ihBlink 1.2s step-start infinite;flex-shrink:0}
+.ih-nav-divider{height:1px;background:var(--border);margin:10px 8px}
+.ih-ws-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.ih-ws-topbar{padding:12px 20px 10px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;gap:8px;align-items:center;flex-shrink:0}
+.ih-ws-search{flex:1;margin-bottom:0}
+.ih-ws-chips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0}
+.ih-ws-body{flex:1;overflow-y:auto;padding:18px 20px}
+.ih-ws-body::-webkit-scrollbar{width:5px}
+.ih-ws-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 /* CVE Card */
 .cve-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;transition:border-color .2s,box-shadow .2s;position:relative;overflow:hidden}
 .cve-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--ih-accent),var(--ih-accent2))}
@@ -1926,33 +1956,133 @@ document.getElementById('copyBtn').onclick = () => {
   }
 
   /* ── Main hub view renderer ── */
-  function renderIntelHubMain(resultsHTML, query){
+  function renderIntelHubMain(resultsHTML, query, activeNav){
+    activeNav = activeNav || 'feed';
     document.getElementById('card').innerHTML = `
-      <div class="ih-wrap">
-        <div class="ih-title-row">
-          <h2>AppSec Intel Hub</h2>
-          <span class="ih-badge">LIVE THREAT INTEL</span>
-          <span class="ih-sub">NVD · CISA KEV · Real-time</span>
+      <div class="ih-layout">
+        <nav class="ih-sub-nav">
+          <div class="ih-sub-nav-brand">
+            <div class="ih-sub-nav-icon">🛡️</div>
+            <div>
+              <div class="ih-sub-nav-title">Intel Hub</div>
+              <div class="ih-sub-nav-subtitle">AppSec Intelligence</div>
+            </div>
+          </div>
+          <div class="ih-nav-group">
+            <div class="ih-nav-group-label">Threat Intelligence</div>
+            <button class="ih-nav-item${activeNav==='feed'?' active':''}" id="ihn-feed" onclick="window.ihNav('feed',this)">
+              <span class="ih-nav-ico">📡</span> CVE Feed
+              <span class="ih-live-pill"><span class="ih-live-dot2"></span>LIVE</span>
+            </button>
+            <button class="ih-nav-item${activeNav==='critical'?' active':''}" id="ihn-critical" onclick="window.ihNav('critical',this)">
+              <span class="ih-nav-ico">🔴</span> Critical CVEs
+            </button>
+            <button class="ih-nav-item${activeNav==='kev'?' active':''}" id="ihn-kev" onclick="window.ihNav('kev',this)">
+              <span class="ih-nav-ico">🚨</span> CISA KEV Feed
+            </button>
+          </div>
+          <div class="ih-nav-divider"></div>
+          <div class="ih-nav-group">
+            <div class="ih-nav-group-label">Knowledge Base</div>
+            <button class="ih-nav-item${activeNav==='cwe'?' active cwe-mode':''}" id="ihn-cwe" onclick="window.ihNav('cwe',this)">
+              <span class="ih-nav-ico">🧩</span> CWE Taxonomy
+              <span class="ih-nav-badge">${Object.keys(CWE_DB).length}</span>
+            </button>
+          </div>
+          <div class="ih-nav-divider"></div>
+          <div class="ih-nav-group">
+            <div class="ih-nav-group-label">Standards</div>
+            <button class="ih-nav-item${activeNav==='api'?' active api-mode':''}" id="ihn-api" onclick="window.ihNav('api',this)">
+              <span class="ih-nav-ico">🌐</span> OWASP API 2023
+            </button>
+            <button class="ih-nav-item${activeNav==='llm'?' active llm-mode':''}" id="ihn-llm" onclick="window.ihNav('llm',this)">
+              <span class="ih-nav-ico">🤖</span> OWASP LLM 2025
+            </button>
+            <button class="ih-nav-item${activeNav==='nist'?' active nist-mode':''}" id="ihn-nist" onclick="window.ihNav('nist',this)">
+              <span class="ih-nav-ico">📋</span> NIST SP 800-53
+            </button>
+          </div>
+        </nav>
+        <div class="ih-ws-wrap">
+          <div class="ih-ws-topbar">
+            <input class="ih-input ih-ws-search" id="ihSearchInput" placeholder="Search CVEs or enter CVE-YYYY-NNNNN…" value="${esc(query||'')}"/>
+            <button class="ih-btn" onclick="window.ihSearch()">🔍 Search</button>
+            <button class="ih-btn sec" onclick="window.ihClear()">✕</button>
+          </div>
+          <div class="ih-ws-chips">
+            <button class="ih-chip" onclick="window.ihQuick('SQL Injection')">💉 SQL Injection</button>
+            <button class="ih-chip" onclick="window.ihQuick('authentication bypass')">🔐 Auth Bypass</button>
+            <button class="ih-chip" onclick="window.ihQuick('remote code execution')">💥 RCE</button>
+            <button class="ih-chip" onclick="window.ihQuick('privilege escalation')">⬆️ Priv Esc</button>
+            <button class="ih-chip" onclick="window.ihQuick('path traversal')">📁 Path Traversal</button>
+            <button class="ih-chip" onclick="window.ihQuick('SSRF')">🌐 SSRF</button>
+            <button class="ih-chip" onclick="window.ihQuick('XXE')">📄 XXE</button>
+            <button class="ih-chip" onclick="window.ihQuick('command injection')">⚡ Cmd Injection</button>
+          </div>
+          <div class="ih-ws-body">
+            <div class="ih-results" id="ihResults">${resultsHTML || '<div class="ih-empty">📡 Select a section from the left or search CVE IDs and keywords above.</div>'}</div>
+          </div>
         </div>
-        <div class="ih-search-row">
-          <input class="ih-input" id="ihSearchInput" placeholder="Search CVEs or enter CVE-YYYY-NNNNN…" value="${esc(query||'')}" />
-          <button class="ih-btn" onclick="window.ihSearch()">🔍 Search</button>
-          <button class="ih-btn sec" onclick="window.ihClear()">✕</button>
-        </div>
-        <div class="ih-chips">
-          <button class="ih-chip" onclick="window.ihQuick('SQL Injection')">💉 SQL Injection</button>
-          <button class="ih-chip" onclick="window.ihQuick('authentication bypass')">🔐 Auth Bypass</button>
-          <button class="ih-chip" onclick="window.ihQuick('remote code execution')">💥 RCE</button>
-          <button class="ih-chip" onclick="window.ihQuick('privilege escalation')">⬆️ Priv Escalation</button>
-          <button class="ih-chip" onclick="window.ihQuick('path traversal')">📁 Path Traversal</button>
-          <button class="ih-chip" onclick="window.ihQuick('SSRF')">🌐 SSRF</button>
-          <button class="ih-chip" onclick="window.ihQuick('XXE')">📄 XXE</button>
-          <button class="ih-chip" onclick="window.ihQuick('command injection')">⚡ Cmd Injection</button>
-        </div>
-        <div class="ih-results" id="ihResults">${resultsHTML || '<div class="ih-empty">🔍 Search CVE IDs, keywords, or use the chips above to explore live threat intelligence.</div>'}</div>
       </div>`;
     const inp = document.getElementById('ihSearchInput');
     if (inp) inp.addEventListener('keydown', e => { if (e.key==='Enter') window.ihSearch(); });
+  }
+
+  function ensureIHLayout(nav){
+    nav = nav || 'feed';
+    if (!document.getElementById('ihResults')) {
+      renderIntelHubMain('', '', nav);
+    } else {
+      _ihActivateNav(nav);
+    }
+  }
+
+  function _ihActivateNav(id){
+    document.querySelectorAll('.ih-nav-item').forEach(el=>{
+      el.classList.remove('active','cwe-mode','api-mode','llm-mode','nist-mode');
+    });
+    const el = document.getElementById('ihn-'+id);
+    if (el){
+      el.classList.add('active');
+      if (id==='cwe')  el.classList.add('cwe-mode');
+      if (id==='api')  el.classList.add('api-mode');
+      if (id==='llm')  el.classList.add('llm-mode');
+      if (id==='nist') el.classList.add('nist-mode');
+    }
+  }
+
+  window.ihNav = function(mode){
+    _ihActivateNav(mode);
+    const res = document.getElementById('ihResults');
+    if (!res) return;
+    if (mode==='feed')     { res.innerHTML=loadingHTML('Loading recent high-severity CVEs…');     window.ihShowTrending(); }
+    else if (mode==='critical'){ res.innerHTML=loadingHTML('Querying NVD for Critical CVEs…');  window.ihShowCritical(); }
+    else if (mode==='kev') { window.ihShowKEV(); }
+    else if (mode==='cwe') { renderCWEBrowser('cwe'); }
+    else if (mode==='api') { renderCWEBrowser('api'); }
+    else if (mode==='llm') { renderCWEBrowser('llm'); }
+    else if (mode==='nist'){ _showNISTRef(); }
+  };
+
+  function _showNISTRef(){
+    ensureIHLayout('nist');
+    document.getElementById('ihResults').innerHTML = `
+      <div class="cwe-browser">
+        <div class="ih-title-row" style="margin-bottom:14px">
+          <h2>NIST SP 800-53</h2>
+          <span class="ih-badge" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)">Rev. 5</span>
+          <span class="ih-sub">Security &amp; Privacy Controls</span>
+        </div>
+        <div class="cwe-det-card" style="text-align:center;padding:32px">
+          <div style="font-size:48px;margin-bottom:12px">📋</div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:8px">NIST SP 800-53 Rev. 5</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">Security and Privacy Controls for Information Systems and Organizations.<br>Provides a comprehensive catalog of controls for federal &amp; enterprise systems.</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <a href="https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final" target="_blank" rel="noopener" class="ih-btn" style="text-decoration:none">🔗 NIST SP 800-53 Rev. 5 ↗</a>
+            <a href="https://csrc.nist.gov/projects/cprt/catalog" target="_blank" rel="noopener" class="ih-btn sec" style="text-decoration:none">📚 Control Catalog ↗</a>
+          </div>
+        </div>
+      </div>`;
   }
 
   function loadingHTML(msg){ return `<div class="ih-loading"><div class="ih-spinner"></div><span>${esc(msg)}</span></div>`; }
@@ -1973,14 +2103,13 @@ document.getElementById('copyBtn').onclick = () => {
     document.getElementById('chipsBar').innerHTML = '';
 
     if (mode==='kev') {
-      renderIntelHubMain('');
+      renderIntelHubMain('', '', 'kev');
       window.ihShowKEV();
     } else if (mode==='critical') {
-      renderIntelHubMain(loadingHTML('Querying NVD for Critical CVEs in the last 30 days…'));
+      renderIntelHubMain(loadingHTML('Querying NVD for Critical CVEs in the last 30 days…'), '', 'critical');
       window.ihShowCritical();
     } else {
-      /* default — auto-load recent high-severity CVEs so user sees data immediately */
-      renderIntelHubMain(loadingHTML('Loading recent high-severity vulnerabilities…'));
+      renderIntelHubMain(loadingHTML('Loading recent high-severity vulnerabilities…'), '', 'feed');
       window.ihShowTrending();
     }
   };
@@ -2362,7 +2491,8 @@ document.getElementById('copyBtn').onclick = () => {
       </div>`;
     }).filter(Boolean).join('');
 
-    document.getElementById('card').innerHTML = `
+    ensureIHLayout('cwe');
+    document.getElementById('ihResults').innerHTML = `
       <div class="cwe-browser">
         <div class="ih-title-row" style="margin-bottom:14px">
           <h2>Taxonomy Browser</h2>
@@ -2408,7 +2538,8 @@ document.getElementById('copyBtn').onclick = () => {
       </div>`;
     }).join('');
 
-    document.getElementById('card').innerHTML = `
+    ensureIHLayout(type);
+    document.getElementById('ihResults').innerHTML = `
       <div class="cwe-browser">
         <div class="ih-title-row" style="margin-bottom:14px">
           <h2>${title}</h2>
@@ -2589,7 +2720,8 @@ document.getElementById('copyBtn').onclick = () => {
         </div>
       </div>`;
 
-    document.getElementById('card').innerHTML = `
+    ensureIHLayout(type);
+    document.getElementById('ihResults').innerHTML = `
       <div class="cwe-browser">
         <button class="cwe-back-btn" onclick="renderCWEBrowser('${type}')">← ${type==='api'?'OWASP API 2023':'OWASP LLM 2025'}</button>
         <div class="cwe-det-hdr" style="--det-top:${color}">
@@ -2620,7 +2752,8 @@ document.getElementById('copyBtn').onclick = () => {
     const id  = String(cweId);
     const d   = CWE_DB[id];
     if (!d){
-      document.getElementById('card').innerHTML = `
+      ensureIHLayout('cwe');
+      document.getElementById('ihResults').innerHTML = `
         <div class="cwe-browser">
           <button class="cwe-back-btn" onclick="window.openCWERef()">← CWE Browser</button>
           <div class="cwe-det-card">
@@ -2756,7 +2889,8 @@ document.getElementById('copyBtn').onclick = () => {
         </div>
       </div>`;
 
-    document.getElementById('card').innerHTML = `
+    ensureIHLayout('cwe');
+    document.getElementById('ihResults').innerHTML = `
       <div class="cwe-browser">
         <button class="cwe-back-btn" onclick="window.openCWERef()">← CWE Browser</button>
         <div class="cwe-det-hdr">
@@ -2827,9 +2961,10 @@ document.getElementById('copyBtn').onclick = () => {
     if (numM){ window.renderCWEDetail(numM[1]); return; }
     const qL = q.toLowerCase();
     const hits = Object.entries(CWE_DB).filter(([id,d])=> d[0].toLowerCase().includes(qL));
-    if (!hits.length){ document.getElementById('card').innerHTML=`<div class="cwe-browser"><button class="cwe-back-btn" onclick="window.openCWERef()">← CWE Browser</button><div class="ih-empty">No CWE matched "<strong>${esc(q)}</strong>". Try a number or shorter keyword.</div></div>`; return; }
+    ensureIHLayout('cwe');
+    if (!hits.length){ document.getElementById('ihResults').innerHTML=`<div class="cwe-browser"><button class="cwe-back-btn" onclick="window.openCWERef()">← CWE Browser</button><div class="ih-empty">No CWE matched "<strong>${esc(q)}</strong>". Try a number or shorter keyword.</div></div>`; return; }
     if (hits.length===1){ window.renderCWEDetail(hits[0][0]); return; }
-    document.getElementById('card').innerHTML = `
+    document.getElementById('ihResults').innerHTML = `
       <div class="cwe-browser">
         <button class="cwe-back-btn" onclick="window.openCWERef()">← CWE Browser</button>
         <div class="ih-section-title">${hits.length} results for "${esc(q)}"</div>
