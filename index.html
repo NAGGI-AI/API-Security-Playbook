@@ -411,7 +411,7 @@ ul.play-list li{margin-bottom:5px}
 .ih-nav-item.active.llm-mode{background:rgba(236,72,153,.1);border-color:rgba(236,72,153,.3);color:#ec4899}
 .ih-nav-item.active.nist-mode{background:rgba(6,182,212,.1);border-color:rgba(6,182,212,.3);color:#06b6d4}
 .ih-nav-ico{width:16px;text-align:center;flex-shrink:0}
-.ih-nav-badge{margin-left:auto;font-size:9.5px;background:var(--soft);border:1px solid var(--border);border-radius:8px;padding:1px 6px;color:var(--muted)}
+.ih-nav-badge{margin-left:auto;font-size:9px;font-weight:700;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.28);border-radius:6px;padding:1px 7px;color:#818cf8}
 .ih-live-pill{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;color:var(--ih-accent);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:1px 5px}
 .ih-live-dot2{width:4px;height:4px;border-radius:50%;background:var(--ih-accent);animation:ihBlink 1.2s step-start infinite;flex-shrink:0}
 .ih-nav-divider{height:1px;background:var(--border);margin:10px 8px}
@@ -525,8 +525,10 @@ ul.play-list li{margin-bottom:5px}
 /* Taxonomy tabs */
 .cwe-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
 .cwe-tab{background:none;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:7px 16px;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;font-weight:600}
-.cwe-tab:hover{border-color:#6366f1;color:var(--text)}
-.cwe-tab.active{background:#6366f1;border-color:#6366f1;color:#fff}
+.cwe-tab:hover{background:var(--soft);color:var(--text)}
+.cwe-tab.active-wa{background:#6366f1;border-color:#6366f1;color:#fff}
+.cwe-tab.active-api{background:#16a34a;border-color:#22c55e;color:#fff}
+.cwe-tab.active-llm{background:#9d174d;border-color:#ec4899;color:#fff}
 /* OWASP change badges */
 .owasp-change-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:5px;display:inline-block}
 .owasp-change-badge.new{background:#16a34a15;border:1px solid #16a34a50;color:#16a34a}
@@ -2472,9 +2474,9 @@ document.getElementById('copyBtn').onclick = () => {
     const apiCweCount = [...new Set(Object.values(OWASP_API_DB).flatMap(e=>e[6]||[]))].length;
     const llmCweCount = [...new Set(Object.values(OWASP_LLM_DB).flatMap(e=>e[6]||[]))].length;
     return `<div class="cwe-tabs">
-      <button class="cwe-tab${active==='cwe'?' active':''}" onclick="renderCWEBrowser('cwe')">🌐 OWASP Web App · ${Object.keys(CWE_DB).length} CWEs</button>
-      <button class="cwe-tab${active==='api'?' active':''}" onclick="renderCWEBrowser('api')">⚡ OWASP API 2023 · ${apiCweCount} CWEs</button>
-      <button class="cwe-tab${active==='llm'?' active':''}" onclick="renderCWEBrowser('llm')">🤖 OWASP LLM 2025 · ${llmCweCount} CWEs</button>
+      <button class="cwe-tab${active==='cwe'?' active-wa':''}" onclick="renderCWEBrowser('cwe')">OWASP Web App &nbsp;·&nbsp; ${Object.keys(CWE_DB).length} CWEs</button>
+      <button class="cwe-tab${active==='api'?' active-api':''}" onclick="renderCWEBrowser('api')">OWASP API 2023 &nbsp;·&nbsp; ${apiCweCount} CWEs</button>
+      <button class="cwe-tab${active==='llm'?' active-llm':''}" onclick="renderCWEBrowser('llm')">OWASP LLM 2025 &nbsp;·&nbsp; ${llmCweCount} CWEs</button>
     </div>`;
   }
 
