@@ -360,12 +360,21 @@ ul.play-list li{margin-bottom:5px}
 
 /* ── AppSec Intel Hub ── */
 :root{--ih-accent:#f59e0b;--ih-accent2:#d97706;--ih-glow:rgba(245,158,11,.18)}
-.group-header.ih-hdr .dot{background:var(--ih-accent);box-shadow:0 0 8px var(--ih-accent)}
-.group-header.ih-hdr .glabel{color:var(--ih-accent)}
-.ih-live{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ih-accent);border:1px solid var(--ih-accent);border-radius:4px;padding:1px 5px;margin-left:6px;animation:ihPulse 2s ease-in-out infinite}
-@keyframes ihPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--ih-glow)}50%{opacity:.7;box-shadow:0 0 0 5px transparent}}
 .ih-dot{width:5px;height:5px;border-radius:50%;background:var(--ih-accent);animation:ihBlink 1.2s step-start infinite}
 @keyframes ihBlink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes ihPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--ih-glow)}50%{opacity:.7;box-shadow:0 0 0 5px transparent}}
+/* Sidebar brand card */
+.ih-sb-card{display:flex;align-items:center;gap:10px;margin:10px 10px 8px;padding:11px 12px;background:linear-gradient(135deg,rgba(245,158,11,.07),rgba(217,119,6,.04));border:1px solid rgba(245,158,11,.22);border-radius:11px;cursor:pointer;transition:all .2s;user-select:none}
+.ih-sb-card:hover{background:linear-gradient(135deg,rgba(245,158,11,.14),rgba(217,119,6,.1));border-color:rgba(245,158,11,.5);box-shadow:0 0 18px rgba(245,158,11,.12)}
+.ih-sb-card.active{border-color:var(--ih-accent);box-shadow:0 0 22px var(--ih-glow);background:linear-gradient(135deg,rgba(245,158,11,.14),rgba(217,119,6,.08))}
+.ih-sb-icon{width:34px;height:34px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 0 12px rgba(59,130,246,.35)}
+.ih-sb-body{flex:1;min-width:0}
+.ih-sb-title{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--text);letter-spacing:-.2px;line-height:1.3}
+.ih-sb-live-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.05em;color:#22c55e;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);border-radius:4px;padding:1px 5px;animation:ihPulse 2.5s ease-in-out infinite}
+.ih-sb-live-dot{width:4px;height:4px;border-radius:50%;background:#22c55e;animation:ihBlink 1.2s step-start infinite;flex-shrink:0}
+.ih-sb-sub{font-size:10.5px;color:var(--muted);margin-top:2px}
+.ih-sb-arrow{color:var(--muted);font-size:18px;flex-shrink:0;transition:transform .2s,color .2s}
+.ih-sb-card:hover .ih-sb-arrow,.ih-sb-card.active .ih-sb-arrow{color:var(--ih-accent);transform:translateX(2px)}
 /* Hub main view */
 .ih-wrap{max-width:900px;padding:4px 0 28px}
 .ih-title-row{display:flex;align-items:center;gap:10px;margin-bottom:18px}
@@ -688,22 +697,17 @@ ul.play-list li{margin-bottom:5px}
       </div>
     </div>
 
-    <!-- AppSec Intel Hub -->
-    <div class="group" id="grp-ih">
-      <div class="group-header ih-hdr" onclick="toggleGroup('grp-ih')">
-        <span class="dot" style="background:var(--ih-accent);box-shadow:0 0 8px var(--ih-accent)"></span>
-        <span class="glabel" style="color:var(--ih-accent)">AppSec Intel Hub</span>
-        <span class="ih-live"><span class="ih-dot"></span>LIVE</span>
-        <span class="chevron">&#9660;</span>
+    <!-- AppSec Intel Hub brand entry -->
+    <div class="ih-sb-card" id="ihSbCard" onclick="openIntelHub()">
+      <div class="ih-sb-icon">🛡️</div>
+      <div class="ih-sb-body">
+        <div class="ih-sb-title">
+          AppSec Intel Hub
+          <span class="ih-sb-live-badge"><span class="ih-sb-live-dot"></span>LIVE</span>
+        </div>
+        <div class="ih-sb-sub">Security Intelligence Platform</div>
       </div>
-      <div class="group-body" id="grp-ih-body">
-        <button class="ih-sidebar-btn" id="ihOpenBtn" onclick="openIntelHub()">🔍 CVE &amp; Threat Intel</button>
-        <button class="ih-sidebar-btn" id="ihKevBtn" onclick="openIntelHub('kev')">🚨 CISA KEV Feed</button>
-        <button class="ih-sidebar-btn" id="ihCritBtn" onclick="openIntelHub('critical')">🔴 Recent Critical CVEs</button>
-        <button class="ih-sidebar-btn" id="ihCWEBtn" onclick="window.openCWERef()" style="color:#6366f1">🧩 CWE Taxonomy</button>
-        <button class="ih-sidebar-btn" onclick="window.openCWERef('api')" style="color:#22c55e">🌐 OWASP API 2023</button>
-        <button class="ih-sidebar-btn" onclick="window.openCWERef('llm')" style="color:#ec4899">🤖 OWASP LLM 2025</button>
-      </div>
+      <div class="ih-sb-arrow">›</div>
     </div>
 
   </div>
@@ -1093,6 +1097,8 @@ function clearAllActive() {
   });
   clActive = false;
   document.getElementById('clLaunchBtn').classList.remove('active');
+  const ihCard = document.getElementById('ihSbCard');
+  if (ihCard) ihCard.classList.remove('active');
 }
 
 // ── API ──
@@ -2091,16 +2097,16 @@ document.getElementById('copyBtn').onclick = () => {
 
   /* ── Public actions exposed on window ── */
 
-  window.openIntelHub = function(mode){
-    /* deactivate other items */
+  function _setIHActive(){
     if (typeof clearAllActive === 'function') clearAllActive();
-    document.querySelectorAll('.ih-sidebar-btn').forEach(b=>b.classList.remove('active'));
-    const btn = mode==='kev' ? document.getElementById('ihKevBtn')
-              : mode==='critical' ? document.getElementById('ihCritBtn')
-              : document.getElementById('ihOpenBtn');
-    if (btn) btn.classList.add('active');
+    const card = document.getElementById('ihSbCard');
+    if (card) card.classList.add('active');
     ihActive = true;
     document.getElementById('chipsBar').innerHTML = '';
+  }
+
+  window.openIntelHub = function(mode){
+    _setIHActive();
 
     if (mode==='kev') {
       renderIntelHubMain('', '', 'kev');
@@ -2440,12 +2446,7 @@ document.getElementById('copyBtn').onclick = () => {
 
   /* ── Feature 4: CWE / OWASP Taxonomy Browser ── */
   window.openCWERef = function(arg){
-    if (typeof clearAllActive === 'function') clearAllActive();
-    document.querySelectorAll('.ih-sidebar-btn').forEach(b=>b.classList.remove('active'));
-    const btn = document.getElementById('ihCWEBtn');
-    if (btn) btn.classList.add('active');
-    ihActive = true;
-    document.getElementById('chipsBar').innerHTML = '';
+    _setIHActive();
     if (!arg || arg === 'cwe')       renderCWEBrowser('cwe');
     else if (arg === 'api')          renderCWEBrowser('api');
     else if (arg === 'llm')          renderCWEBrowser('llm');
