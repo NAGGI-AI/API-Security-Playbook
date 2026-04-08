@@ -1997,7 +1997,6 @@ document.getElementById('copyBtn').onclick = () => {
             <div class="ih-nav-group-label">Knowledge Base</div>
             <div class="ih-nav-group-title">
               <span class="ih-nav-ico">🧩</span> CWE Taxonomy
-              <span class="ih-nav-badge">${Object.keys(CWE_DB).length}</span>
             </div>
             <button class="ih-nav-item ih-nav-sub${activeNav==='cwe'?' active cwe-mode':''}" id="ihn-cwe" onclick="window.ihNav('cwe',this)">
               OWASP Web App
@@ -2474,7 +2473,7 @@ document.getElementById('copyBtn').onclick = () => {
     const apiCweCount = [...new Set(Object.values(OWASP_API_DB).flatMap(e=>e[6]||[]))].length;
     const llmCweCount = [...new Set(Object.values(OWASP_LLM_DB).flatMap(e=>e[6]||[]))].length;
     return `<div class="cwe-tabs">
-      <button class="cwe-tab${active==='cwe'?' active-wa':''}" onclick="renderCWEBrowser('cwe')">OWASP Web App &nbsp;·&nbsp; ${Object.keys(CWE_DB).length} CWEs</button>
+      <button class="cwe-tab${active==='cwe'?' active-wa':''}" onclick="renderCWEBrowser('cwe')">OWASP Web App 2021 &nbsp;·&nbsp; ${Object.keys(CWE_DB).length} CWEs</button>
       <button class="cwe-tab${active==='api'?' active-api':''}" onclick="renderCWEBrowser('api')">OWASP API 2023 &nbsp;·&nbsp; ${apiCweCount} CWEs</button>
       <button class="cwe-tab${active==='llm'?' active-llm':''}" onclick="renderCWEBrowser('llm')">OWASP LLM 2025 &nbsp;·&nbsp; ${llmCweCount} CWEs</button>
     </div>`;
@@ -2520,7 +2519,7 @@ document.getElementById('copyBtn').onclick = () => {
       <div class="cwe-browser">
         <div class="ih-title-row" style="margin-bottom:14px">
           <h2>OWASP Web App 2021</h2>
-          <span class="ih-badge" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">MITRE CWE</span>
+          <span class="ih-badge" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">2021</span>
           <span class="ih-sub">${Object.keys(CWE_DB).length} CWEs mapped to OWASP Top 10 — 2021</span>
         </div>
         ${_tabBar('cwe')}
