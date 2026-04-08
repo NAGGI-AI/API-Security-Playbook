@@ -415,6 +415,9 @@ ul.play-list li{margin-bottom:5px}
 .ih-live-pill{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;color:var(--ih-accent);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:1px 5px}
 .ih-live-dot2{width:4px;height:4px;border-radius:50%;background:var(--ih-accent);animation:ihBlink 1.2s step-start infinite;flex-shrink:0}
 .ih-nav-divider{height:1px;background:var(--border);margin:10px 8px}
+.ih-nav-group-title{display:flex;align-items:center;gap:8px;padding:7px 10px 5px;font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.1px}
+.ih-nav-sub{padding-left:26px;font-size:12px}
+.ih-nav-sub::before{content:'›';margin-right:5px;opacity:.5;font-size:13px}
 .ih-ws-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .ih-ws-topbar{padding:12px 20px 10px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;gap:8px;align-items:center;flex-shrink:0}
 .ih-ws-search{flex:1;margin-bottom:0}
@@ -1990,22 +1993,18 @@ document.getElementById('copyBtn').onclick = () => {
           <div class="ih-nav-divider"></div>
           <div class="ih-nav-group">
             <div class="ih-nav-group-label">Knowledge Base</div>
-            <button class="ih-nav-item${activeNav==='cwe'?' active cwe-mode':''}" id="ihn-cwe" onclick="window.ihNav('cwe',this)">
+            <div class="ih-nav-group-title">
               <span class="ih-nav-ico">🧩</span> CWE Taxonomy
               <span class="ih-nav-badge">${Object.keys(CWE_DB).length}</span>
+            </div>
+            <button class="ih-nav-item ih-nav-sub${activeNav==='cwe'?' active cwe-mode':''}" id="ihn-cwe" onclick="window.ihNav('cwe',this)">
+              OWASP Web App
             </button>
-          </div>
-          <div class="ih-nav-divider"></div>
-          <div class="ih-nav-group">
-            <div class="ih-nav-group-label">Standards</div>
-            <button class="ih-nav-item${activeNav==='api'?' active api-mode':''}" id="ihn-api" onclick="window.ihNav('api',this)">
-              <span class="ih-nav-ico">🌐</span> OWASP API 2023
+            <button class="ih-nav-item ih-nav-sub${activeNav==='api'?' active api-mode':''}" id="ihn-api" onclick="window.ihNav('api',this)">
+              OWASP API 2023
             </button>
-            <button class="ih-nav-item${activeNav==='llm'?' active llm-mode':''}" id="ihn-llm" onclick="window.ihNav('llm',this)">
-              <span class="ih-nav-ico">🤖</span> OWASP LLM 2025
-            </button>
-            <button class="ih-nav-item${activeNav==='nist'?' active nist-mode':''}" id="ihn-nist" onclick="window.ihNav('nist',this)">
-              <span class="ih-nav-ico">📋</span> NIST SP 800-53
+            <button class="ih-nav-item ih-nav-sub${activeNav==='llm'?' active llm-mode':''}" id="ihn-llm" onclick="window.ihNav('llm',this)">
+              OWASP LLM 2025
             </button>
           </div>
         </nav>
@@ -2735,8 +2734,8 @@ document.getElementById('copyBtn').onclick = () => {
         </div>
         <div class="cwe-det-tabs" id="odet-tabs-${id}">
           <button class="cwe-det-tab active" onclick="window._detTab(this,'odet-')">Overview</button>
-          <button class="cwe-det-tab" onclick="window._detTab(this,'odet-')">Scenarios</button>
-          <button class="cwe-det-tab" onclick="window._detTab(this,'odet-')">Prevention</button>
+          <button class="cwe-det-tab" onclick="window._detTab(this,'odet-')">Attack</button>
+          <button class="cwe-det-tab" onclick="window._detTab(this,'odet-')">Fix</button>
           <button class="cwe-det-tab" onclick="window._detTab(this,'odet-')">CVE</button>
           <button class="cwe-det-tab" onclick="window._detTab(this,'odet-')">Risk</button>
         </div>
